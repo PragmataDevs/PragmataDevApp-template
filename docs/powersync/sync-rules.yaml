@@ -1,0 +1,100 @@
+# PowerSync Sync Rules for PragmataDevApp
+# Version: 1.0
+# Last Updated: 2026-02-06
+#
+# Estas reglas definen QUÉ datos baja cada usuario a su dispositivo.
+# Se ejecutan en el servidor PowerSync y respetan RLS de Supabase.
+
+bucket_definitions:
+  # ============================================================================
+  # BUCKET 1: Usuario y sus datos personales
+  # ============================================================================
+  user:
+    # Parámetro: El ID del usuario autenticado (PowerSync requiere columna "id")
+    parameters: SELECT id FROM profiles WHERE id = token_parameters.user_id
+    
+    data:
+      # Su propio perfil completo (incluye team_id)
+      - SELECT * FROM profiles WHERE id = bucket.id
+      
+      # Sus permisos efectivos (para UI offline)
+      - SELECT * FROM sys_user_permissions WHERE user_id = bucket.id
+
+      # Sus preferencias (tema, etc.)
+      - SELECT user_id AS id, theme, locale, notifications_enabled, created_at, updated_at FROM sys_user_preferences WHERE user_id = bucket.id
+
+      # Sus notificaciones
+      - SELECT * FROM notifications WHERE recipient_id = bucket.id
+
+      # Nota: notification_attachments NO se sincronizan offline.
+      # Se obtienen vía Supabase API cuando el usuario abre una notificación.
+
+      # Lecturas de mensajes de chat (tabla única, sin subquery)
+      - SELECT * FROM chat_message_reads WHERE user_id = bucket.id
+
+  # ============================================================================
+  # BUCKET 2: Chat del usuario
+  # ============================================================================
+  user_chat:
+    # Conversaciones donde el usuario es participante
+    parameters: SELECT conversation_id AS id FROM chat_participants WHERE user_id = token_parameters.user_id
+
+    data:
+      # La conversación
+      - SELECT * FROM chat_conversations WHERE id = bucket.id
+
+      # Participantes de la conversación
+      - SELECT * FROM chat_participants WHERE conversation_id = bucket.id
+
+      # Mensajes de la conversación
+      - SELECT * FROM chat_messages WHERE conversation_id = bucket.id
+
+  # ============================================================================
+  # BUCKET 2: Team del usuario
+  # ============================================================================
+  user_team:
+    # El team_id del perfil del usuario
+    parameters: SELECT team_id as id FROM profiles WHERE id = token_parameters.user_id
+    
+    data:
+      # Datos del team
+      - SELECT * FROM teams WHERE id = bucket.id
+
+  # ============================================================================
+  # BUCKET 2: Proyectos autorizados
+  # ============================================================================
+  projects:
+    # Para cada proyecto al que tiene acceso el usuario (PowerSync requiere columna "id")
+    parameters: SELECT project_id as id FROM sys_project_access WHERE user_id = token_parameters.user_id
+    
+    data:
+      # El proyecto mismo
+      - SELECT * FROM projects WHERE id = bucket.id
+      
+      # Accesos al proyecto (para ver colaboradores offline)
+      - SELECT * FROM sys_project_access WHERE project_id = bucket.id
+
+  # ============================================================================
+  # BUCKET 3: Recursos del sistema (Catálogo Global)
+  # ============================================================================
+  resources:
+    # PowerSync requiere parameters, usamos un truco: sincronizar solo activos
+    parameters: SELECT id FROM sys_resources WHERE resource_status = 'active'
+    
+    data:
+      # Recursos activos del sistema
+      - SELECT * FROM sys_resources WHERE id = bucket.id
+
+  # ============================================================================
+  # BUCKET 4: Roles del sistema (Catálogo Global)
+  # ============================================================================
+  roles:
+    # Solo roles activos
+    parameters: SELECT id FROM sys_roles WHERE status = 'active'
+    
+    data:
+      # Rol completo
+      - SELECT * FROM sys_roles WHERE id = bucket.id
+      
+      # Definiciones del rol (permisos que incluye)
+      - SELECT * FROM sys_role_definitions WHERE role_id = bucket.id

@@ -1,0 +1,70 @@
+@import url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css');
+@import url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-mono/style.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-pragmata: 'Geist Sans', sans-serif;
+  --font-pragmata-mono: 'Geist Mono', monospace;
+
+  /* --- BASE (Neutrals) --- */
+  --pragmata-bg: #F7F8FB;           /* Soft neutral background */
+  --pragmata-fg: #0B1220;           /* Ink */
+  --pragmata-muted: #5A6B85;        /* Muted text */
+  --pragmata-muted-2: #8A9AB1;      /* Secondary muted */
+
+  /* --- BRAND (Pragmata) --- */
+  --pragmata-primary: #1A2740;      /* Deep navy */
+  --pragmata-primary-2: #23365C;    /* Navy hover */
+  --pragmata-accent: #1A7FF0;       /* Electric blue */
+  --pragmata-accent-dark: #1365C0;  /* Accent hover */
+  --pragmata-accent-soft: #E6F0FF;  /* Accent background */
+
+  /* --- UI SURFACES --- */
+  --pragmata-surface: #FFFFFF;     /* Cards */
+  --pragmata-surface-2: #F2F5FA;   /* Subtle surface */
+  --pragmata-border: #E3E8F2;      /* Borders */
+  --pragmata-border-strong: #D5DDEB;
+
+  /* --- STATUS --- */
+  --pragmata-success: #10B981;
+  --pragmata-warning: #F59E0B;
+  --pragmata-danger: #EF4444;
+
+  /* --- INTERACTION --- */
+  --pragmata-row-hover: #F1F5F9;   /* Slate 100 for clear hover contrast */
+}
+
+/* Dark Mode (Controlado por clase .dark en <html>) */
+.dark {
+    --pragmata-bg: #0A0F1B;
+    --pragmata-fg: #E6ECF6;
+    --pragmata-muted: #9AA8BF;
+    --pragmata-muted-2: #7F90AB;
+
+    --pragmata-primary: #E6ECF6;
+    --pragmata-primary-2: #C9D6EA;
+    --pragmata-accent: #4EA1FF;
+    --pragmata-accent-dark: #2C7EE0;
+    --pragmata-accent-soft: #0F1B33;
+
+    --pragmata-surface: #0F1526;
+    --pragmata-surface-2: #121A2E;
+    --pragmata-border: #1C2740;
+    --pragmata-border-strong: #273454;
+    
+    --pragmata-row-hover: #1E293B;  /* Slate 800 for dark mode contrast */
+}
+
+body {
+  font-family: var(--font-pragmata);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em; /* El toque sutil de refinamiento */
+  
+  background-color: var(--pragmata-bg);
+  color: var(--pragmata-fg);
+}
+

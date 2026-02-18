@@ -1,0 +1,24 @@
+import type { AuditBase, UUID } from '../core/base';
+
+/**
+ * Project: La unidad de trabajo (Obra, Campaña, Caso).
+ */
+export interface Project extends AuditBase {
+    team_id: UUID; // A qué empresa pertenece
+    name: string;
+    code: string | null; // Código interno (ej: "OBRA-2024-001")
+    description: string | null;
+
+    // Estado del Negocio (Ciclo de vida de la obra)
+    // NOTA: 'status' (AuditBase) controla borrado lógico. Este controla la etapa.
+    project_status: 'planning' | 'active' | 'completed' | 'paused' | 'canceled';
+    
+    // Core Business Fields (Columnas reales para indexación)
+    location: string | null;
+    budget: number | null; // DECIMAL en DB
+    start_date: string | null; // ISO Date
+    end_date: string | null;   // ISO Date
+    
+    // Configuración Adicional (JSONB)
+    metadata?: Record<string, any>;
+}
