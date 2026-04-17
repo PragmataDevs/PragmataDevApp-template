@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { AccessLevel } from '@/types/users/profile';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { withSessionRetry } from '@/lib/auth/sessionRetry';
+import type { AccessLevel, Profile } from '@/types/users/profile';
 import type { GrantedPermissions } from '@/features/settings/components/PermissionsPanel';
 
 // ─── Feature flag ────────────────────────────────────────────
@@ -8,21 +10,22 @@ const POWERSYNC_ENABLED = import.meta.env.VITE_ENABLE_POWERSYNC === 'true';
 
 // ─── Types ───────────────────────────────────────────────────
 
-export interface UserRow {
-  id: string;
-  email: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  phone: string | null;
-  job_title: string | null;
-  team_id: string;
-  role_id: string;
-  access_level: AccessLevel;
-  is_role_synced: boolean;
-  profile_status: 'active' | 'suspended';
-  created_at: string;
-  updated_at: string;
-}
+export type UserRow = Pick<
+  Profile,
+  | 'id'
+  | 'email'
+  | 'full_name'
+  | 'avatar_url'
+  | 'phone'
+  | 'job_title'
+  | 'team_id'
+  | 'role_id'
+  | 'access_level'
+  | 'is_role_synced'
+  | 'profile_status'
+  | 'created_at'
+  | 'updated_at'
+>;
 
 /** Extended user with role name for the list view */
 export interface UserWithRole extends UserRow {
@@ -76,6 +79,7 @@ export interface ProjectOption {
 // ─── Hook ────────────────────────────────────────────────────
 
 export function useUsers() {
+  const { loading: authLoading, isAuthenticated } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +88,15 @@ export function useUsers() {
   // ── Fetch users ──────────────────────────────────────────
 
   const fetchUsers = useCallback(async () => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      setUsers([]);
+      setRoles([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -112,17 +125,29 @@ export function useUsers() {
         );
         setRoles(roleRows.map((r) => ({ ...r, can_be_customized: Boolean(r.can_be_customized) })));
       } else {
-        // Supabase direct: read from cloud
-        // Fetch profiles with role name via join
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*, sys_roles(name)')
-          .order('created_at', { ascending: false });
+        const { profilesData, rolesData } = await withSessionRetry(async () => {
+          const profilesResponse = await supabase
+            .from('profiles')
+            .select('*, sys_roles(name)')
+            .order('created_at', { ascending: false });
 
-        if (profilesError) throw profilesError;
+          if (profilesResponse.error) throw profilesResponse.error;
+
+          const rolesResponse = await supabase
+            .from('sys_roles')
+            .select('id, name, can_be_customized')
+            .order('name');
+
+          if (rolesResponse.error) throw rolesResponse.error;
+
+          return {
+            profilesData: profilesResponse.data ?? [],
+            rolesData: rolesResponse.data ?? [],
+          };
+        }, 'useUsers.fetchUsers');
 
         setUsers(
-          (profilesData ?? []).map((p: any) => ({
+          profilesData.map((p: any) => ({
             id: p.id,
             email: p.email,
             full_name: p.full_name,
@@ -140,14 +165,7 @@ export function useUsers() {
           })),
         );
 
-        // Fetch roles for the select (include can_be_customized flag)
-        const { data: rolesData, error: rolesError } = await supabase
-          .from('sys_roles')
-          .select('id, name, can_be_customized')
-          .order('name');
-
-        if (rolesError) throw rolesError;
-        setRoles((rolesData ?? []).map((r: any) => ({
+        setRoles(rolesData.map((r: any) => ({
           id: r.id,
           name: r.name,
           can_be_customized: r.can_be_customized ?? false,
@@ -159,11 +177,12 @@ export function useUsers() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
+    if (authLoading) return;
     fetchUsers();
-  }, [fetchUsers]);
+  }, [authLoading, isAuthenticated, fetchUsers]);
 
   // ── Fetch role definitions (permissions of a role) ────────
   // Used by UserFormModal to pre-populate the PermissionsPanel
@@ -186,15 +205,18 @@ export function useUsers() {
         }
         return perms;
       } else {
-        const { data, error: fetchError } = await supabase
-          .from('sys_role_definitions')
-          .select('resource_code, granted_actions')
-          .eq('role_id', roleId);
+        const data = await withSessionRetry(async () => {
+          const response = await supabase
+            .from('sys_role_definitions')
+            .select('resource_code, granted_actions')
+            .eq('role_id', roleId);
 
-        if (fetchError) throw fetchError;
+          if (response.error) throw response.error;
+          return response.data ?? [];
+        }, 'useUsers.fetchRoleDefinitions');
 
         const perms: GrantedPermissions = {};
-        for (const row of data ?? []) {
+        for (const row of data) {
           perms[row.resource_code] = row.granted_actions ?? [];
         }
         return perms;
@@ -208,15 +230,18 @@ export function useUsers() {
 
   const fetchUserPermissions = useCallback(
     async (userId: string): Promise<GrantedPermissions> => {
-      const { data, error: fetchError } = await supabase
-        .from('sys_user_permissions')
-        .select('resource_code, granted_actions')
-        .eq('user_id', userId);
+      const data = await withSessionRetry(async () => {
+        const response = await supabase
+          .from('sys_user_permissions')
+          .select('resource_code, granted_actions')
+          .eq('user_id', userId);
 
-      if (fetchError) throw fetchError;
+        if (response.error) throw response.error;
+        return response.data ?? [];
+      }, 'useUsers.fetchUserPermissions');
 
       const perms: GrantedPermissions = {};
-      for (const row of data ?? []) {
+      for (const row of data) {
         perms[row.resource_code] = row.granted_actions ?? [];
       }
       return perms;
@@ -267,24 +292,32 @@ export function useUsers() {
   // ── Project assignments (sys_project_access) ─────────────
 
   const fetchProjectsForAssignment = useCallback(async (): Promise<ProjectOption[]> => {
-    const { data, error: fetchError } = await supabase
-      .from('projects')
-      .select('id, name, code')
-      .eq('status', 'active')
-      .order('name');
+    const data = await withSessionRetry(async () => {
+      const response = await supabase
+        .from('projects')
+        .select('id, name, code')
+        .eq('status', 'active')
+        .order('name');
 
-    if (fetchError) throw fetchError;
-    return (data ?? []) as ProjectOption[];
+      if (response.error) throw response.error;
+      return response.data ?? [];
+    }, 'useUsers.fetchProjectsForAssignment');
+
+    return data as ProjectOption[];
   }, []);
 
   const fetchUserProjectAssignments = useCallback(async (userId: string): Promise<string[]> => {
-    const { data, error: fetchError } = await supabase
-      .from('sys_project_access')
-      .select('project_id')
-      .eq('user_id', userId);
+    const data = await withSessionRetry(async () => {
+      const response = await supabase
+        .from('sys_project_access')
+        .select('project_id')
+        .eq('user_id', userId);
 
-    if (fetchError) throw fetchError;
-    return (data ?? []).map((row: any) => row.project_id as string);
+      if (response.error) throw response.error;
+      return response.data ?? [];
+    }, 'useUsers.fetchUserProjectAssignments');
+
+    return data.map((row: any) => row.project_id as string);
   }, []);
 
   const syncUserProjectAssignments = useCallback(

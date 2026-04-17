@@ -2,28 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { uploadFile, CHAT_IMAGE_PRESET } from '@/lib/storage';
+import { withSessionRetry } from '@/lib/auth/sessionRetry';
+import type { Project } from '@/types/projects/project';
 
 const POWERSYNC_ENABLED = import.meta.env.VITE_ENABLE_POWERSYNC === 'true';
 
 // ─── Types ───────────────────────────────────────────────────
 
-export interface ProjectRow {
-  id: string;
-  team_id: string;
-  name: string;
-  code: string | null;
-  description: string | null;
-  location: string | null;
-  budget: number | null;
-  start_date: string | null;
-  end_date: string | null;
-  metadata: Record<string, any>;
-  project_status: 'planning' | 'active' | 'completed' | 'paused' | 'canceled';
-  created_at: string;
-  updated_at: string;
-  status: string;
-  created_by: string | null;
-}
+export type ProjectRow = Project;
 
 export interface ProjectMember {
   id: string; // sys_project_access.id
@@ -79,7 +65,7 @@ export const PROJECT_STATUS_CONFIG: Record<
 // ─── Hook ────────────────────────────────────────────────────
 
 export function useProjects() {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading, isAuthenticated } = useAuth();
   const [projects, setProjects] = useState<ProjectWithMembers[]>([]);
   const [totalProjectCount, setTotalProjectCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -88,7 +74,15 @@ export function useProjects() {
   // ── Fetch projects ─────────────────────────────────────
 
   const fetchProjects = useCallback(async () => {
-    if (!profile) return;
+    if (authLoading) return;
+    if (!isAuthenticated || !profile) {
+      setProjects([]);
+      setTotalProjectCount(0);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -108,23 +102,30 @@ export function useProjects() {
           `SELECT * FROM projects WHERE status = 'active' ORDER BY updated_at DESC`,
         );
       } else {
-        // Count ALL projects (any status) for consecutive code generation
-        const { count } = await supabase
-          .from('projects')
-          .select('*', { count: 'exact', head: true })
-          .eq('team_id', profile.team_id);
+        const { count, data } = await withSessionRetry(async () => {
+          const countResponse = await supabase
+            .from('projects')
+            .select('*', { count: 'exact', head: true })
+            .eq('team_id', profile.team_id);
+
+          if (countResponse.error) throw countResponse.error;
+
+          const projectsResponse = await supabase
+            .from('projects')
+            .select('*')
+            .eq('status', 'active')
+            .order('updated_at', { ascending: false });
+
+          if (projectsResponse.error) throw projectsResponse.error;
+
+          return {
+            count: countResponse.count,
+            data: projectsResponse.data ?? [],
+          };
+        }, 'useProjects.fetchProjects');
 
         setTotalProjectCount(count ?? 0);
-
-        // Fetch all projects the user can see (RLS handles filtering)
-        const { data, error: pErr } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('status', 'active')
-          .order('updated_at', { ascending: false });
-
-        if (pErr) throw pErr;
-        projectsData = data || [];
+        projectsData = data;
       }
 
       // Get member counts via sys_project_access
@@ -144,12 +145,17 @@ export function useProjects() {
             memberCounts[row.project_id] = (memberCounts[row.project_id] || 0) + 1;
           }
         } else {
-          const { data: accessData } = await supabase
-            .from('sys_project_access')
-            .select('project_id')
-            .in('project_id', projectIds);
+          const accessData = await withSessionRetry(async () => {
+            const response = await supabase
+              .from('sys_project_access')
+              .select('project_id')
+              .in('project_id', projectIds);
 
-          for (const row of accessData || []) {
+            if (response.error) throw response.error;
+            return response.data ?? [];
+          }, 'useProjects.fetchProjectsAccess');
+
+          for (const row of accessData) {
             memberCounts[row.project_id] = (memberCounts[row.project_id] || 0) + 1;
           }
         }
@@ -167,7 +173,7 @@ export function useProjects() {
     } finally {
       setLoading(false);
     }
-  }, [profile]);
+  }, [authLoading, isAuthenticated, profile]);
 
   // ── Create project ─────────────────────────────────────
 
@@ -323,20 +329,23 @@ export function useProjects() {
   // ── Fetch project members ──────────────────────────────
 
   const fetchProjectMembers = useCallback(async (projectId: string): Promise<ProjectMember[]> => {
-    const { data, error } = await supabase
-      .from('sys_project_access')
-      .select(`
-        id,
-        user_id,
-        project_id,
-        created_at,
-        profiles!sys_project_access_user_id_fkey(full_name, email, avatar_url, role_id, sys_roles(name))
-      `)
-      .eq('project_id', projectId);
+    const data = await withSessionRetry(async () => {
+      const response = await supabase
+        .from('sys_project_access')
+        .select(`
+          id,
+          user_id,
+          project_id,
+          created_at,
+          profiles!sys_project_access_user_id_fkey(full_name, email, avatar_url, role_id, sys_roles(name))
+        `)
+        .eq('project_id', projectId);
 
-    if (error) throw error;
+      if (response.error) throw response.error;
+      return response.data ?? [];
+    }, 'useProjects.fetchProjectMembers');
 
-    return (data || []).map((row: any) => ({
+    return data.map((row: any) => ({
       id: row.id,
       user_id: row.user_id,
       project_id: row.project_id,
@@ -385,8 +394,9 @@ export function useProjects() {
   // ── Initial load ───────────────────────────────────────
 
   useEffect(() => {
+    if (authLoading) return;
     fetchProjects();
-  }, [fetchProjects]);
+  }, [authLoading, isAuthenticated, fetchProjects]);
 
   return {
     projects,

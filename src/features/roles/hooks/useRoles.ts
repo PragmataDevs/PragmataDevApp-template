@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { withSessionRetry } from '@/lib/auth/sessionRetry';
 import type { ResourceAction } from '@/types/auth/rbac';
+import type { Role, RoleDefinition } from '@/types/roles/role';
 import type { GrantedPermissions } from '@/features/roles/components/PermissionsPanel';
 
 // ─── Feature flag ────────────────────────────────────────────
@@ -8,25 +11,11 @@ const POWERSYNC_ENABLED = import.meta.env.VITE_ENABLE_POWERSYNC === 'true';
 
 // ─── Types ───────────────────────────────────────────────────
 
-/** Row shape coming from Supabase / SQLite */
-export interface RoleRow {
-  id: string;
-  name: string;
-  description: string | null;
-  is_system_role: boolean;
-  can_be_customized: boolean;
-  is_dev_role: boolean;
-  created_at: string;
-  updated_at: string;
-}
+export type RoleRow = Role;
 
-export interface RoleDefinitionRow {
-  id: string;
-  role_id: string;
-  resource_code: string;
-  granted_actions: string; // JSON string in SQLite, or string[] from Supabase
-  conditions: string | null;
-}
+export type RoleDefinitionRow = Omit<RoleDefinition, 'granted_actions'> & {
+  granted_actions: string | ResourceAction[];
+};
 
 /** Payload for creating/updating a role */
 export interface RoleSavePayload {
@@ -43,6 +32,7 @@ export interface RoleWithCount extends RoleRow {
 // ─── Hook ────────────────────────────────────────────────────
 
 export function useRoles() {
+  const { loading: authLoading, isAuthenticated } = useAuth();
   const [roles, setRoles] = useState<RoleWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +40,14 @@ export function useRoles() {
   // ── Fetch roles ──────────────────────────────────────────
 
   const fetchRoles = useCallback(async () => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      setRoles([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -79,31 +77,36 @@ export function useRoles() {
           }))
         );
       } else {
-        // Supabase direct: read from cloud
-        const { data: rolesData, error: rolesError } = await supabase
-          .from('sys_roles')
-          .select('*')
-          .order('is_system_role', { ascending: false })
-          .order('name');
+        const { rolesData, profilesData } = await withSessionRetry(async () => {
+          const rolesResponse = await supabase
+            .from('sys_roles')
+            .select('*')
+            .order('is_system_role', { ascending: false })
+            .order('name');
 
-        if (rolesError) throw rolesError;
+          if (rolesResponse.error) throw rolesResponse.error;
 
-        // Count users per role
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('role_id');
+          const profilesResponse = await supabase
+            .from('profiles')
+            .select('role_id');
 
-        if (profilesError) throw profilesError;
+          if (profilesResponse.error) throw profilesResponse.error;
+
+          return {
+            rolesData: rolesResponse.data ?? [],
+            profilesData: profilesResponse.data ?? [],
+          };
+        }, 'useRoles.fetchRoles');
 
         const countMap = new Map<string, number>();
-        for (const p of profilesData ?? []) {
+        for (const p of profilesData) {
           if (p.role_id) {
             countMap.set(p.role_id, (countMap.get(p.role_id) ?? 0) + 1);
           }
         }
 
         setRoles(
-          (rolesData ?? []).map((role) => ({
+          rolesData.map((role) => ({
             ...role,
             users_count: countMap.get(role.id) ?? 0,
           }))
@@ -115,11 +118,12 @@ export function useRoles() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
+    if (authLoading) return;
     fetchRoles();
-  }, [fetchRoles]);
+  }, [authLoading, isAuthenticated, fetchRoles]);
 
   // ── Fetch role definitions (permissions) for a single role ──
 
@@ -144,15 +148,18 @@ export function useRoles() {
           }
           return permissions;
         } else {
-          const { data, error } = await supabase
-            .from('sys_role_definitions')
-            .select('*')
-            .eq('role_id', roleId);
+          const data = await withSessionRetry(async () => {
+            const response = await supabase
+              .from('sys_role_definitions')
+              .select('*')
+              .eq('role_id', roleId);
 
-          if (error) throw error;
+            if (response.error) throw response.error;
+            return response.data ?? [];
+          }, 'useRoles.fetchRoleDefinitions');
 
           const permissions: GrantedPermissions = {};
-          for (const row of data ?? []) {
+          for (const row of data) {
             permissions[row.resource_code] = row.granted_actions;
           }
           return permissions;

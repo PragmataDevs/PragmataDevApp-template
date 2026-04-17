@@ -1,8 +1,8 @@
-# DOCUMENTO MAESTRO: ARQUITECTURA PRAGMATA v1.1
+# DOCUMENTO MAESTRO: ARQUITECTURA PRAGMATA v1.2
 
 **Proyecto:** Plantilla Universal Offline-First (SaaS / Enterprise)
 **Stack:** React + Vite + Supabase + PowerSync + Tailwind
-**Última Actualización:** 6 de Febrero 2026
+**Última Actualización:** 16 de Abril 2026
 
 ---
 
@@ -163,6 +163,41 @@ Todas las tablas del sistema seguirán un diseño **Relacional Normalizado (3NF)
   - `status` (`active` | `deleted`) → Estado de auditoría
   - `deleted_at` (Timestamp nullable) → Marca temporal de borrado lógico
 
+### 4.1.1 Contratos de Frontend y Fuente de Verdad
+
+En Frontend, la **fuente de verdad obligatoria** de contratos de datos es `src/types`.
+
+**Reglas obligatorias:**
+- Los modelos de dominio (`Project`, `Profile`, `Team`, `Role`, etc.) deben declararse y mantenerse en `src/types`.
+- Hooks, componentes y páginas no deben redefinir modelos de dominio completos si ya existen en `src/types`.
+- Los tipos locales dentro de features solo se permiten si son **tipos derivados de presentación o agregación**, por ejemplo: conteos, joins o payloads de UI.
+- Cuando un hook necesite enriquecer un modelo, debe hacerlo por extensión o composición sobre el tipo canónico, no copiando la estructura base.
+
+**Patrón recomendado:**
+
+```ts
+import type { Project } from '@/types/projects/project';
+
+export interface ProjectWithMembers extends Project {
+  member_count: number;
+}
+```
+
+**Objetivo:**
+- Evitar drift entre UI, hooks y dominio.
+- Reducir duplicación de contratos.
+- Mantener una sola capa confiable para cambios de schema.
+
+### 4.1.2 Tipos Derivados Permitidos
+
+Se consideran válidos fuera de `src/types` únicamente estos casos:
+
+- View models para tablas o cards (`ProjectWithMembers`, `UserWithRole`).
+- Payloads de formularios o mutaciones (`ProjectCreatePayload`, `RoleSavePayload`).
+- Tipos adaptadores entre Supabase/SQLite y UI cuando cambie el formato de un campo.
+
+Incluso en esos casos, el tipo derivado debe partir del contrato base de `src/types` cuando exista.
+
 ### 4.2 Flujo de Datos Híbrido (Implementado)
 
 *   **Lectura (READ):** 
@@ -233,10 +268,92 @@ La seguridad se aplica en capas concéntricas mediante Layouts y Guards.
    - *Validación:* ¿El usuario tiene registro en `sys_project_access` para este projectId?
    - *Acción:* Si no, muestra 403 Forbidden. Si sí, permite módulos internos del proyecto.
 
+### 5.2.1 Ciclo de Vida de Sesión
+
+La sesión se centraliza en `AuthProvider` y sigue este flujo:
+
+1. **Bootstrap inicial**
+  - Al montar la app, `AuthProvider` llama `supabase.auth.getSession()`.
+  - Si existe usuario autenticado, carga `profile` desde `profiles` y luego permisos desde `sys_user_permissions`.
+
+2. **Suscripción a cambios de auth**
+  - `AuthProvider` escucha `supabase.auth.onAuthStateChange(...)`.
+  - Ante `SIGNED_IN`, `SIGNED_OUT`, `PASSWORD_RECOVERY` u otros eventos, sincroniza `user`, `profile`, `permissions` y `loading`.
+
+3. **Consumo desacoplado**
+  - `useAuth()` expone el estado autenticado (`user`, `profile`, `permissions`, `loading`, `isAuthenticated`).
+  - `usePermission()` resuelve permisos sobre el snapshot cargado por `AuthProvider`, sin volver a consultar por cada render.
+
+**Regla operativa:**
+- Ningún hook de datos protegido debe asumir que la sesión ya está hidratada en el primer render.
+
+### 5.2.2 Resiliencia de `fetchProfile`
+
+`fetchProfile` puede dispararse desde múltiples fuentes casi al mismo tiempo: bootstrap inicial, eventos de auth, recuperación de password, reconexión o refresco manual. Para evitar requests paralelos y estados inconsistentes, el patrón obligatorio es:
+
+1. **Guard de concurrencia**
+  - Mantener un `fetchingProfileRef` en `AuthProvider`.
+  - Si ya existe un fetch en curso, salir inmediatamente sin lanzar un segundo request.
+
+2. **Manejo explícito de aborts**
+  - Si el error es `AbortError` o su mensaje contiene `aborted`, tratarlo como cancelación esperada.
+  - Un abort no debe marcar la sesión como inválida ni dejar el provider en estado `stale`.
+
+3. **Reset garantizado**
+  - El guard debe resetearse siempre en `finally`, incluso si falla el request.
+
+```ts
+const fetchingProfileRef = useRef(false);
+
+const fetchProfile = async (userId: string) => {
+  if (fetchingProfileRef.current) return;
+  fetchingProfileRef.current = true;
+
+  try {
+   // cargar profile y permissions
+  } catch (err: any) {
+   if (err?.name === 'AbortError' || /aborted/i.test(err?.message || '')) {
+    console.warn('[AuthProvider] fetchProfile aborted, ignoring.');
+   } else {
+    throw err;
+   }
+  } finally {
+   fetchingProfileRef.current = false;
+  }
+};
+```
+
 ### 5.3 Hooks de Seguridad Implementados
 
 - `useAuth()`: Consume AuthContext (user, profile, loading, isAuthenticated)
 - `usePermission()`: Valida permisos (`hasPermission(code)`, `isAdmin()`)
+
+### 5.4 Patrón Obligatorio para Hooks Protegidos por Sesión
+
+Todo hook que consulte tablas protegidas por RLS o dependientes del JWT debe seguir este patrón:
+
+1. **Gate por Auth antes del fetch**
+  - Leer `loading` e `isAuthenticated` desde `useAuth()`.
+  - No ejecutar queries mientras `loading === true`.
+  - Si `isAuthenticated === false`, salir temprano y limpiar estados derivados si aplica.
+
+2. **Dependencias correctas del efecto**
+  - El `useEffect` inicial debe depender de `loading` e `isAuthenticated`, además de sus dependencias funcionales.
+  - El fetch solo corre cuando Auth ya terminó de hidratar.
+
+3. **Retry único ante error de sesión**
+  - Si el query falla con errores equivalentes a JWT ausente o sesión no lista (`PGRST301`, `PGRST302`, errores de JWT), intentar `supabase.auth.getSession()` una sola vez.
+  - Si la sesión se recupera, reintentar una vez.
+  - Si vuelve a fallar, exponer error normal sin loops.
+
+4. **Instrumentación mínima**
+  - Loggear retry ejecutado, retry omitido o error definitivo.
+  - Mantener la traza suficientemente clara para distinguir error de sesión contra error real de negocio.
+
+**Objetivo:**
+- Evitar pantallas vacías por carrera entre render inicial e hidratación de sesión.
+- Reducir fallos intermitentes en tablas protegidas por RLS.
+- Unificar el comportamiento de hooks online y offline-first.
 
 ---
 

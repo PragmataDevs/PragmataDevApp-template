@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import type { Profile } from '@/types/database';
+import type { Profile } from '@/types/users/profile';
 
 /** Permissions map: resource_code → granted_actions[] */
 export type UserPermissionsMap = Record<string, string[]>;
@@ -29,31 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [permissions, setPermissions] = useState<UserPermissionsMap>({});
   const [loading, setLoading] = useState(true);
+  const fetchingProfileRef = useRef(false);
 
-  const fetchProfile = async (userId: string) => {
-    console.log('[AuthProvider] Fetching profil for:', userId);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) {
-        console.error('[AuthProvider] Error fetching profile - RLS or Schema issue?', error);
-      } else {
-        console.log('[AuthProvider] Profile loaded:', data);
-        setProfile(data as Profile);
-
-        // Load user permissions from sys_user_permissions
-        await fetchPermissions(userId);
-      }
-    } catch (err) {
-      console.error('[AuthProvider] Unexpected error fetching profile:', err);
-    }
-  };
-
-  const fetchPermissions = async (userId: string) => {
+  const fetchPermissions = async (userId: string): Promise<UserPermissionsMap> => {
     try {
       const { data, error } = await supabase
         .from('sys_user_permissions')
@@ -62,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('[AuthProvider] Error fetching permissions:', error);
-        return;
+        return {};
       }
 
       const permMap: UserPermissionsMap = {};
@@ -70,9 +48,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         permMap[row.resource_code] = row.granted_actions ?? [];
       }
       console.log('[AuthProvider] Permissions loaded:', Object.keys(permMap).length, 'resources');
-      setPermissions(permMap);
+      return permMap;
     } catch (err) {
       console.error('[AuthProvider] Unexpected error fetching permissions:', err);
+      return {};
+    }
+  };
+
+  const fetchProfile = async (userId: string) => {
+    if (fetchingProfileRef.current) {
+      console.warn('[AuthProvider] fetchProfile skipped. Another request is already in progress.');
+      return;
+    }
+
+    fetchingProfileRef.current = true;
+    console.log('[AuthProvider] Fetching profile for:', userId);
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('[AuthProvider] Error fetching profile - RLS or Schema issue?', error);
+        return;
+      }
+
+      const nextPermissions = await fetchPermissions(userId);
+      console.log('[AuthProvider] Profile loaded:', data);
+      setProfile(data as Profile);
+      setPermissions(nextPermissions);
+    } catch (err: any) {
+      if (err?.name === 'AbortError' || /aborted/i.test(err?.message || '')) {
+        console.warn('[AuthProvider] fetchProfile aborted, ignoring.');
+        return;
+      }
+
+      console.error('[AuthProvider] Unexpected error fetching profile:', err);
+    } finally {
+      fetchingProfileRef.current = false;
     }
   };
 
