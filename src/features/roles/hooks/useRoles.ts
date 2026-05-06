@@ -32,7 +32,7 @@ export interface RoleWithCount extends RoleRow {
 // ─── Hook ────────────────────────────────────────────────────
 
 export function useRoles() {
-  const { loading: authLoading, isAuthenticated } = useAuth();
+  const { loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
   const [roles, setRoles] = useState<RoleWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +123,8 @@ export function useRoles() {
   useEffect(() => {
     if (authLoading) return;
     fetchRoles();
-  }, [authLoading, isAuthenticated, fetchRoles]);
+    // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
+  }, [authLoading, isAuthenticated, fetchRoles, sessionEpoch]);
 
   // ── Fetch role definitions (permissions) for a single role ──
 

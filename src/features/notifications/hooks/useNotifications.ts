@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { withSessionRetry } from '@/lib/auth/sessionRetry';
 import type { NotificationType, BroadcastTargetType } from '../config';
 
 // ─── Types ───────────────────────────────────────────────────
@@ -44,7 +45,7 @@ export interface SendNotificationPayload {
 // ─── Hook ────────────────────────────────────────────────────
 
 export function useNotifications() {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -52,27 +53,34 @@ export function useNotifications() {
   // ── Fetch recent notifications ──
   const fetchNotifications = useCallback(
     async (limit = 20, includeArchived = false) => {
+      if (authLoading || !isAuthenticated) {
+        setLoading(true);
+        return;
+      }
       if (!profile) return;
       setLoading(true);
 
       try {
-        let query = supabase
-          .from('notifications')
-          .select(`
-            *,
-            sender:profiles!notifications_sender_id_fkey(full_name, email),
-            attachments:notification_attachments(id, file_name, file_url, file_type, file_size)
-          `)
-          .eq('recipient_id', profile.id)
-          .order('created_at', { ascending: false })
-          .limit(limit);
+        const data = await withSessionRetry(async () => {
+          let query = supabase
+            .from('notifications')
+            .select(`
+              *,
+              sender:profiles!notifications_sender_id_fkey(full_name, email),
+              attachments:notification_attachments(id, file_name, file_url, file_type, file_size)
+            `)
+            .eq('recipient_id', profile.id)
+            .order('created_at', { ascending: false })
+            .limit(limit);
 
-        if (!includeArchived) {
-          query = query.eq('is_archived', false);
-        }
+          if (!includeArchived) {
+            query = query.eq('is_archived', false);
+          }
 
-        const { data, error } = await query;
-        if (error) throw error;
+          const response = await query;
+          if (response.error) throw response.error;
+          return response.data;
+        }, 'useNotifications.fetchNotifications');
 
         setNotifications((data as unknown as Notification[]) || []);
       } catch (err: any) {
@@ -81,24 +89,34 @@ export function useNotifications() {
         setLoading(false);
       }
     },
-    [profile]
+    [authLoading, isAuthenticated, profile]
   );
 
   // ── Fetch unread count ──
   const fetchUnreadCount = useCallback(async () => {
+    if (authLoading || !isAuthenticated) return;
     if (!profile) return;
 
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('recipient_id', profile.id)
-      .eq('is_read', false)
-      .eq('is_archived', false);
+    try {
+      const count = await withSessionRetry(async () => {
+        const response = await supabase
+          .from('notifications')
+          .select('id', { count: 'exact', head: true })
+          .eq('recipient_id', profile.id)
+          .eq('is_read', false)
+          .eq('is_archived', false);
 
-    if (!error && count !== null) {
-      setUnreadCount(count);
+        if (response.error) throw response.error;
+        return response.count;
+      }, 'useNotifications.fetchUnreadCount');
+
+      if (count !== null && count !== undefined) {
+        setUnreadCount(count);
+      }
+    } catch (err: any) {
+      console.error('Error fetching unread count:', err.message);
     }
-  }, [profile]);
+  }, [authLoading, isAuthenticated, profile]);
 
   // ── Mark as read ──
   const markAsRead = useCallback(
@@ -274,9 +292,11 @@ export function useNotifications() {
 
   // ── Initial load ──
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     fetchNotifications(10);
     fetchUnreadCount();
-  }, [fetchNotifications, fetchUnreadCount]);
+    // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
+  }, [authLoading, isAuthenticated, fetchNotifications, fetchUnreadCount, sessionEpoch]);
 
   return {
     notifications,

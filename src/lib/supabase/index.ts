@@ -9,5 +9,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(
   supabaseUrl || '', // Fallback vacío para evitar crash inmediato si faltan envs en build time, pero fallará runtime si no se proveen.
-  supabaseAnonKey || ''
+  supabaseAnonKey || '',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: 'pragmata-auth-v1',
+    },
+  }
 );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { withSessionRetry } from '@/lib/auth/sessionRetry';
 import { uploadFile, resolveSignedUrl, CHAT_IMAGE_PRESET } from '@/lib/storage';
 
 // ─── Types ───────────────────────────────────────────────────
@@ -43,60 +44,93 @@ export interface ChatMessage {
 // ─── useConversations ────────────────────────────────────────
 
 export function useConversations() {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchConversations = useCallback(async () => {
+    if (authLoading || !isAuthenticated) {
+      setLoading(true);
+      return;
+    }
     if (!profile) return;
     setLoading(true);
 
     try {
-      // Get conversation IDs where user is participant
-      const { data: participantRows, error: pError } = await supabase
-        .from('chat_participants')
-        .select('conversation_id')
-        .eq('user_id', profile.id);
+      const conversationsWithLastMessage = await withSessionRetry(async () => {
+        // Get conversation IDs where user is participant
+        const { data: participantRows, error: pError } = await supabase
+          .from('chat_participants')
+          .select('conversation_id')
+          .eq('user_id', profile.id);
 
-      if (pError) throw pError;
-      if (!participantRows || participantRows.length === 0) {
-        setConversations([]);
-        setLoading(false);
-        return;
-      }
+        if (pError) throw pError;
+        if (!participantRows || participantRows.length === 0) {
+          return [] as Conversation[];
+        }
 
-      const convIds = participantRows.map((p) => p.conversation_id);
+        const convIds = participantRows.map((p) => p.conversation_id);
 
-      // Get conversations with participants
-      const { data: convos, error: cError } = await supabase
-        .from('chat_conversations')
-        .select(`
-          *,
-          participants:chat_participants(
-            id, user_id, joined_at,
-            profile:profiles(full_name, email, avatar_url)
-          )
-        `)
-        .in('id', convIds)
-        .order('updated_at', { ascending: false });
+        // Get conversations with participants
+        const { data: convos, error: cError } = await supabase
+          .from('chat_conversations')
+          .select(`
+            *,
+            participants:chat_participants(
+              id, user_id, joined_at,
+              profile:profiles(full_name, email, avatar_url)
+            )
+          `)
+          .in('id', convIds)
+          .order('updated_at', { ascending: false });
 
-      if (cError) throw cError;
+        if (cError) throw cError;
 
-      // Get last message for each conversation
-      const conversationsWithLastMessage = await Promise.all(
-        (convos || []).map(async (conv) => {
-          const { data: msgs } = await supabase
-            .from('chat_messages')
-            .select('id, body, type, sender_id, created_at')
-            .eq('conversation_id', conv.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
+        // Get last message + unread count per conversation
+        return Promise.all(
+          (convos || []).map(async (conv) => {
+            const { data: msgs } = await supabase
+              .from('chat_messages')
+              .select('id, body, type, sender_id, created_at')
+              .eq('conversation_id', conv.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
 
-          // Get unread count (2-step: get read IDs, then count messages not in that set)
-          const { data: readData } = await supabase
-            .from('chat_message_reads')
-            .select('message_id')
-            .eq('user_id', profile.id);
+            const { data: readData } = await supabase
+              .from('chat_message_reads')
+              .select('message_id')
+              .eq('user_id', profile.id);
+
+            const readMessageIds = (readData || []).map((r) => r.message_id);
+
+            let unreadQuery = supabase
+              .from('chat_messages')
+              .select('id', { count: 'exact', head: true })
+              .eq('conversation_id', conv.id)
+              .neq('sender_id', profile.id);
+
+            if (readMessageIds.length > 0) {
+              unreadQuery = unreadQuery.not('id', 'in', `(${readMessageIds.join(',')})`);
+            }
+
+            const { count } = await unreadQuery;
+
+            return {
+              ...conv,
+              last_message: msgs?.[0] || null,
+              unread_count: count || 0,
+            } as Conversation;
+          })
+        );
+      }, 'useConversations.fetchConversations');
+
+      setConversations(conversationsWithLastMessage);
+    } catch (err: any) {
+      console.error('Error fetching conversations:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [authLoading, isAuthenticated, profile]);
 
           const readMessageIds = (readData || []).map((r) => r.message_id);
 
@@ -180,8 +214,10 @@ export function useConversations() {
 
   // Initial load
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     fetchConversations();
-  }, [fetchConversations]);
+    // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
+  }, [authLoading, isAuthenticated, fetchConversations, sessionEpoch]);
 
   return {
     conversations,
@@ -205,27 +241,31 @@ async function resolveFileUrls(msgs: ChatMessage[]): Promise<ChatMessage[]> {
 }
 
 export function useMessages(conversationId: string | null) {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchMessages = useCallback(
     async (limit = 50) => {
+      if (authLoading || !isAuthenticated) return;
       if (!conversationId || !profile) return;
       setLoading(true);
 
       try {
-        const { data, error } = await supabase
-          .from('chat_messages')
-          .select(`
-            *,
-            sender:profiles!chat_messages_sender_id_fkey(full_name, email, avatar_url)
-          `)
-          .eq('conversation_id', conversationId)
-          .order('created_at', { ascending: true })
-          .limit(limit);
+        const data = await withSessionRetry(async () => {
+          const response = await supabase
+            .from('chat_messages')
+            .select(`
+              *,
+              sender:profiles!chat_messages_sender_id_fkey(full_name, email, avatar_url)
+            `)
+            .eq('conversation_id', conversationId)
+            .order('created_at', { ascending: true })
+            .limit(limit);
 
-        if (error) throw error;
+          if (response.error) throw response.error;
+          return response.data;
+        }, 'useMessages.fetchMessages');
 
         // Resolve storage paths to signed URLs
         const resolved = await resolveFileUrls((data as unknown as ChatMessage[]) || []);
@@ -265,7 +305,7 @@ export function useMessages(conversationId: string | null) {
         setLoading(false);
       }
     },
-    [conversationId, profile]
+    [authLoading, isAuthenticated, conversationId, profile]
   );
 
   // Send a text message
@@ -382,12 +422,14 @@ export function useMessages(conversationId: string | null) {
 
   // Load messages when conversation changes
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     if (conversationId) {
       fetchMessages();
     } else {
       setMessages([]);
     }
-  }, [conversationId, fetchMessages]);
+    // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
+  }, [authLoading, isAuthenticated, conversationId, fetchMessages, sessionEpoch]);
 
   return {
     messages,

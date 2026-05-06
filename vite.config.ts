@@ -15,6 +15,7 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
 
+          // React core + router
           if (
             id.includes("/react/") ||
             id.includes("/react-dom/") ||
@@ -23,15 +24,23 @@ export default defineConfig({
             return "react-vendor";
           }
 
+          // Supabase client
           if (id.includes("/@supabase/")) {
             return "supabase";
           }
 
+          // PowerSync + SQLite WASM (only loaded when VITE_ENABLE_POWERSYNC=true)
           if (
             id.includes("/@powersync/") ||
             id.includes("/@journeyapps/wa-sqlite/")
           ) {
             return "powersync";
+          }
+
+          // Lucide icons: imported in layout components (always loaded),
+          // isolated here so changes don't bust the react-vendor cache.
+          if (id.includes("/lucide-react/")) {
+            return "icons";
           }
         },
       },

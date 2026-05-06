@@ -65,7 +65,7 @@ export const PROJECT_STATUS_CONFIG: Record<
 // ─── Hook ────────────────────────────────────────────────────
 
 export function useProjects() {
-  const { profile, loading: authLoading, isAuthenticated } = useAuth();
+  const { profile, loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
   const [projects, setProjects] = useState<ProjectWithMembers[]>([]);
   const [totalProjectCount, setTotalProjectCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -396,7 +396,8 @@ export function useProjects() {
   useEffect(() => {
     if (authLoading) return;
     fetchProjects();
-  }, [authLoading, isAuthenticated, fetchProjects]);
+    // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
+  }, [authLoading, isAuthenticated, fetchProjects, sessionEpoch]);
 
   return {
     projects,

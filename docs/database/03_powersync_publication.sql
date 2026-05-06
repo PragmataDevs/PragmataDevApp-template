@@ -14,7 +14,7 @@ CREATE PUBLICATION powersync FOR TABLE
   public.sys_user_permissions,
   public.sys_project_access,
   public.sys_user_preferences,
-  -- Chat & Notifications (05_chat_notifications.sql)
+  -- Chat & Notifications (also part of 01_security_engine.sql)
   public.notification_broadcasts,
   public.notifications,
   public.notification_attachments,

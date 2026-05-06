@@ -79,7 +79,7 @@ export interface ProjectOption {
 // ─── Hook ────────────────────────────────────────────────────
 
 export function useUsers() {
-  const { loading: authLoading, isAuthenticated } = useAuth();
+  const { loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,7 +182,8 @@ export function useUsers() {
   useEffect(() => {
     if (authLoading) return;
     fetchUsers();
-  }, [authLoading, isAuthenticated, fetchUsers]);
+    // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
+  }, [authLoading, isAuthenticated, fetchUsers, sessionEpoch]);
 
   // ── Fetch role definitions (permissions of a role) ────────
   // Used by UserFormModal to pre-populate the PermissionsPanel

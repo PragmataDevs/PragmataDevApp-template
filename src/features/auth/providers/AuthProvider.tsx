@@ -18,6 +18,12 @@ interface AuthContextType {
   permissions: UserPermissionsMap;
   loading: boolean;
   isAuthenticated: boolean;
+  /**
+   * Monotonic counter that increments every time the session is (re)hydrated.
+   * Data hooks should include it in their initial-fetch `useEffect` deps so
+   * they refetch after `TOKEN_REFRESHED`, wake-from-idle, etc.
+   */
+  sessionEpoch: number;
   /** Re-fetch the profile from the database (e.g. after avatar update) */
   refreshProfile: () => Promise<void>;
 }
@@ -29,7 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [permissions, setPermissions] = useState<UserPermissionsMap>({});
   const [loading, setLoading] = useState(true);
+  const [sessionEpoch, setSessionEpoch] = useState(0);
   const fetchingProfileRef = useRef(false);
+  const lastProfileUserIdRef = useRef<string | null>(null);
+
+  const bumpSessionEpoch = () => setSessionEpoch((prev) => prev + 1);
 
   const fetchPermissions = async (userId: string): Promise<UserPermissionsMap> => {
     try {
@@ -92,70 +102,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // ── Bootstrap + auth subscription ──
+  // IMPORTANT: `onAuthStateChange` callback MUST stay synchronous. Awaiting
+  // any `supabase.from(...)` query or `supabase.auth.refreshSession()` inside
+  // it deadlocks against `navigator.locks`. Profile loading happens in a
+  // separate effect that watches `user?.id`.
   useEffect(() => {
     let mounted = true;
     console.log('[AuthProvider] Mounting...');
 
     const initAuth = async () => {
-      // 1. Get initial session
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) console.error('[AuthProvider] getSession error:', error);
-        
+
         const currentUser = session?.user ?? null;
         console.log('[AuthProvider] Initial Session User:', currentUser?.id);
-        setUser(currentUser);
-        
-        if (currentUser) {
-          await fetchProfile(currentUser.id);
-        }
+        if (mounted) setUser(currentUser);
       } catch (e) {
         console.error('[AuthProvider] Init Error:', e);
       } finally {
         if (mounted) {
-           console.log('[AuthProvider] Setting loading = false');
-           setLoading(false);
+          console.log('[AuthProvider] Setting loading = false');
+          setLoading(false);
         }
       }
     };
 
-    initAuth();
+    void initAuth();
 
-    // 2. Listen for changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[AuthProvider] Auth Event:', event);
       if (!mounted) return;
 
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      
-      if (currentUser) {
-        await fetchProfile(currentUser.id);
 
-        // Handle PASSWORD_RECOVERY: redirect to reset-password page
-        if (event === 'PASSWORD_RECOVERY') {
-          console.log('[AuthProvider] PASSWORD_RECOVERY event, redirecting to /auth/reset-password');
-          window.location.replace('/auth/reset-password');
-          return;
-        }
+      // TOKEN_REFRESHED: do NOT re-fetch profile, just signal data hooks.
+      if (event === 'TOKEN_REFRESHED' && currentUser) {
+        bumpSessionEpoch();
+        return;
+      }
 
-        // OAuth redirect: if user just signed in and we're on a public page,
-        // navigate to /dashboard. This handles the case where Supabase
-        // processes the OAuth hash before the CallbackPage mounts.
-        if (event === 'SIGNED_IN') {
-          const currentPath = window.location.pathname;
-          if (PUBLIC_PATHS.includes(currentPath) && !NO_REDIRECT_PATHS.includes(currentPath)) {
-            console.log('[AuthProvider] OAuth sign-in detected on public path, redirecting to /dashboard');
-            window.location.replace('/dashboard');
-          }
-        }
-      } else {
+      if (!currentUser) {
         setProfile(null);
         setPermissions({});
+        lastProfileUserIdRef.current = null;
+        return;
       }
-      setLoading(false);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        queueMicrotask(() => window.location.replace('/auth/reset-password'));
+        return;
+      }
+
+      if (event === 'SIGNED_IN') {
+        const currentPath = window.location.pathname;
+        if (PUBLIC_PATHS.includes(currentPath) && !NO_REDIRECT_PATHS.includes(currentPath)) {
+          console.log('[AuthProvider] OAuth sign-in detected on public path, redirecting to /dashboard');
+          queueMicrotask(() => window.location.replace('/dashboard'));
+        }
+      }
     });
 
     return () => {
@@ -165,8 +174,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // ── Profile + permissions: runs OUTSIDE the auth lock callback ──
+  useEffect(() => {
+    const userId = user?.id ?? null;
+    if (!userId) return;
+    if (lastProfileUserIdRef.current === userId) return;
+    lastProfileUserIdRef.current = userId;
+
+    void (async () => {
+      await fetchProfile(userId);
+      bumpSessionEpoch();
+    })();
+  }, [user?.id]);
+
+  // ── Revalidate on tab visibility / network reconnection ──
+  useEffect(() => {
+    const maybeRevalidate = async () => {
+      if (!user) return;
+      try {
+        // Force the auth client to surface a fresh JWT before any refetch.
+        await supabase.auth.getSession();
+        bumpSessionEpoch();
+      } catch (err) {
+        console.warn('[AuthProvider] Revalidation skipped:', err);
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void maybeRevalidate();
+    };
+    const onOnline = () => void maybeRevalidate();
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('online', onOnline);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [user]);
+
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    if (!user) return;
+    // Force a fresh fetch even if the cached id matches.
+    lastProfileUserIdRef.current = null;
+    await fetchProfile(user.id);
+    bumpSessionEpoch();
+    lastProfileUserIdRef.current = user.id;
   };
 
   const value = {
@@ -175,6 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     permissions,
     loading,
     isAuthenticated: !!user,
+    sessionEpoch,
     refreshProfile,
   };
 

@@ -154,49 +154,89 @@ Todas las tablas del sistema seguirán un diseño **Relacional Normalizado (3NF)
 
 *   Priorizamos integridad referencial (Foreign Keys) sobre flexibilidad JSONB.
 *   Cada entidad tiene su propia tabla. Las relaciones M:N usan tablas pivote explícitas.
-*   Usamos `AuditBase` para trazabilidad automática:
+*   **`AuditBase` es OBLIGATORIO.** Toda tabla de negocio (y por tanto todo modelo de dominio en `src/types`) **debe** extender `AuditBase`. No hay excepciones para entidades de negocio. Las únicas excepciones permitidas son tablas puramente sistémicas/inmutables (catálogos como `sys_resources`) y vistas/proyecciones materializadas. Si una tabla nueva no puede extender `AuditBase`, requiere justificación explícita en el PR.
+*   `AuditBase` provee:
     - `id` (UUID, PK)
     - `created_at` (Timestamp)
     - `updated_at` (Timestamp)
     - `created_by` (UUID → auth.users)
     - `updated_by` (UUID → auth.users)
-  - `status` (`active` | `deleted`) → Estado de auditoría
-  - `deleted_at` (Timestamp nullable) → Marca temporal de borrado lógico
+    - `status` (`active` | `deleted`) → Estado de auditoría
+    - `deleted_at` (Timestamp nullable) → Marca temporal de borrado lógico
 
-### 4.1.1 Contratos de Frontend y Fuente de Verdad
+### 4.1.1 Modelo Único como Fuente de Verdad
 
-En Frontend, la **fuente de verdad obligatoria** de contratos de datos es `src/types`.
+**Regla de oro: una entidad → un modelo canónico → un único archivo en `src/types`.**
 
-**Reglas obligatorias:**
-- Los modelos de dominio (`Project`, `Profile`, `Team`, `Role`, etc.) deben declararse y mantenerse en `src/types`.
-- Hooks, componentes y páginas no deben redefinir modelos de dominio completos si ya existen en `src/types`.
-- Los tipos locales dentro de features solo se permiten si son **tipos derivados de presentación o agregación**, por ejemplo: conteos, joins o payloads de UI.
-- Cuando un hook necesite enriquecer un modelo, debe hacerlo por extensión o composición sobre el tipo canónico, no copiando la estructura base.
+- Cada entidad del dominio tiene **exactamente una** definición canónica (`Project`, `Profile`, `Team`, `Role`, `Conversation`, `ChatMessage`, `Notification`, etc.).
+- La definición vive en `src/types/<dominio>/<entidad>.ts` y **debe** extender `AuditBase` (salvo excepciones sistémicas justificadas).
+- **PROHIBIDO** redeclarar el modelo en hooks, componentes, páginas, servicios o tests. Un hook que necesita el modelo lo importa, no lo redefine.
+- **PROHIBIDO** mantener "casi-copias" del mismo modelo con campos sueltos para "lo que necesita esa pantalla". Si la pantalla necesita campos que el modelo no tiene, se evalúa si esos campos pertenecen al modelo canónico o si son legítimamente derivados (ver §4.1.2).
+- Cuando hay desfase entre lo que devuelve la query y el modelo canónico, **se ajusta la query** (con `select` explícito o un alias en SQL), no se inventa un tipo paralelo.
 
-**Patrón recomendado:**
+**Patrón obligatorio para CRUD en frontend (formularios):**
+
+Todo formulario de creación o edición opera siempre sobre **una instancia del modelo canónico completo**, incluyendo los campos de `AuditBase`. Nunca sobre estructuras intermedias paralelas ni recortes que descarten auditoría:
+
+1. **Crear:** se inicializa un objeto en blanco del modelo canónico (`createEmpty<Entidad>()`) con todos sus campos, incluidos los de `AuditBase`:
+   - `id`: UUID generado en cliente (`crypto.randomUUID()`) o dejado para que el backend lo asigne, según convenga al feature.
+   - `created_at` / `updated_at`: `new Date().toISOString()`.
+   - `created_by` / `updated_by`: `profile.id` actual.
+   - `status`: `'active'`.
+   - `deleted_at`: `null`.
+   - Resto de campos: valores neutrales por defecto (`null`, `''`, `0`, etc.).
+2. **Editar:** se carga la instancia desde el origen (Supabase/SQLite) tal cual viene, con sus campos de auditoría intactos, y se pasa al estado del form.
+3. **Mutar:** los inputs del form mutan campos directamente de ese objeto en `useState<Entidad>(...)`. No se usan estados separados por campo. El form puede tocar libremente campos de negocio; los campos de `AuditBase` se actualizan por reglas controladas (ej. `updated_at` y `updated_by` se refrescan justo antes de persistir).
+4. **Persistir:** se envía **el objeto canónico completo** (o, como mucho, un `Pick` de un subconjunto explícito de campos de negocio cuando el endpoint lo exija). **Nunca** se aplica `Omit<…, keyof AuditBase>`: los campos de auditoría son el motivo por el que existen, deben llegar a la tabla.
+
+**Responsabilidades de auditoría:**
+- `created_by`, `updated_by`, `status`, `deleted_at` los setea el cliente con la información de sesión (`profile.id`) antes del `insert`/`update`.
+- `created_at`, `updated_at` los puede setear el cliente y/o reforzar un trigger en Postgres (`updated_at = now()` en `BEFORE UPDATE`). Ambos lados son válidos; el trigger es la red de seguridad.
+- `id` puede generarse en cliente (recomendado para offline-first con PowerSync) o en servidor (`DEFAULT gen_random_uuid()`). Decisión por feature, documentada.
+- El borrado lógico se hace mutando `status = 'deleted'` y `deleted_at = now()` sobre el mismo objeto canónico, nunca con `DELETE` físico.
 
 ```ts
-import type { Project } from '@/types/projects/project';
+// ✅ Correcto: form trabaja sobre el modelo canónico completo
+const [project, setProject] = useState<Project>(createEmptyProject(profile.id));
+<Input value={project.name} onChange={(e) => setProject({ ...project, name: e.target.value })} />
 
-export interface ProjectWithMembers extends Project {
-  member_count: number;
-}
+// Al guardar:
+const toPersist: Project = {
+  ...project,
+  updated_at: new Date().toISOString(),
+  updated_by: profile.id,
+};
+await supabase.from('projects').upsert(toPersist);
+
+// ❌ Prohibido: copia paralela
+interface ProjectFormState { nombre: string; presupuesto: number; }
+const [form, setForm] = useState<ProjectFormState>({ ... });
+
+// ❌ Prohibido: descartar AuditBase al persistir
+const payload: Omit<Project, keyof AuditBase> = { ... };
+await supabase.from('projects').insert(payload); // pierde trazabilidad
 ```
 
-**Objetivo:**
-- Evitar drift entre UI, hooks y dominio.
-- Reducir duplicación de contratos.
-- Mantener una sola capa confiable para cambios de schema.
+Esto elimina drift entre formulario, hook y backend, y garantiza que toda la información de auditoría llegue siempre a la base de datos.
 
 ### 4.1.2 Tipos Derivados Permitidos
 
-Se consideran válidos fuera de `src/types` únicamente estos casos:
+Los únicos tipos que pueden vivir **fuera** de `src/types` son **derivaciones explícitas** del modelo canónico, con un único propósito de presentación o agregación. Toda derivación debe partir del tipo base por **extensión, intersección, `Pick` o `Partial`** — nunca por copia manual de campos, y **nunca** descartando los campos de `AuditBase`.
 
-- View models para tablas o cards (`ProjectWithMembers`, `UserWithRole`).
-- Payloads de formularios o mutaciones (`ProjectCreatePayload`, `RoleSavePayload`).
-- Tipos adaptadores entre Supabase/SQLite y UI cuando cambie el formato de un campo.
+Casos válidos:
 
-Incluso en esos casos, el tipo derivado debe partir del contrato base de `src/types` cuando exista.
+| Caso | Patrón | Ejemplo |
+| --- | --- | --- |
+| View model con joins/conteos | `extends` (mantiene `AuditBase`) | `interface ProjectWithMembers extends Project { member_count: number }` |
+| Selector / opción de combo (solo lectura) | `Pick` | `type RoleOption = Pick<Role, 'id' \| 'name' \| 'can_be_customized'>` |
+| Update parcial dentro de un mismo objeto canónico | `Partial<Entidad>` aplicado a un setter | `setProject((p) => ({ ...p, ...partial }))` |
+
+Reglas para los derivados:
+
+- Viven junto al hook o componente que los usa, nunca duplicados en otro lugar.
+- Su nombre debe reflejar la derivación (`*WithX`, `*Option`, `*View`).
+- **No** se permiten tipos `*CreatePayload` / `*UpdatePayload` que recorten el modelo canónico. Para crear o actualizar se usa la entidad completa (ver §4.1.1). Si el endpoint exige menos campos, eso lo resuelve la capa de persistencia con un `Pick` local **al momento de la query**, no con un tipo paralelo en el dominio.
+- Si el derivado deja de usar el tipo base canónico, es señal de que el modelo canónico está mal diseñado: corregir el modelo, no abandonar la regla.
 
 ### 4.2 Flujo de Datos Híbrido (Implementado)
 
@@ -281,11 +321,22 @@ La sesión se centraliza en `AuthProvider` y sigue este flujo:
   - Ante `SIGNED_IN`, `SIGNED_OUT`, `PASSWORD_RECOVERY` u otros eventos, sincroniza `user`, `profile`, `permissions` y `loading`.
 
 3. **Consumo desacoplado**
-  - `useAuth()` expone el estado autenticado (`user`, `profile`, `permissions`, `loading`, `isAuthenticated`).
+  - `useAuth()` expone el estado autenticado (`user`, `profile`, `permissions`, `loading`, `isAuthenticated`, `sessionEpoch`).
   - `usePermission()` resuelve permisos sobre el snapshot cargado por `AuthProvider`, sin volver a consultar por cada render.
 
-**Regla operativa:**
+**Reglas operativas:**
 - Ningún hook de datos protegido debe asumir que la sesión ya está hidratada en el primer render.
+- El callback de `supabase.auth.onAuthStateChange` es **estrictamente síncrono**. No se permite `await` de `supabase.from(...)`, `supabase.auth.refreshSession()` ni cargas de perfil/permisos dentro del callback. Supabase v2 mantiene `navigator.locks` mientras el callback corre y cualquier `await` a una query produce deadlock contra otros componentes que disparan queries simultáneas.
+- La carga de `profile` y `permissions` vive en un `useEffect` separado que observa `user?.id` (con `lastProfileUserIdRef` para evitar reentradas). De esta forma se ejecuta **fuera** del lock de auth.
+- No se llama `supabase.auth.refreshSession()` proactivamente en el camino principal. Confiamos en `autoRefreshToken: true` y reaccionamos al evento `TOKEN_REFRESHED`.
+
+### 5.2.3 `sessionEpoch` y revalidación tras idle
+
+Para evitar pantallas vacías cuando el usuario regresa después de varios minutos (token expirado pero `user` aún en estado React → el gate `!isAuthenticated` no bloquea, la query sale con JWT viejo y RLS responde `200 + []` sin error visible), `AuthProvider` expone un contador monotónico `sessionEpoch`:
+
+- Se incrementa en: bootstrap exitoso, evento `SIGNED_IN`, evento `TOKEN_REFRESHED`, y revalidación proactiva en `visibilitychange` / `online`.
+- En `visibilitychange === 'visible'` y `online`, `AuthProvider` llama `supabase.auth.getSession()` (fuerza el path de refresh del cliente) y luego bumpea el epoch.
+- Todo hook protegido **debe** incluir `sessionEpoch` en las dependencias del `useEffect` de fetch inicial. Esto garantiza un refetch inmediato cuando la sesión se renueva en background.
 
 ### 5.2.2 Resiliencia de `fetchProfile`
 
@@ -333,26 +384,59 @@ const fetchProfile = async (userId: string) => {
 Todo hook que consulte tablas protegidas por RLS o dependientes del JWT debe seguir este patrón:
 
 1. **Gate por Auth antes del fetch**
-  - Leer `loading` e `isAuthenticated` desde `useAuth()`.
+  - Leer `loading`, `isAuthenticated` y `sessionEpoch` desde `useAuth()`.
   - No ejecutar queries mientras `loading === true`.
   - Si `isAuthenticated === false`, salir temprano y limpiar estados derivados si aplica.
 
 2. **Dependencias correctas del efecto**
-  - El `useEffect` inicial debe depender de `loading` e `isAuthenticated`, además de sus dependencias funcionales.
-  - El fetch solo corre cuando Auth ya terminó de hidratar.
+  - El `useEffect` inicial debe depender de `loading`, `isAuthenticated` y `sessionEpoch`, además de sus dependencias funcionales.
+  - El fetch corre cuando Auth ya hidrató y se vuelve a ejecutar tras `TOKEN_REFRESHED` o revalidación por `visibilitychange` / `online`.
 
-3. **Retry único ante error de sesión**
-  - Si el query falla con errores equivalentes a JWT ausente o sesión no lista (`PGRST301`, `PGRST302`, errores de JWT), intentar `supabase.auth.getSession()` una sola vez.
-  - Si la sesión se recupera, reintentar una vez.
-  - Si vuelve a fallar, exponer error normal sin loops.
+3. **Retry único ante error de sesión (`withSessionRetry`)**
+  - Envolver las queries protegidas en el helper `withSessionRetry` (`src/lib/auth/sessionRetry.ts`).
+  - El helper detecta `PGRST301`, `PGRST302` o mensajes de JWT, llama `supabase.auth.getSession()` una sola vez y reintenta.
+  - Si el retry vuelve a fallar, propaga el error sin loops.
 
 4. **Instrumentación mínima**
-  - Loggear retry ejecutado, retry omitido o error definitivo.
-  - Mantener la traza suficientemente clara para distinguir error de sesión contra error real de negocio.
+  - `withSessionRetry` ya loggea retry ejecutado, retry omitido y error definitivo.
+  - No agregar lógica adicional de retry fuera de este helper.
+
+**Plantilla mínima:**
+
+```ts
+const { profile, loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
+
+const fetchData = useCallback(async () => {
+  if (authLoading || !isAuthenticated) {
+    setLoading(true);
+    return;
+  }
+  // ... fetch protegido
+  const data = await withSessionRetry(async () => {
+    const res = await supabase.from('tabla').select('*');
+    if (res.error) throw res.error;
+    return res.data;
+  }, 'useFoo.fetchData');
+}, [authLoading, isAuthenticated, profile]);
+
+useEffect(() => {
+  if (authLoading) return;
+  void fetchData();
+  // sessionEpoch en deps: re-run tras TOKEN_REFRESHED / wake-from-idle.
+}, [authLoading, isAuthenticated, fetchData, sessionEpoch]);
+```
+
+**Checklist obligatorio para nuevos hooks protegidos:**
+- [ ] Inyecta `loading`, `isAuthenticated` y `sessionEpoch` desde `useAuth()`.
+- [ ] Gate `authLoading || !isAuthenticated` al inicio del fetch.
+- [ ] Queries envueltas en `withSessionRetry`.
+- [ ] `useEffect` de fetch inicial incluye `sessionEpoch` en sus deps.
+- [ ] No `await` de queries dentro de `onAuthStateChange` ni llamadas a `refreshSession()` en el camino principal.
 
 **Objetivo:**
 - Evitar pantallas vacías por carrera entre render inicial e hidratación de sesión.
 - Reducir fallos intermitentes en tablas protegidas por RLS.
+- Recuperar datos automáticamente tras wake-from-idle sin requerir hard refresh.
 - Unificar el comportamiento de hooks online y offline-first.
 
 ---
@@ -440,10 +524,9 @@ Las reglas se definen en **buckets**:
 ### 7.5 Scripts de Base de Datos
 
 Orden de ejecución en cada branch:
-1. `01_security_engine.sql` - Schema completo (tablas, funciones, RLS)
+1. `01_security_engine.sql` - Schema completo: tablas, AuditBase, funciones, triggers y RLS (incluye chat + notifications)
 2. `02_seed_god_user.sql` - Crear primer usuario administrador
-3. `03_chat_notifications.sql` - Objetos de chat/notificaciones del sistema
-4. `04_powersync_publication.sql` - Habilitar replicación lógica (PowerSync)
+3. `03_powersync_publication.sql` - Habilitar replicación lógica (PowerSync)
 
 ---
 
@@ -464,8 +547,7 @@ No existe actualmente un archivo `src/app/app.config.ts` en esta plantilla.
 ### Primer Deploy a Production
 - [ ] Ejecutar `01_security_engine.sql` en branch `main` de Supabase
 - [ ] Ejecutar `02_seed_god_user.sql` en branch `main` (solo bootstrap inicial)
-- [ ] Ejecutar `03_chat_notifications.sql` en branch `main`
-- [ ] Ejecutar `04_powersync_publication.sql` en branch(es) que usen PowerSync
+- [ ] Ejecutar `03_powersync_publication.sql` en branch(es) que usen PowerSync
 - [ ] Deployar Sync Rules en PowerSync Instance (main)
 - [ ] Configurar variables en Vercel (Production: VITE_ENABLE_POWERSYNC=true)
 - [ ] Probar login y sincronización en staging antes de mergear
@@ -478,22 +560,44 @@ No existe actualmente un archivo `src/app/app.config.ts` en esta plantilla.
 
 ---
 
-## 10. Performance de Bundle (Implementado)
+## 10. Performance de Bundle
 
-### Estrategia
+> Referencia operativa completa: [docs/bundle-chunck-strategy.md](bundle-chunck-strategy.md)
 
-- **Code-splitting por rutas** con `React.lazy` + `Suspense`.
-- **Carga condicional de PowerSync** mediante import dinámico (solo cuando `VITE_ENABLE_POWERSYNC=true`).
-- **Manual chunking en build** (`vite.config.ts`) para separar:
-  - `react-vendor` (`react`, `react-dom`, `react-router-dom`)
-  - `supabase` (`@supabase/*`)
-  - `powersync` (`@powersync/*`, `@journeyapps/wa-sqlite`) cuando aplique
+### 10.1 Estrategia Implementada
 
-### Resultado observado en build
+**Tres técnicas en capas:**
 
-- Antes de chunking manual (post lazy + conditional PowerSync): chunk principal ~`536 kB`.
-- Después de chunking manual:
-  - `index` ~`183 kB`
-  - `react-vendor` ~`190 kB`
-  - `supabase` ~`163 kB`
-- Se elimina el warning de chunk único `>500 kB` y mejora la estrategia de caché.
+1. **Code-splitting por ruta** — todas las páginas usan `React.lazy` + `Suspense` en `routes.config.ts`. El fallback visual está centralizado en `RouteLoader`.
+2. **Carga condicional de PowerSync** — `PowerSyncProvider.tsx` usa imports dinámicos condicionales. `@powersync/*` y `@journeyapps/wa-sqlite` no se cargan en el arranque si `VITE_ENABLE_POWERSYNC=false`.
+3. **Manual chunking en build** — `vite.config.ts` separa los vendors en chunks cacheables independientes.
+
+### 10.2 Chunks Definidos (vite.config.ts)
+
+| Chunk | Contenido | Razón |
+| --- | --- | --- |
+| `react-vendor` | `react`, `react-dom`, `react-router-dom` | Core siempre presente; se cachea por separado |
+| `supabase` | `@supabase/*` | Cliente pesado; cambia poco |
+| `powersync` | `@powersync/*`, `@journeyapps/wa-sqlite` | Solo se descarga cuando `VITE_ENABLE_POWERSYNC=true` |
+| `icons` | `lucide-react` | Importado en layouts siempre activos; aislado para no contaminar el caché de `react-vendor` |
+
+**Regla:** cada nueva dependencia `node_modules` que supere ~50 kB minificada **debe** evaluarse para chunk propio. Ver procedimiento en [bundle-chunck-strategy.md](bundle-chunck-strategy.md).
+
+### 10.3 Resultado de Build (Línea Base)
+
+| Chunk | Tamaño aprox. |
+| --- | --- |
+| `index` | ~183 kB |
+| `react-vendor` | ~190 kB |
+| `supabase` | ~163 kB |
+| `icons` | ~70 kB |
+
+Antes del chunking manual el chunk principal era ~536 kB (warning `>500 kB`). La línea base se actualiza en cada sprint cuando cambia una dependencia mayor.
+
+### 10.4 Reglas de Implementación Obligatorias
+
+1. **Toda nueva página** se importa con `React.lazy` en `routes.config.ts`. Prohibido el import estático de páginas.
+2. **Toda librería pesada** (PDF, charts, editores, mapas) va en un chunk `manualChunks` dedicado y se carga con import dinámico en la ruta que la consume.
+3. **Prohibido** subir `chunkSizeWarningLimit` para silenciar un warning sin resolver la causa.
+4. **Al agregar una dependencia**, ejecutar `pnpm build` y registrar el delta de tamaño en el PR usando la plantilla del [bundle-chunck-strategy.md §6](bundle-chunck-strategy.md).
+5. No importar librerías de vendor en `providers/`, `App.tsx` ni `main.tsx` de forma estática si se puede diferir a la ruta consumidora.
