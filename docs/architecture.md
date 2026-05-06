@@ -166,58 +166,144 @@ Todas las tablas del sistema seguirán un diseño **Relacional Normalizado (3NF)
 
 ### 4.1.1 Modelo Único como Fuente de Verdad
 
-**Regla de oro: una entidad → un modelo canónico → un único archivo en `src/types`.**
+> **Regla de oro: una entidad → un modelo canónico → un único archivo en `src/types`.**
+> Este modelo es lo único que existe para representar esa entidad en todo el sistema: tipo TS, estado del form, payload a Supabase. No hay transformaciones, no hay copies, no hay wrappers.
 
-- Cada entidad del dominio tiene **exactamente una** definición canónica (`Project`, `Profile`, `Team`, `Role`, `Conversation`, `ChatMessage`, `Notification`, etc.).
-- La definición vive en `src/types/<dominio>/<entidad>.ts` y **debe** extender `AuditBase` (salvo excepciones sistémicas justificadas).
-- **PROHIBIDO** redeclarar el modelo en hooks, componentes, páginas, servicios o tests. Un hook que necesita el modelo lo importa, no lo redefine.
-- **PROHIBIDO** mantener "casi-copias" del mismo modelo con campos sueltos para "lo que necesita esa pantalla". Si la pantalla necesita campos que el modelo no tiene, se evalúa si esos campos pertenecen al modelo canónico o si son legítimamente derivados (ver §4.1.2).
-- Cuando hay desfase entre lo que devuelve la query y el modelo canónico, **se ajusta la query** (con `select` explícito o un alias en SQL), no se inventa un tipo paralelo.
+#### Definición del modelo
 
-**Patrón obligatorio para CRUD en frontend (formularios):**
-
-Todo formulario de creación o edición opera siempre sobre **una instancia del modelo canónico completo**, incluyendo los campos de `AuditBase`. Nunca sobre estructuras intermedias paralelas ni recortes que descarten auditoría:
-
-1. **Crear:** se inicializa un objeto en blanco del modelo canónico (`createEmpty<Entidad>()`) con todos sus campos, incluidos los de `AuditBase`:
-   - `id`: UUID generado en cliente (`crypto.randomUUID()`) o dejado para que el backend lo asigne, según convenga al feature.
-   - `created_at` / `updated_at`: `new Date().toISOString()`.
-   - `created_by` / `updated_by`: `profile.id` actual.
-   - `status`: `'active'`.
-   - `deleted_at`: `null`.
-   - Resto de campos: valores neutrales por defecto (`null`, `''`, `0`, etc.).
-2. **Editar:** se carga la instancia desde el origen (Supabase/SQLite) tal cual viene, con sus campos de auditoría intactos, y se pasa al estado del form.
-3. **Mutar:** los inputs del form mutan campos directamente de ese objeto en `useState<Entidad>(...)`. No se usan estados separados por campo. El form puede tocar libremente campos de negocio; los campos de `AuditBase` se actualizan por reglas controladas (ej. `updated_at` y `updated_by` se refrescan justo antes de persistir).
-4. **Persistir:** se envía **el objeto canónico completo** (o, como mucho, un `Pick` de un subconjunto explícito de campos de negocio cuando el endpoint lo exija). **Nunca** se aplica `Omit<…, keyof AuditBase>`: los campos de auditoría son el motivo por el que existen, deben llegar a la tabla.
-
-**Responsabilidades de auditoría:**
-- `created_by`, `updated_by`, `status`, `deleted_at` los setea el cliente con la información de sesión (`profile.id`) antes del `insert`/`update`.
-- `created_at`, `updated_at` los puede setear el cliente y/o reforzar un trigger en Postgres (`updated_at = now()` en `BEFORE UPDATE`). Ambos lados son válidos; el trigger es la red de seguridad.
-- `id` puede generarse en cliente (recomendado para offline-first con PowerSync) o en servidor (`DEFAULT gen_random_uuid()`). Decisión por feature, documentada.
-- El borrado lógico se hace mutando `status = 'deleted'` y `deleted_at = now()` sobre el mismo objeto canónico, nunca con `DELETE` físico.
+Cada entidad nueva se define así y nada más:
 
 ```ts
-// ✅ Correcto: form trabaja sobre el modelo canónico completo
-const [project, setProject] = useState<Project>(createEmptyProject(profile.id));
-<Input value={project.name} onChange={(e) => setProject({ ...project, name: e.target.value })} />
+// src/types/contratos/contrato.ts
+import type { AuditBase } from '@/types/core/base';
 
-// Al guardar:
-const toPersist: Project = {
-  ...project,
-  updated_at: new Date().toISOString(),
-  updated_by: profile.id,
-};
-await supabase.from('projects').upsert(toPersist);
-
-// ❌ Prohibido: copia paralela
-interface ProjectFormState { nombre: string; presupuesto: number; }
-const [form, setForm] = useState<ProjectFormState>({ ... });
-
-// ❌ Prohibido: descartar AuditBase al persistir
-const payload: Omit<Project, keyof AuditBase> = { ... };
-await supabase.from('projects').insert(payload); // pierde trazabilidad
+export interface Contrato extends AuditBase {
+  numero:        string;
+  nombre:        string;
+  monto_total:   number;
+  proyecto_id:   string;
+  fecha_inicio:  string;       // ISO 8601
+  fecha_fin:     string | null;
+  notas:         string | null;
+  // …los campos que necesite el negocio
+}
 ```
 
-Esto elimina drift entre formulario, hook y backend, y garantiza que toda la información de auditoría llegue siempre a la base de datos.
+Eso es todo. No hay `ContratoCreatePayload`, no hay `ContratoFormState`, no hay `ContratoDTO`. **Un solo tipo.**
+
+- La definición vive en `src/types/<dominio>/<entidad>.ts` y **siempre** extiende `AuditBase`.
+- **PROHIBIDO** redeclarar el modelo en hooks, componentes, páginas o servicios. Quien lo necesite lo importa.
+- **PROHIBIDO** mantener "casi-copias" con campos sueltos para "lo que necesita esa pantalla".
+- Cuando hay desfase entre lo que devuelve la query y el modelo, **se ajusta la query**, no se inventa un tipo paralelo.
+
+#### Función `createEmpty<Entidad>()`
+
+Para crear una instancia en blanco se usa un helper que vive junto al tipo:
+
+```ts
+// src/types/contratos/contrato.ts  (mismo archivo)
+export function createEmptyContrato(userId: string): Contrato {
+  return {
+    id:           crypto.randomUUID(),
+    created_at:   new Date().toISOString(),
+    updated_at:   new Date().toISOString(),
+    created_by:   userId,
+    updated_by:   userId,
+    status:       'active',
+    deleted_at:   null,
+    // campos de negocio en blanco:
+    numero:       '',
+    nombre:       '',
+    monto_total:  0,
+    proyecto_id:  '',
+    fecha_inicio: new Date().toISOString(),
+    fecha_fin:    null,
+    notas:        null,
+  };
+}
+```
+
+#### Patrón obligatorio: ciclo de vida completo en un hook/componente
+
+```ts
+// ✅ Correcto — el modelo canónico es el único estado, desde el blank hasta Supabase
+const { profile } = useAuth();
+const [contrato, setContrato] = useState<Contrato>(() =>
+  createEmptyContrato(profile.id)
+);
+
+// Inputs mutan directamente el modelo canónico:
+<Input
+  value={contrato.nombre}
+  onChange={(e) => setContrato((c) => ({ ...c, nombre: e.target.value }))}
+/>
+
+// Persistir: se refresca AuditBase y se manda el objeto COMPLETO tal cual
+async function guardar() {
+  const toPersist: Contrato = {
+    ...contrato,
+    updated_at: new Date().toISOString(),
+    updated_by: profile.id,
+  };
+  await supabase.from('contratos').upsert(toPersist);
+}
+
+// Editar: se carga desde Supabase/SQLite tal cual, con auditoría intacta
+async function cargar(id: string) {
+  const { data } = await supabase.from('contratos').select('*').eq('id', id).single();
+  setContrato(data as Contrato);
+}
+
+// Borrado lógico: nunca DELETE, siempre mutar status
+async function eliminar() {
+  const deleted: Contrato = {
+    ...contrato,
+    status:     'deleted',
+    deleted_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    updated_by: profile.id,
+  };
+  await supabase.from('contratos').upsert(deleted);
+}
+```
+
+```ts
+// ❌ Prohibido: estado paralelo separado del modelo canónico
+interface ContratoFormState { nombre: string; monto: number; }
+const [form, setForm] = useState<ContratoFormState>({ nombre: '', monto: 0 });
+
+// ❌ Prohibido: wrapper / payload que descarta AuditBase
+type ContratoPayload = Omit<Contrato, keyof AuditBase>;
+const payload: ContratoPayload = { numero: '001', nombre: '...', ... };
+await supabase.from('contratos').insert(payload); // pierde toda la trazabilidad
+
+// ❌ Prohibido: redeclarar el modelo dentro de un hook o componente
+interface Contrato { nombre: string; monto: number; } // NO — va en src/types/
+```
+
+#### Por qué AuditBase NUNCA se omite al persistir
+
+Los campos de auditoría son la razón de ser del modelo:
+
+- `created_by` / `updated_by` → quién hizo el cambio
+- `created_at` / `updated_at` → cuándo lo hizo
+- `status` / `deleted_at` → si sigue activo o fue borrado lógicamente
+
+Sin ellos, la tabla en Supabase y en PowerSync pierde trazabilidad completa. Por eso **el objeto canónico se manda completo**, sin filtros, sin Omit.
+
+#### Responsabilidades de auditoría
+
+| Campo | Quién lo setea | Cuándo |
+| --- | --- | --- |
+| `id` | Cliente (`crypto.randomUUID()`) o trigger Postgres | Al crear |
+| `created_at` | Cliente (`new Date().toISOString()`) | Solo al crear |
+| `updated_at` | Cliente + trigger Postgres (`BEFORE UPDATE`) | Cada upsert |
+| `created_by` | Cliente (`profile.id`) | Solo al crear |
+| `updated_by` | Cliente (`profile.id`) | Cada upsert |
+| `status` | Cliente (`'active'` \| `'deleted'`) | Al crear y al borrar lógico |
+| `deleted_at` | Cliente (`new Date().toISOString()`) | Solo al borrar lógico |
+
+El trigger de Postgres en `updated_at` es la red de seguridad, pero el cliente siempre lo envía también para consistencia en PowerSync/SQLite local.
 
 ### 4.1.2 Tipos Derivados Permitidos
 
