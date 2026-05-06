@@ -48,7 +48,13 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    -- Enforce server-side timestamp (ignore whatever the client sent)
     NEW.updated_at := NOW();
+    -- Optimistic Concurrency Control: increment version on every UPDATE.
+    -- The client reads the current version, sends it in .eq('version', v),
+    -- and checks that the update affected exactly 1 row. If 0 rows were
+    -- affected, another writer committed first → conflict detected.
+    NEW.version := COALESCE(OLD.version, 0) + 1;
     RETURN NEW;
 END;
 $$;
@@ -457,6 +463,33 @@ CREATE TABLE public.chat_message_reads (
 
     UNIQUE (message_id, user_id)
 );
+
+-- ------------------------------------------------------------------------------
+-- 7.5 AUDITBASE: version column (Optimistic Concurrency Control)
+-- ------------------------------------------------------------------------------
+-- Added separately to avoid repeating it in every CREATE TABLE block above.
+-- The `set_updated_at` trigger increments this on every UPDATE.
+-- The client sends .eq('version', currentVersion) on writes; 0 rows returned = conflict.
+-- ------------------------------------------------------------------------------
+DO $$
+DECLARE
+    t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY[
+        'sys_resources', 'sys_roles', 'sys_role_definitions',
+        'teams', 'profiles', 'projects',
+        'sys_project_access', 'sys_user_permissions', 'sys_user_preferences',
+        'notification_broadcasts', 'notifications', 'notification_attachments',
+        'chat_conversations', 'chat_participants', 'chat_messages', 'chat_message_reads'
+    ]
+    LOOP
+        EXECUTE format(
+            'ALTER TABLE public.%I ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 0;',
+            t
+        );
+    END LOOP;
+END;
+$$;
 
 
 -- ------------------------------------------------------------------------------

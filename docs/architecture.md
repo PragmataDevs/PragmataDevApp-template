@@ -209,6 +209,7 @@ export function createEmptyContrato(userId: string): Contrato {
     updated_at:   new Date().toISOString(),
     created_by:   userId,
     updated_by:   userId,
+    version:      0,   // El trigger lo incrementa a 1 en el primer UPDATE
     status:       'active',
     deleted_at:   null,
     // campos de negocio en blanco:
@@ -239,13 +240,37 @@ const [contrato, setContrato] = useState<Contrato>(() =>
 />
 
 // Persistir: se refresca AuditBase y se manda el objeto COMPLETO tal cual
+// El .eq('version', ...) activa el Optimistic Concurrency Control (ver §4.1.3)
 async function guardar() {
   const toPersist: Contrato = {
     ...contrato,
     updated_at: new Date().toISOString(),
     updated_by: profile.id,
   };
-  await supabase.from('contratos').upsert(toPersist);
+
+  const isNew = contrato.version === 0;
+
+  if (isNew) {
+    const { data, error } = await supabase.from('contratos').insert(toPersist).select().single();
+    if (error) throw error;
+    setContrato(data as Contrato); // version sigue en 0; el trigger la sube en el primer UPDATE
+  } else {
+    // UPDATE con optimistic lock: falla silenciosamente si version cambió
+    const { data, error } = await supabase
+      .from('contratos')
+      .update(toPersist)
+      .eq('id', toPersist.id)
+      .eq('version', toPersist.version) // <-- lock clave
+      .select()
+      .single();
+    if (error) throw error;
+    if (!data) {
+      // Conflicto: otro usuario grabó antes — recargar y notificar al usuario
+      await cargar(toPersist.id);
+      throw new Error('conflict'); // el componente muestra un aviso
+    }
+    setContrato(data as Contrato); // contiene la version incrementada por el trigger
+  }
 }
 
 // Editar: se carga desde Supabase/SQLite tal cual, con auditoría intacta
@@ -323,6 +348,83 @@ Reglas para los derivados:
 - Su nombre debe reflejar la derivación (`*WithX`, `*Option`, `*View`).
 - **No** se permiten tipos `*CreatePayload` / `*UpdatePayload` que recorten el modelo canónico. Para crear o actualizar se usa la entidad completa (ver §4.1.1). Si el endpoint exige menos campos, eso lo resuelve la capa de persistencia con un `Pick` local **al momento de la query**, no con un tipo paralelo en el dominio.
 - Si el derivado deja de usar el tipo base canónico, es señal de que el modelo canónico está mal diseñado: corregir el modelo, no abandonar la regla.
+
+### 4.1.3 Resolución de Conflictos Offline (Optimistic Concurrency Control)
+
+En un sistema offline-first (PowerSync + SQLite), dos usuarios pueden editar el mismo registro mientras uno o ambos están sin conexión. Sin un mecanismo explícito, el último en reconectar sobreescribe silenciosamente los cambios del otro. `AuditBase` incluye el campo `version: number` para detectar y exponer estos conflictos.
+
+#### Cómo funciona
+
+1. **El cliente lee** un registro con `version = N`.
+2. **El usuario edita** offline. El objeto en `useState` sigue teniendo `version = N`.
+3. **Al guardar**, el cliente hace `UPDATE ... WHERE id = $id AND version = N`.
+4. **Si otro usuario ya guardó antes**, el registro en Supabase tiene `version = N+1`. La condición `AND version = N` no coincide → la query retorna **0 filas** → conflicto detectado.
+5. **Si no hay conflicto**, el trigger `set_updated_at` incrementa `version` a `N+1`. El cliente actualiza su estado con el objeto retornado (que ya tiene `version = N+1`).
+6. **PowerSync** sincroniza la `version` actualizada al resto de clientes como cualquier otro campo.
+
+#### Trigger en Postgres (implementado en `01_security_engine.sql`)
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    NEW.updated_at := NOW();
+    NEW.version    := COALESCE(OLD.version, 0) + 1;  -- OCC
+    RETURN NEW;
+END;
+$$;
+```
+
+El trigger es la fuente de verdad. El cliente **nunca** incrementa `version` manualmente; solo la lee y la usa como condición de escritura.
+
+#### Patrón de escritura (INSERT vs UPDATE)
+
+```ts
+// INSERT (registro nuevo, version = 0)
+await supabase.from('contratos').insert(toPersist).select().single();
+// El trigger NO se dispara en INSERT → version sigue en 0 hasta el primer UPDATE.
+
+// UPDATE con optimistic lock
+const { data } = await supabase
+  .from('contratos')
+  .update(toPersist)
+  .eq('id', toPersist.id)
+  .eq('version', toPersist.version)  // lock
+  .select()
+  .single();
+
+if (!data) {
+  // Conflicto: version ya no coincide
+  // 1. Recargar el registro más reciente desde Supabase
+  // 2. Mostrar aviso al usuario con opción de "sobrescribir" o "descartar"
+}
+// Si data existe → contiene version incrementada por el trigger
+setEntidad(data as Entidad);
+```
+
+#### Estrategia de resolución en el cliente
+
+Esta plantilla usa **"notificar y dejar decidir al usuario"** como estrategia por defecto:
+
+| Escenario | Acción recomendada |
+| --- | --- |
+| Conflicto en campo crítico (monto, estado) | Recargar + modal con diff lado a lado |
+| Conflicto en campo secundario (notas) | Recargar + aviso tipo toast, mantener cambio local como sugerencia |
+| Entidad append-only (mensajes, logs) | No aplica OCC — siempre INSERT, nunca UPDATE del mismo registro |
+
+**Nota sobre PowerSync offline:** PowerSync encola las escrituras cuando no hay red. Cuando reconecta, las envía en orden. El OCC sigue aplicando: si el registro remoto cambió mientras la escritura estaba en cola, el error de conflicto se propaga al hook y debe manejarse igual.
+
+#### Inicialización obligatoria en `createEmpty`
+
+```ts
+export function createEmptyEntidad(userId: string): Entidad {
+  return {
+    // …AuditBase
+    version: 0,  // SIEMPRE 0 para registros nuevos
+    // …campos de negocio
+  };
+}
+```
 
 ### 4.2 Flujo de Datos Híbrido (Implementado)
 

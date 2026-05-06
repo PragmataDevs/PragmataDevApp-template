@@ -15,12 +15,21 @@ export interface AuditBase {
   updated_at: string; // ISO Timestamp
   created_by?: UUID | null; // ID del usuario que creó el registro
   updated_by?: UUID | null;
-  
+
+  /**
+   * Optimistic Concurrency Control (OCC).
+   * Incrementado por el trigger `set_updated_at` en cada UPDATE.
+   * El cliente lo incluye en .eq('version', current) al escribir:
+   * si la query retorna 0 filas, otro usuario actualizó antes → conflicto.
+   * Inicializar en 0 al crear (`createEmpty`). El servidor lo mueve a 1 en el primer UPDATE.
+   */
+  version: number;
+
   // Status de Auditoría (Existencia del dato)
   // active = Visible
   // deleted = Borrado Lógico (Papelera)
   status: AuditStatus;
-  
+
   deleted_at?: string | null; // Fecha opcional de cuando se marcó como deleted
 }
 
