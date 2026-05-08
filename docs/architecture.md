@@ -88,7 +88,10 @@ Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
   │   │   ├── components/         # RouteGuard (Protección de rutas)
   │   │   ├── hooks/              # useAuth, usePermission
   │   │   └── providers/          # AuthProvider (Context global)
-  │   ├── projects/               # Gestión de proyectos (CRUD, miembros, selector)
+  │   ├── entities/               # Gestión de entidades (CRUD, miembros, EntitySelector)
+  │   │   ├── hooks/useEntities.ts
+  │   │   └── components/EntitySelector.tsx
+  │   ├── tasks/                  # Kanban (Workspace module)
   │   ├── roles/                  # Gestión de roles y permisos
   │   ├── users/                  # Gestión de usuarios y asignaciones
   │   ├── settings/               # Componentes compartidos de configuración
@@ -110,12 +113,117 @@ Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
   │   ├── auth/                   # Login, callback, reset password
   │   ├── dashboard/              # Dashboard global
   │   ├── profile/                # Perfil de usuario
-  │   └── settings/               # Roles, Usuarios, Proyectos
+  │   ├── settings/               # Roles, Usuarios, Entidades
+  │   └── workspace/              # Páginas del Workspace (Tasks, Costos, Contratos…)
   │
   └── types/                      # Definiciones de TypeScript (DB Interfaces)
       ├── core/base.ts            # AuditBase — la raíz de todo modelo
+      ├── entities/entity.ts      # Entity (canon). VITE_ENTITY_LABEL define el label en UI
       └── <dominio>/              # Un archivo por entidad de negocio
 ```
+
+---
+
+## 2b. Navegación y Layouts
+
+### Estructura Visual Canónica
+
+```
+┌─ Navbar (Header) ──────────────────────────────────────────┐
+│  [≡ Mobile]  [EntitySelector¹]      [Chat][🔔][👤 Perfil] │
+└────────────────────────────────────────────────────────────┘
+┌─ Sidebar ──────┐  ┌─ Content Area ─────────────────────────┐
+│ 🏠 Dashboard   │  │                                         │
+│ 👤 Mi Perfil   │  │   <Outlet />  (page content)            │
+│ ────────────── │  │                                         │
+│ ⚙ Configuración│  └─────────────────────────────────────────┘
+│   Roles        │
+│   Usuarios     │
+│   Entidades    │
+│ ────────────── │
+│ ▼ Workspace²   │
+│   Resumen      │
+│   Tareas       │
+│   Costos       │
+│   Contratos    │
+└────────────────┘
+
+¹ EntitySelector: visible en navbar cuando VITE_ENABLE_MULTI_ENTITY=true
+² Workspace: se despliega en sidebar cuando hay una entity activa (/workspace/:entityId/*)
+```
+
+### Orden del Sidebar (FIJO e INMUTABLE)
+
+1. Rutas globales sin grupo → Dashboard, Mi Perfil
+2. `────` separador
+3. **Configuración** (grupo `settings`) → Roles, Usuarios, Entidades
+4. `────` separador
+5. **Workspace** (sección dinámica) → rutas del contexto de Entity activo
+
+> ❌ **Prohibido** poner Workspace antes de Configuración.
+> ❌ **Prohibido** mover el EntitySelector al sidebar.
+
+### Layouts
+
+| Layout | Archivo | Propósito |
+|---|---|---|
+| `AppLayout` | `components/layout/AppLayout.tsx` | Shell universal (Sidebar + Header + Outlet). Envuelve **todas** las rutas autenticadas, incluyendo workspace. |
+| `WorkspaceLayout` | `components/layout/WorkspaceLayout.tsx` | Solo renderiza `<Outlet />`. Provee contexto de Entity. **Sin sidebar propio.** |
+| `PublicLayout` | `components/layout/PublicLayout.tsx` | Rutas sin autenticación (login, landing). |
+
+### Árbol de Rutas
+
+```
+/ (PublicLayout)
+  /login, /auth/callback, /auth/reset-password
+
+/ (AppLayout — TODAS las rutas autenticadas)
+  /dashboard
+  /profile
+  /settings/roles
+  /settings/usuarios
+  /settings/entities
+
+  /workspace/:entityId  (WorkspaceLayout — Outlet only)
+    /dashboard
+    /tasks
+    /costos
+    /contracts
+```
+
+### Entity vs "Proyecto" — Terminología
+
+| Nivel | Nombre canónico | Ejemplo de label por cliente |
+|---|---|---|
+| Código / DB | `Entity` / `entities` | — (no cambia) |
+| URL params | `:entityId` | — (no cambia) |
+| UI / Frontend | `VITE_ENTITY_LABEL` | `"Proyecto"`, `"Obra"`, `"Cliente"`, `"Caso"` |
+
+### EntitySelector — Reglas de Visibilidad
+
+El `EntitySelector` vive en el **Navbar (Header)**, no en el sidebar.  
+Se renderiza **únicamente** cuando se cumplen las dos condiciones simultáneamente:
+
+1. `VITE_ENABLE_MULTI_ENTITY=true`
+2. La ruta activa está dentro de `/workspace/:entityId/*`
+
+En cualquier otra ruta (Dashboard, Configuración, Perfil) el selector **no aparece**.
+
+```tsx
+// Implementación canónica en Header.tsx
+const isInWorkspace = !!useMatch('/workspace/:entityId/*');
+{MULTI_ENTITY_ENABLED && isInWorkspace && <EntitySelector />}
+```
+
+> ❌ **Prohibido** mostrar el EntitySelector fuera de rutas `/workspace/*`.  
+> ❌ **Prohibido** mover el EntitySelector al sidebar.
+
+### Feature Flags de Navegación
+
+| Variable | Default | Efecto |
+|---|---|---|
+| `VITE_ENTITY_LABEL` | `"Entidad"` | Label visible en UI para el concepto de Entity |
+| `VITE_ENABLE_MULTI_ENTITY` | `true` | Habilita el EntitySelector (solo visible en rutas `/workspace/*`) |
 
 ### Pilar Público (`/packages/web`) — Astro
 

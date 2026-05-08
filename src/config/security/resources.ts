@@ -48,56 +48,63 @@ export const APP_RESOURCES: ResourceDefinition[] = [
         default_actions: ['read', 'create', 'update', 'delete']
     },
     {
-        code: 'page_settings_proyectos',
-        name: 'Gestión de Proyectos',
-        description: 'Crear y administrar proyectos',
+        code: 'page_settings_entities',
+        name: 'Gestión de Entidades',
+        description: 'Crear y administrar entidades (proyectos, obras, clientes, etc.)',
         category: 'Settings',
         type: 'page',
         default_actions: ['read', 'create', 'update', 'delete']
     },
 
     // =================================================================
-    // 2. MODULO: PROYECTO (Contexto de proyecto)
+    // 2. MODULO: WORKSPACE (Contexto de Entity)
     // =================================================================
     {
-        code: 'page_project_dashboard',
-        name: 'Resumen del Proyecto',
-        category: 'Project',
+        code: 'page_workspace_dashboard',
+        name: 'Resumen de Workspace',
+        category: 'Workspace',
         type: 'page',
         default_actions: ['read']
     },
     {
-        code: 'page_project_costs',
-        name: 'Costos del Proyecto',
-        category: 'Project',
-        type: 'page',
-        default_actions: ['read', 'create', 'update']
-    },
-    {
-        code: 'page_project_costs_budget',
-        name: 'Presupuesto',
-        category: 'Project',
-        type: 'page',
-        default_actions: ['read', 'create', 'update']
-    },
-    {
-        code: 'page_project_costs_invoices',
-        name: 'Facturas',
-        category: 'Project',
-        type: 'page',
-        default_actions: ['read', 'create', 'update']
-    },
-    {
-        code: 'page_contracts',
-        name: 'Contratos',
-        category: 'Project',
+        code: 'page_workspace_tasks',
+        name: 'Tareas (Kanban)',
+        category: 'Workspace',
         type: 'page',
         default_actions: ['read', 'create', 'update', 'delete']
     },
     {
-        code: 'page_project_config',
-        name: 'Configuración del Proyecto',
-        category: 'Project',
+        code: 'page_workspace_costs',
+        name: 'Costos',
+        category: 'Workspace',
+        type: 'page',
+        default_actions: ['read', 'create', 'update']
+    },
+    {
+        code: 'page_workspace_costs_budget',
+        name: 'Presupuesto',
+        category: 'Workspace',
+        type: 'page',
+        default_actions: ['read', 'create', 'update']
+    },
+    {
+        code: 'page_workspace_costs_invoices',
+        name: 'Facturas',
+        category: 'Workspace',
+        type: 'page',
+        default_actions: ['read', 'create', 'update']
+    },
+    {
+        code: 'page_workspace_contracts',
+        name: 'Contratos',
+        category: 'Workspace',
+        type: 'page',
+        default_actions: ['read', 'create', 'update', 'delete']
+    },
+    {
+        code: 'page_workspace_config',
+        name: 'Configuración del Workspace',
+        category: 'Workspace',
         type: 'page',
         default_actions: ['read', 'update']
     },
@@ -106,14 +113,14 @@ export const APP_RESOURCES: ResourceDefinition[] = [
     // 5. ACCIONES SENSIBLES
     // =================================================================
     {
-        code: 'action_project_archive',
-        name: 'Archivar Proyecto',
+        code: 'action_entity_archive',
+        name: 'Archivar Entidad',
         category: 'Actions',
         type: 'action',
-        default_actions: ['execute'] 
+        default_actions: ['execute']
     },
     {
-        code: 'btn_export_project_report',
+        code: 'btn_export_entity_report',
         name: 'Exportar Excel/PDF',
         category: 'Actions',
         type: 'action',

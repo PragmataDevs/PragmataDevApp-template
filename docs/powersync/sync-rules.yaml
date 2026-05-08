@@ -61,18 +61,18 @@ bucket_definitions:
       - SELECT * FROM teams WHERE id = bucket.id
 
   # ============================================================================
-  # BUCKET 2: Proyectos autorizados
+  # BUCKET 2: Workspace (Entities autorizadas)
   # ============================================================================
-  projects:
-    # Para cada proyecto al que tiene acceso el usuario (PowerSync requiere columna "id")
-    parameters: SELECT project_id as id FROM sys_project_access WHERE user_id = token_parameters.user_id
+  workspace:
+    # Para cada entity a la que tiene acceso el usuario
+    parameters: SELECT entity_id as id FROM sys_entity_access WHERE user_id = token_parameters.user_id
     
     data:
-      # El proyecto mismo
-      - SELECT * FROM projects WHERE id = bucket.id
+      # La entity misma
+      - SELECT * FROM entities WHERE id = bucket.id
       
-      # Accesos al proyecto (para ver colaboradores offline)
-      - SELECT * FROM sys_project_access WHERE project_id = bucket.id
+      # Accesos a la entity (para ver colaboradores offline)
+      - SELECT * FROM sys_entity_access WHERE entity_id = bucket.id
 
   # ============================================================================
   # BUCKET 3: Recursos del sistema (Catálogo Global)
@@ -98,3 +98,19 @@ bucket_definitions:
       
       # Definiciones del rol (permisos que incluye)
       - SELECT * FROM sys_role_definitions WHERE role_id = bucket.id
+
+  # ============================================================================
+  # BUCKET 5: Tareas (Kanban por proyecto)
+  # Una entrada por proyecto al que el usuario tiene acceso.
+  # ============================================================================
+  tasks:
+    parameters: SELECT entity_id AS id FROM sys_entity_access WHERE user_id = token_parameters.user_id
+
+    data:
+      # Tareas activas de la entity
+      - SELECT * FROM tasks WHERE entity_id = bucket.id AND status = 'active'
+
+      # Comentarios de las tareas de la entity
+      - SELECT tc.* FROM task_comments tc
+        INNER JOIN tasks t ON t.id = tc.task_id
+        WHERE t.entity_id = bucket.id AND tc.status = 'active'

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { ChevronDown, Settings } from 'lucide-react';
+import { NavLink, useLocation, useMatch } from 'react-router-dom';
+import { ChevronDown, Settings, Layers } from 'lucide-react';
 import PragmataIcon from '@/assets/pragmata-devs-icon.png';
-import { APP_ROUTES } from '@/app/routes.config';
+import { APP_ROUTES, WORKSPACE_ROUTES } from '@/app/routes.config';
 import { usePermission } from '@/features/auth/hooks/usePermission';
+import { ENTITY_LABEL } from '@/types/entities/entity';
 import type { AppRoute } from '@/app/navigation';
 import type { ComponentType } from 'react';
 
@@ -25,6 +26,13 @@ interface SidebarProps {
 export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: SidebarProps) {
   const { hasPermission } = usePermission();
   const location = useLocation();
+  const workspaceMatch = useMatch('/workspace/:entityId/*');
+  const activeEntityId = workspaceMatch?.params?.entityId;
+  const isInWorkspace = !!activeEntityId;
+
+  const [isWorkspaceExpanded, setWorkspaceExpanded] = useState(() =>
+    location.pathname.startsWith('/workspace')
+  );
 
   // All visible app routes
   const sidebarRoutes = APP_ROUTES.filter(
@@ -200,11 +208,86 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
 
         {/* Navigation */}
         <nav className={`flex-1 overflow-y-auto space-y-1 ${isCollapsed ? 'p-2' : 'p-4'}`}>
-          {/* Ungrouped routes */}
+          {/* Ungrouped routes (Dashboard, Mi Perfil) */}
           {ungroupedRoutes.map((route) => renderNavLink(route))}
 
-          {/* Grouped routes */}
+          {/* Separator */}
+          {!isCollapsed && (
+            <div className="py-2">
+              <div className="h-px bg-[color:var(--pragmata-border)] mx-3" />
+            </div>
+          )}
+
+          {/* ─── CONFIGURACIÓN (grouped routes — above Workspace) ─── */}
           {Object.entries(groups).map(([key, routes]) => renderGroup(key, routes))}
+
+          {/* Separator */}
+          {!isCollapsed && (
+            <div className="py-2">
+              <div className="h-px bg-[color:var(--pragmata-border)] mx-3" />
+            </div>
+          )}
+
+          {/* ─── WORKSPACE section ─────────────────────────── */}
+          <div>
+            {!isCollapsed && (
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--pragmata-muted-2)]">
+                Workspace
+              </p>
+            )}
+
+            <button
+              onClick={() => setWorkspaceExpanded(p => !p)}
+              className={`
+                w-full flex items-center text-sm font-medium rounded-pragmata transition-all duration-200
+                ${isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2.5'}
+                ${isInWorkspace
+                  ? 'text-[color:var(--pragmata-accent)]'
+                  : 'text-[color:var(--pragmata-muted)] hover:bg-[color:var(--pragmata-surface-2)] hover:text-[color:var(--pragmata-fg)]'}
+              `}
+              title={isCollapsed ? ENTITY_LABEL : undefined}
+            >
+              <div className={isCollapsed ? '' : 'mr-3'}>
+                <Layers className={`w-5 h-5 ${isInWorkspace ? 'text-[color:var(--pragmata-accent)]' : 'text-[color:var(--pragmata-muted)]'}`} />
+              </div>
+              {!isCollapsed && (
+                <>
+                  <span className="truncate flex-1 text-left">{ENTITY_LABEL}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isWorkspaceExpanded ? '' : '-rotate-90'}`} />
+                </>
+              )}
+            </button>
+
+            {/* Workspace routes — only shown when an entity is active */}
+            {!isCollapsed && activeEntityId && (
+              <div className={`overflow-hidden transition-all duration-200 ${isWorkspaceExpanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="mt-1 space-y-1">
+                  {WORKSPACE_ROUTES
+                    .filter(r => !r.hideInMenu && (!r.resourceCode || hasPermission(r.resourceCode)))
+                    .map(route => {
+                      const Icon = route.icon;
+                      const to = `/workspace/${activeEntityId}/${route.path}`;
+                      return (
+                        <NavLink
+                          key={route.path}
+                          to={to}
+                          onClick={onClose}
+                          className={({ isActive }) => `
+                            flex items-center text-sm font-medium rounded-pragmata transition-all duration-200 pl-8 pr-3 py-2
+                            ${isActive
+                              ? 'bg-[color:var(--pragmata-accent-soft)] text-[color:var(--pragmata-accent)] shadow-sm ring-1 ring-[color:var(--pragmata-border)]'
+                              : 'text-[color:var(--pragmata-muted)] hover:bg-[color:var(--pragmata-surface-2)] hover:text-[color:var(--pragmata-fg)]'}
+                          `}
+                        >
+                          {Icon && <Icon className="w-4 h-4 mr-2.5 flex-shrink-0" />}
+                          <span className="truncate">{route.name}</span>
+                        </NavLink>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Bottom Area */}

@@ -64,10 +64,10 @@ export const AppSchema = new Schema([
   }),
 
   // ============================================================================
-  // BUCKET: projects (Proyectos autorizados)
+  // BUCKET: workspace (Entities autorizadas — "Proyecto", "Obra", etc.)
   // ============================================================================
   new Table({
-    name: 'projects',
+    name: 'entities',
     columns: [
       new Column({ name: 'id', type: ColumnType.TEXT }),
       new Column({ name: 'team_id', type: ColumnType.TEXT }),
@@ -79,7 +79,7 @@ export const AppSchema = new Schema([
       new Column({ name: 'start_date', type: ColumnType.TEXT }),
       new Column({ name: 'end_date', type: ColumnType.TEXT }),
       new Column({ name: 'metadata', type: ColumnType.TEXT }),
-      new Column({ name: 'project_status', type: ColumnType.TEXT }),
+      new Column({ name: 'entity_status', type: ColumnType.TEXT }),
       new Column({ name: 'created_at', type: ColumnType.TEXT }),
       new Column({ name: 'updated_at', type: ColumnType.TEXT }),
       new Column({ name: 'status', type: ColumnType.TEXT }),
@@ -87,21 +87,21 @@ export const AppSchema = new Schema([
       new Column({ name: 'updated_by', type: ColumnType.TEXT }),
     ],
     indexes: [
-      Index.createAscending({ name: 'projects_team_id_idx' }, ['team_id'])
+      Index.createAscending({ name: 'entities_team_id_idx' }, ['team_id'])
     ]
   }),
 
   new Table({
-    name: 'sys_project_access',
+    name: 'sys_entity_access',
     columns: [
       new Column({ name: 'id', type: ColumnType.TEXT }),
       new Column({ name: 'user_id', type: ColumnType.TEXT }),
-      new Column({ name: 'project_id', type: ColumnType.TEXT }),
+      new Column({ name: 'entity_id', type: ColumnType.TEXT }),
       new Column({ name: 'team_id', type: ColumnType.TEXT }),
       new Column({ name: 'created_at', type: ColumnType.TEXT }),
     ],
     indexes: [
-      Index.createAscending({ name: 'sys_project_access_user_project_idx' }, ['user_id', 'project_id'])
+      Index.createAscending({ name: 'sys_entity_access_user_entity_idx' }, ['user_id', 'entity_id'])
     ]
   }),
 
@@ -248,5 +248,54 @@ export const AppSchema = new Schema([
       new Column({ name: 'user_id', type: ColumnType.TEXT }),
       new Column({ name: 'read_at', type: ColumnType.TEXT }),
     ],
+  }),
+
+  // ============================================================================
+  // BUCKET: tasks (Kanban por proyecto)
+  // ============================================================================
+  new Table({
+    name: 'tasks',
+    columns: [
+      new Column({ name: 'id', type: ColumnType.TEXT }),
+      new Column({ name: 'entity_id', type: ColumnType.TEXT }),
+      new Column({ name: 'title', type: ColumnType.TEXT }),
+      new Column({ name: 'description', type: ColumnType.TEXT }),
+      new Column({ name: 'task_status', type: ColumnType.TEXT }),
+      new Column({ name: 'column_order', type: ColumnType.REAL }),
+      new Column({ name: 'priority', type: ColumnType.TEXT }),
+      new Column({ name: 'assigned_to', type: ColumnType.TEXT }),
+      new Column({ name: 'due_date', type: ColumnType.TEXT }),
+      new Column({ name: 'tags', type: ColumnType.TEXT }),       // JSON stringified
+      new Column({ name: 'metadata', type: ColumnType.TEXT }),   // JSON stringified
+      new Column({ name: 'created_at', type: ColumnType.TEXT }),
+      new Column({ name: 'updated_at', type: ColumnType.TEXT }),
+      new Column({ name: 'created_by', type: ColumnType.TEXT }),
+      new Column({ name: 'updated_by', type: ColumnType.TEXT }),
+      new Column({ name: 'version', type: ColumnType.INTEGER }),
+      new Column({ name: 'status', type: ColumnType.TEXT }),
+      new Column({ name: 'deleted_at', type: ColumnType.TEXT }),
+    ],
+    indexes: [
+      Index.createAscending({ name: 'tasks_entity_status_idx' }, ['entity_id', 'task_status']),
+    ]
+  }),
+
+  new Table({
+    name: 'task_comments',
+    columns: [
+      new Column({ name: 'id', type: ColumnType.TEXT }),
+      new Column({ name: 'task_id', type: ColumnType.TEXT }),
+      new Column({ name: 'body', type: ColumnType.TEXT }),
+      new Column({ name: 'created_at', type: ColumnType.TEXT }),
+      new Column({ name: 'updated_at', type: ColumnType.TEXT }),
+      new Column({ name: 'created_by', type: ColumnType.TEXT }),
+      new Column({ name: 'updated_by', type: ColumnType.TEXT }),
+      new Column({ name: 'version', type: ColumnType.INTEGER }),
+      new Column({ name: 'status', type: ColumnType.TEXT }),
+      new Column({ name: 'deleted_at', type: ColumnType.TEXT }),
+    ],
+    indexes: [
+      Index.createAscending({ name: 'task_comments_task_id_idx' }, ['task_id']),
+    ]
   }),
 ]);

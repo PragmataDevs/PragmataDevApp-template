@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useMatch } from 'react-router-dom';
 import { Menu, ChevronDown, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { resolveSignedUrl } from '@/lib/storage';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { ChatIcon } from '@/features/chat/components/ChatPanel';
-import ProjectSelector from '@/features/projects/components/ProjectSelector';
+import EntitySelector from '@/features/entities/components/EntitySelector';
+import { MULTI_ENTITY_ENABLED } from '@/types/entities/entity';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -14,6 +15,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { user, profile } = useAuth();
+  const isInWorkspace = !!useMatch('/workspace/:entityId/*');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [headerAvatarUrl, setHeaderAvatarUrl] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   return (
     <header className="h-16 bg-[color:var(--pragmata-surface)] border-b border-[color:var(--pragmata-border)] flex items-center justify-between px-4 md:px-6 z-20 sticky top-0">
       
-      {/* Left: Mobile Menu & Project Selector */}
+      {/* Left: Mobile Menu + EntitySelector */}
       <div className="flex items-center gap-4">
         <button 
           onClick={onMenuClick}
@@ -63,10 +65,12 @@ export function Header({ onMenuClick }: HeaderProps) {
           <Menu className="w-6 h-6" />
         </button>
 
-        {/* Project Selector */}
-        <div className="hidden md:flex items-center">
-            <ProjectSelector />
-        </div>
+        {/* EntitySelector — only on workspace routes + multi-entity enabled */}
+        {MULTI_ENTITY_ENABLED && isInWorkspace && (
+          <div className="hidden sm:flex items-center">
+            <EntitySelector />
+          </div>
+        )}
       </div>
 
       {/* Right: Actions & Profile */}

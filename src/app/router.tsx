@@ -1,10 +1,10 @@
 import { createBrowserRouter, type RouteObject } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ProjectLayout } from "@/components/layout/ProjectLayout";
+import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { RouteGuard } from "@/features/auth/components/RouteGuard";
 import { RouteLoader } from "@/components/layout/RouteLoader";
-import { APP_ROUTES, PROJECT_ROUTES } from "./routes.config";
+import { APP_ROUTES, WORKSPACE_ROUTES } from "./routes.config";
 import type { AppRoute } from "./navigation";
 import { Suspense } from "react";
 
@@ -58,10 +58,9 @@ function buildGuardedRoute(route: AppRoute): RouteObject {
 /**
  * Filtramos las rutas por layout para agruparlas bajo su Layout Component correspondiente.
  */
-const publicRoutes = APP_ROUTES.filter(r => r.layout === 'public');
-const appRoutes = APP_ROUTES.filter(r => r.layout === 'app');
-// PROJECT_ROUTES se asumen todas bajo 'project' layout
-const projectRoutes = PROJECT_ROUTES; 
+const publicRoutes   = APP_ROUTES.filter(r => r.layout === 'public');
+const appRoutes      = APP_ROUTES.filter(r => r.layout === 'app');
+const workspaceRoutes = WORKSPACE_ROUTES; 
 
 /**
  * Definición de Rutas de la Aplicación (The Onion Architecture)
@@ -74,19 +73,18 @@ export const router = createBrowserRouter([
     children: mapRoutes(publicRoutes),
   },
 
-  // 2. Rutas de Aplicación (Global Dashboard, Profile)
-  // Protegidas por Autenticación (asumida en el layout o wrapper superior)
-  // y RBAC específico por ruta.
+  // 2. Rutas de Aplicación + Workspace (comparten AppLayout → mismo sidebar)
   {
     element: <AppLayout />,
-    children: appRoutes.map(buildGuardedRoute),
-  },
-
-  // 3. Rutas de Proyecto (Contexto Específico: /projects/:projectId/...)
-  {
-    path: '/projects/:projectId',
-    element: <ProjectLayout />,
-    children: projectRoutes.map(buildGuardedRoute),
+    children: [
+      ...appRoutes.map(buildGuardedRoute),
+      // 3. Workspace (contexto de Entity: /workspace/:entityId/*)
+      {
+        path: '/workspace/:entityId',
+        element: <WorkspaceLayout />,
+        children: workspaceRoutes.map(buildGuardedRoute),
+      },
+    ],
   },
 
   // Fallback 404 (Opcional, pero recomendado)

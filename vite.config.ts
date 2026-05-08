@@ -37,6 +37,20 @@ export default defineConfig({
             return "powersync";
           }
 
+          // Drag & drop (Kanban)
+          if (id.includes("/@hello-pangea/dnd/")) {
+            return "dnd";
+          }
+
+          // Form validation
+          if (
+            id.includes("/zod/") ||
+            id.includes("/react-hook-form/") ||
+            id.includes("/@hookform/")
+          ) {
+            return "forms";
+          }
+
           // Lucide icons: imported in layout components (always loaded),
           // isolated here so changes don't bust the react-vendor cache.
           if (id.includes("/lucide-react/")) {

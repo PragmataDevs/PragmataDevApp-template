@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -11,6 +12,7 @@ import {
   AlertCircle,
   MapPin,
   CalendarDays,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import {
@@ -288,9 +290,13 @@ export default function ProyectosPage() {
                             <FolderKanban className="h-4 w-4 text-[color:var(--pragmata-accent)]" />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium text-[color:var(--pragmata-fg)] truncate">
+                            <Link
+                              to={`/workspace/${project.id}/dashboard`}
+                              className="font-medium text-[color:var(--pragmata-fg)] hover:text-[color:var(--pragmata-accent)] truncate flex items-center gap-1 group/link"
+                            >
                               {project.name}
-                            </p>
+                              <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity flex-shrink-0" />
+                            </Link>
                             {project.code && (
                               <p className="text-xs text-[color:var(--pragmata-muted)] font-mono">
                                 {project.code}
@@ -384,6 +390,15 @@ export default function ProyectosPage() {
                                     left: dropdownPosition?.left ?? 0,
                                   }}
                                 >
+                                  <Link
+                                    to={`/workspace/${project.id}/dashboard`}
+                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[color:var(--pragmata-accent)] hover:bg-[color:var(--pragmata-accent-soft)] transition-colors"
+                                    onClick={() => { setActiveDropdown(null); setDropdownPosition(null); }}
+                                  >
+                                    <ExternalLink className="h-4 w-4 shrink-0" />
+                                    <span>Abrir proyecto</span>
+                                  </Link>
+                                  <div className="h-px bg-[color:var(--pragmata-border)] mx-2 my-1" />
                                   <button
                                     type="button"
                                     onClick={() => handleViewMembers(project)}

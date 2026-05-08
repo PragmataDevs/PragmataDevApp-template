@@ -1,37 +1,44 @@
 import { lazy } from 'react';
-import { 
-  Settings, 
-  Users, 
-  FileText, 
+import {
+  Settings,
+  Users,
+  FileText,
   Home,
   Shield,
-  FolderKanban,
+  Layers,
   LayoutDashboard,
   Wallet,
   Calculator,
-  ReceiptText
+  ReceiptText,
+  CheckSquare,
 } from 'lucide-react';
 import type { AppRoute } from '@/app/navigation';
 
 // --- Lazy Loading de Páginas ---
-const LandingPage = lazy(() => import('@/pages/LandingPage'));
-const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
-const CallbackPage = lazy(() => import('@/pages/auth/CallbackPage'));
-const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'));
+const LandingPage           = lazy(() => import('@/pages/LandingPage'));
+const LoginPage             = lazy(() => import('@/pages/auth/LoginPage'));
+const CallbackPage          = lazy(() => import('@/pages/auth/CallbackPage'));
+const ResetPasswordPage     = lazy(() => import('@/pages/auth/ResetPasswordPage'));
 
-const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage')); 
-const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'));
+const DashboardPage         = lazy(() => import('@/pages/dashboard/DashboardPage'));
+const ProfilePage           = lazy(() => import('@/pages/profile/ProfilePage'));
 
-// Settings Pages (cada una es independiente, agrupadas por 'settings' en el sidebar)
-const RolesPage = lazy(() => import('@/pages/settings/RolesPage'));
-const UsuariosPage = lazy(() => import('@/pages/settings/UsuariosPage'));
-const ProyectosPage = lazy(() => import('@/pages/settings/ProyectosPage'));
+// Settings Pages
+const RolesPage             = lazy(() => import('@/pages/settings/RolesPage'));
+const UsuariosPage          = lazy(() => import('@/pages/settings/UsuariosPage'));
+const EntitiesPage          = lazy(() => import('@/pages/settings/EntitiesPage'));
 
-// Reutilizamos el Dashboard como placeholder para las secciones WIP
-const DashboardPlaceholder = DashboardPage;
+// Workspace Pages
+const TasksPage             = lazy(() => import('@/pages/workspace/TasksPage'));
+
+const DashboardPlaceholder  = DashboardPage;
+
+// =============================================================================
+// APP ROUTES (Global Layout: Dashboard, Profile, Settings)
+// =============================================================================
 
 export const APP_ROUTES: AppRoute[] = [
-  // --- Rutas Públicas (Sin Resource Code) ---
+  // --- Public (no resource code) ---
   {
     path: '/',
     name: 'Landing',
@@ -61,15 +68,13 @@ export const APP_ROUTES: AppRoute[] = [
     hideInMenu: true,
   },
 
-  // --- Nivel 1: App Global (Requiere Resource Code) ---
+  // --- App global ---
   {
     path: '/dashboard',
     name: 'Inicio',
     icon: Home,
     element: DashboardPage,
     layout: 'app',
-    // Sin resourceCode: todos pueden entrar. Widgets internos controlan visibilidad.
-    hideProjectSelector: false,
     hideInMenu: false,
   },
   {
@@ -78,11 +83,10 @@ export const APP_ROUTES: AppRoute[] = [
     icon: Users,
     element: ProfilePage,
     layout: 'app',
-    // Sin resourceCode: siempre accesible (tu propio perfil).
-    hideProjectSelector: true,
     hideInMenu: false,
   },
-  // --- Configuración (Grupo expandible en sidebar) ---
+
+  // --- Settings (group) ---
   {
     path: '/settings/roles',
     name: 'Roles',
@@ -104,25 +108,38 @@ export const APP_ROUTES: AppRoute[] = [
     group: 'settings',
   },
   {
-    path: '/settings/proyectos',
-    name: 'Proyectos',
-    icon: FolderKanban,
-    element: ProyectosPage,
+    path: '/settings/entities',
+    name: 'Entidades',
+    icon: Layers,
+    element: EntitiesPage,
     layout: 'app',
-    resourceCode: 'page_settings_proyectos',
+    resourceCode: 'page_settings_entities',
     hideProjectSelector: true,
     group: 'settings',
   },
 ];
 
-export const PROJECT_ROUTES: AppRoute[] = [
+// =============================================================================
+// WORKSPACE ROUTES (WorkspaceLayout: /workspace/:entityId/*)
+// =============================================================================
+
+export const WORKSPACE_ROUTES: AppRoute[] = [
   {
-    path: 'dashboard', // /projects/:id/dashboard
+    path: 'dashboard',
     name: 'Resumen',
     icon: LayoutDashboard,
     element: DashboardPlaceholder,
-    layout: 'project',
-    resourceCode: 'page_project_dashboard', // <--- NUEVO
+    layout: 'workspace',
+    resourceCode: 'page_workspace_dashboard',
+    hideInMenu: false,
+  },
+  {
+    path: 'tasks',
+    name: 'Tareas',
+    icon: CheckSquare,
+    element: TasksPage,
+    layout: 'workspace',
+    resourceCode: 'page_workspace_tasks',
     hideInMenu: false,
   },
   {
@@ -130,8 +147,8 @@ export const PROJECT_ROUTES: AppRoute[] = [
     name: 'Costos',
     icon: Wallet,
     element: DashboardPlaceholder,
-    layout: 'project',
-    resourceCode: 'page_project_costs',
+    layout: 'workspace',
+    resourceCode: 'page_workspace_costs',
     hideInMenu: false,
     children: [
       {
@@ -139,8 +156,8 @@ export const PROJECT_ROUTES: AppRoute[] = [
         name: 'Presupuesto',
         icon: Calculator,
         element: DashboardPlaceholder,
-        layout: 'project',
-        resourceCode: 'page_project_costs_budget',
+        layout: 'workspace',
+        resourceCode: 'page_workspace_costs_budget',
         hideInMenu: false,
       },
       {
@@ -148,19 +165,19 @@ export const PROJECT_ROUTES: AppRoute[] = [
         name: 'Facturas',
         icon: ReceiptText,
         element: DashboardPlaceholder,
-        layout: 'project',
-        resourceCode: 'page_project_costs_invoices',
+        layout: 'workspace',
+        resourceCode: 'page_workspace_costs_invoices',
         hideInMenu: false,
-      }
-    ]
+      },
+    ],
   },
   {
     path: 'contracts',
     name: 'Contratos',
     icon: FileText,
     element: DashboardPlaceholder,
-    layout: 'project',
-    resourceCode: 'page_contracts',
+    layout: 'workspace',
+    resourceCode: 'page_workspace_contracts',
     hideInMenu: false,
   },
   {
@@ -168,8 +185,11 @@ export const PROJECT_ROUTES: AppRoute[] = [
     name: 'Configuración',
     icon: Settings,
     element: DashboardPlaceholder,
-    layout: 'project',
-    resourceCode: 'page_project_config',
+    layout: 'workspace',
+    resourceCode: 'page_workspace_config',
     hideInMenu: true,
-  }
+  },
 ];
+
+// Alias for backward compatibility during migration
+export const PROJECT_ROUTES = WORKSPACE_ROUTES;

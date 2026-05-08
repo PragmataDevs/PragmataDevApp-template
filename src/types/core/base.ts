@@ -33,7 +33,7 @@ export interface AuditBase {
   deleted_at?: string | null; // Fecha opcional de cuando se marcó como deleted
 }
 
-export type RouteLayoutType = 'public' | 'app' | 'project';
+export type RouteLayoutType = 'public' | 'app' | 'workspace' | 'project'; // 'project' kept as alias
 export type AdminLevelType = 'Admin' | 'User';
 
 // NOTA: ProjectRole y AppResource eran del sistema viejo.

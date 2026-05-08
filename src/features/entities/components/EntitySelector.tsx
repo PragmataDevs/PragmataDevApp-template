@@ -1,81 +1,80 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronsUpDown, FolderKanban, Check, Search, Plus, Loader2 } from 'lucide-react';
+import { ChevronsUpDown, Layers, Check, Search, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { PROJECT_STATUS_CONFIG } from '../hooks/useProjects';
+import { ENTITY_STATUS_CONFIG, ENTITY_LABEL } from '@/types/entities/entity';
 
-const STORAGE_KEY = 'pragmata_last_project_id';
+const STORAGE_KEY = 'pragmata_last_entity_id';
 const POWERSYNC_ENABLED = import.meta.env.VITE_ENABLE_POWERSYNC === 'true';
 
-interface ProjectOption {
-  id: string;
-  name: string;
-  code: string | null;
-  project_status: string;
+interface EntityOption {
+  id:            string;
+  name:          string;
+  code:          string | null;
+  entity_status: string;
 }
 
-export default function ProjectSelector() {
+export default function EntitySelector() {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const params = useParams<{ id?: string; projectId?: string }>();
+  const params = useParams<{ entityId?: string }>();
   const [isOpen, setIsOpen] = useState(false);
-  const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [entities, setEntities] = useState<EntityOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // ── Load projects ──────────────────────────────────────
+  // ── Load entities ──────────────────────────────────────
 
-  const fetchProjects = useCallback(async () => {
+  const fetchEntities = useCallback(async () => {
     if (!profile) return;
     setLoading(true);
     try {
       if (POWERSYNC_ENABLED) {
         const { db } = await import('@/lib/db');
-        const rows = await db.getAll<ProjectOption>(
-          `SELECT id, name, code, project_status FROM projects WHERE status = 'active' ORDER BY name ASC`,
+        const rows = await db.getAll<EntityOption>(
+          `SELECT id, name, code, entity_status FROM entities WHERE status = 'active' ORDER BY name ASC`,
         );
-        setProjects(rows || []);
+        setEntities(rows || []);
       } else {
         const { data, error } = await supabase
-          .from('projects')
-          .select('id, name, code, project_status')
+          .from('entities')
+          .select('id, name, code, entity_status')
           .eq('status', 'active')
           .order('name');
 
         if (error) throw error;
-        setProjects(data || []);
+        setEntities(data || []);
       }
     } catch (err: any) {
-      console.error('Error loading projects:', err.message);
+      console.error('Error loading entities:', err.message);
     } finally {
       setLoading(false);
     }
   }, [profile]);
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    fetchEntities();
+  }, [fetchEntities]);
 
   // ── Sync selected from URL or localStorage ────────────
 
   useEffect(() => {
-    const activeProjectId = params.projectId ?? params.id;
-    if (activeProjectId) {
-      setSelectedId(activeProjectId);
-      localStorage.setItem(STORAGE_KEY, activeProjectId);
+    if (params.entityId) {
+      setSelectedId(params.entityId);
+      localStorage.setItem(STORAGE_KEY, params.entityId);
     } else {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored && projects.some((p) => p.id === stored)) {
+      if (stored && entities.some((e) => e.id === stored)) {
         setSelectedId(stored);
-      } else if (projects.length > 0) {
-        setSelectedId(projects[0].id);
+      } else if (entities.length > 0) {
+        setSelectedId(entities[0].id);
       }
     }
-  }, [params.id, params.projectId, projects]);
+  }, [params.entityId, entities]);
 
   // ── Close on outside click ─────────────────────────────
 
@@ -90,8 +89,6 @@ export default function ProjectSelector() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ── Focus search on open ───────────────────────────────
-
   useEffect(() => {
     if (isOpen && searchRef.current) {
       setTimeout(() => searchRef.current?.focus(), 50);
@@ -100,36 +97,36 @@ export default function ProjectSelector() {
 
   // ── Handlers ───────────────────────────────────────────
 
-  const handleSelect = (project: ProjectOption) => {
-    setSelectedId(project.id);
-    localStorage.setItem(STORAGE_KEY, project.id);
+  const handleSelect = (entity: EntityOption) => {
+    setSelectedId(entity.id);
+    localStorage.setItem(STORAGE_KEY, entity.id);
     setIsOpen(false);
     setSearchTerm('');
-    navigate(`/projects/${project.id}/dashboard`);
+    navigate(`/workspace/${entity.id}/dashboard`);
   };
 
   // ── Derived ────────────────────────────────────────────
 
-  const selected = projects.find((p) => p.id === selectedId);
-  const filtered = projects.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.code?.toLowerCase().includes(searchTerm.toLowerCase())
+  const selected = entities.find((e) => e.id === selectedId);
+  const filtered = entities.filter(
+    (e) =>
+      e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      e.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Trigger button */}
+      {/* Trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 py-1.5 px-3 rounded-lg border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface-2)] hover:bg-[color:var(--pragmata-surface)] hover:border-[color:var(--pragmata-border-strong)] transition-all text-sm font-medium text-[color:var(--pragmata-fg)] min-w-[200px] justify-between group"
       >
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-5 h-5 rounded-md bg-[color:var(--pragmata-accent)] flex items-center justify-center text-[10px] text-white font-bold flex-shrink-0">
-            {selected?.name?.charAt(0).toUpperCase() || 'P'}
+            {selected?.name?.charAt(0).toUpperCase() || 'E'}
           </div>
           <span className="truncate">
-            {loading ? 'Cargando...' : selected?.name || 'Seleccionar proyecto'}
+            {loading ? 'Cargando...' : selected?.name || `Seleccionar ${ENTITY_LABEL}`}
           </span>
         </div>
         <ChevronsUpDown className="w-4 h-4 text-[color:var(--pragmata-muted-2)] group-hover:text-[color:var(--pragmata-fg)] flex-shrink-0" />
@@ -138,14 +135,13 @@ export default function ProjectSelector() {
       {/* Dropdown */}
       {isOpen && (
         <div className="absolute top-full left-0 mt-2 w-72 bg-[color:var(--pragmata-surface)] rounded-xl shadow-xl border border-[color:var(--pragmata-border)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-          {/* Search */}
           <div className="p-2 border-b border-[color:var(--pragmata-border)]">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[color:var(--pragmata-muted)]" />
               <input
                 ref={searchRef}
                 type="text"
-                placeholder="Buscar proyecto..."
+                placeholder={`Buscar ${ENTITY_LABEL.toLowerCase()}...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 bg-[color:var(--pragmata-surface-2)] border border-[color:var(--pragmata-border)] rounded-lg text-xs text-[color:var(--pragmata-fg)] placeholder:text-[color:var(--pragmata-muted)] focus:outline-none focus:ring-1 focus:ring-[color:var(--pragmata-accent)]"
@@ -153,7 +149,6 @@ export default function ProjectSelector() {
             </div>
           </div>
 
-          {/* List */}
           <div className="max-h-64 overflow-y-auto py-1">
             {loading ? (
               <div className="flex items-center justify-center py-8">
@@ -161,60 +156,48 @@ export default function ProjectSelector() {
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-6 text-xs text-[color:var(--pragmata-muted)]">
-                {searchTerm ? 'Sin resultados' : 'Sin proyectos'}
+                {searchTerm ? 'Sin resultados' : `Sin ${ENTITY_LABEL.toLowerCase()}s`}
               </div>
             ) : (
-              filtered.map((project) => {
-                const isSelected = project.id === selectedId;
-                const statusCfg = PROJECT_STATUS_CONFIG[project.project_status as keyof typeof PROJECT_STATUS_CONFIG];
+              filtered.map((entity) => {
+                const isSelected = entity.id === selectedId;
+                const statusCfg = ENTITY_STATUS_CONFIG[entity.entity_status as keyof typeof ENTITY_STATUS_CONFIG];
                 return (
                   <button
-                    key={project.id}
-                    onClick={() => handleSelect(project)}
+                    key={entity.id}
+                    onClick={() => handleSelect(entity)}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-[color:var(--pragmata-surface-2)] transition-colors ${
                       isSelected ? 'bg-[color:var(--pragmata-accent-soft)]' : ''
                     }`}
                   >
                     <div className="w-7 h-7 rounded-md bg-[color:var(--pragmata-surface-2)] border border-[color:var(--pragmata-border)] flex items-center justify-center flex-shrink-0">
-                      <FolderKanban className="h-3.5 w-3.5 text-[color:var(--pragmata-accent)]" />
+                      <Layers className="h-3.5 w-3.5 text-[color:var(--pragmata-accent)]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[color:var(--pragmata-fg)] truncate">
-                        {project.name}
-                      </p>
+                      <p className="text-sm font-medium text-[color:var(--pragmata-fg)] truncate">{entity.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        {project.code && (
-                          <span className="text-[10px] text-[color:var(--pragmata-muted)] font-mono">
-                            {project.code}
-                          </span>
+                        {entity.code && (
+                          <span className="text-[10px] text-[color:var(--pragmata-muted)] font-mono">{entity.code}</span>
                         )}
                         {statusCfg && (
-                          <span className={`text-[10px] font-medium ${statusCfg.color}`}>
-                            {statusCfg.label}
-                          </span>
+                          <span className={`text-[10px] font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
                         )}
                       </div>
                     </div>
-                    {isSelected && (
-                      <Check className="h-4 w-4 text-[color:var(--pragmata-accent)] flex-shrink-0" />
-                    )}
+                    {isSelected && <Check className="h-4 w-4 text-[color:var(--pragmata-accent)] flex-shrink-0" />}
                   </button>
                 );
               })
             )}
           </div>
 
-          {/* Footer: Manage Projects */}
           <div className="border-t border-[color:var(--pragmata-border)] p-1">
             <button
-              onClick={() => {
-                setIsOpen(false);
-                navigate('/settings/proyectos');
-              }}
+              onClick={() => { setIsOpen(false); navigate('/settings/entities'); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] rounded-lg transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
-              Gestionar proyectos
+              Gestionar {ENTITY_LABEL.toLowerCase()}s
             </button>
           </div>
         </div>

@@ -225,8 +225,9 @@ ALTER TABLE public.profiles
     ADD CONSTRAINT fk_profiles_created_by FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL,
     ADD CONSTRAINT fk_profiles_updated_by FOREIGN KEY (updated_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
 
--- 4.3 PROJECTS (Scopes)
-CREATE TABLE public.projects (
+-- 4.3 ENTITIES (Business scope — "Proyecto", "Obra", "Cliente", etc.)
+-- The UI label is configurable via VITE_ENTITY_LABEL env var.
+CREATE TABLE public.entities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     team_id UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
 
@@ -240,8 +241,8 @@ CREATE TABLE public.projects (
     end_date DATE,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
 
-    project_status TEXT NOT NULL DEFAULT 'planning'
-        CHECK (project_status IN ('planning','active','completed','paused','canceled')),
+    entity_status TEXT NOT NULL DEFAULT 'planning'
+        CHECK (entity_status IN ('planning','active','completed','paused','canceled')),
 
     -- AuditBase
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -257,12 +258,12 @@ CREATE TABLE public.projects (
 -- 5. ACCESS CONTROL LISTS (Runtime Data)
 -- ------------------------------------------------------------------------------
 
--- 5.1 PROJECT SCOPE (Whitelist)
--- POWERSYNC: Defines the "Project Bucket" contents.
-CREATE TABLE public.sys_project_access (
+-- 5.1 ENTITY SCOPE (Whitelist)
+-- POWERSYNC: Defines the "Workspace Bucket" contents.
+CREATE TABLE public.sys_entity_access (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+    entity_id UUID NOT NULL REFERENCES public.entities(id) ON DELETE CASCADE,
     team_id UUID NOT NULL REFERENCES public.teams(id),
 
     -- AuditBase
@@ -273,7 +274,7 @@ CREATE TABLE public.sys_project_access (
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','deleted')),
     deleted_at TIMESTAMPTZ,
 
-    CONSTRAINT sys_project_access_user_project_unique UNIQUE (user_id, project_id)
+    CONSTRAINT sys_entity_access_user_entity_unique UNIQUE (user_id, entity_id)
 );
 
 -- 5.2 EFFECTIVE PERMISSIONS (Cache)
@@ -547,8 +548,8 @@ BEGIN
     -- MEMBER: project whitelist + granular permissions
     IF context_project_id IS NOT NULL THEN
         IF NOT EXISTS (
-            SELECT 1 FROM public.sys_project_access
-            WHERE user_id = current_uid AND project_id = context_project_id
+            SELECT 1 FROM public.sys_entity_access
+            WHERE user_id = current_uid AND entity_id = context_project_id
         ) THEN
             RETURN FALSE;
         END IF;
@@ -575,6 +576,17 @@ AS $$
     SELECT team_id FROM public.profiles WHERE id = auth.uid();
 $$;
 
+CREATE OR REPLACE FUNCTION public.get_my_entity_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+    SELECT entity_id FROM public.sys_entity_access WHERE user_id = auth.uid();
+$$;
+
+-- Alias kept for compatibility during migration
 CREATE OR REPLACE FUNCTION public.get_my_project_ids()
 RETURNS SETOF UUID
 LANGUAGE sql
@@ -582,7 +594,7 @@ SECURITY DEFINER
 SET search_path = public
 STABLE
 AS $$
-    SELECT project_id FROM public.sys_project_access WHERE user_id = auth.uid();
+    SELECT entity_id FROM public.sys_entity_access WHERE user_id = auth.uid();
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_chat_participant(conv_id UUID)
@@ -721,8 +733,8 @@ DECLARE
         'sys_role_definitions',
         'teams',
         'profiles',
-        'projects',
-        'sys_project_access',
+        'entities',
+        'sys_entity_access',
         'sys_user_permissions',
         'sys_user_preferences',
         'notification_broadcasts',
@@ -752,10 +764,10 @@ $$;
 -- ------------------------------------------------------------------------------
 
 -- Core
-CREATE INDEX idx_profiles_team                 ON public.profiles(team_id);
-CREATE INDEX idx_projects_team                 ON public.projects(team_id);
-CREATE INDEX idx_permissions_user              ON public.sys_user_permissions(user_id);
-CREATE INDEX idx_project_access_user           ON public.sys_project_access(user_id);
+CREATE INDEX idx_profiles_team                  ON public.profiles(team_id);
+CREATE INDEX idx_entities_team                  ON public.entities(team_id);
+CREATE INDEX idx_permissions_user               ON public.sys_user_permissions(user_id);
+CREATE INDEX idx_entity_access_user             ON public.sys_entity_access(user_id);
 CREATE INDEX idx_role_definitions_role_resource ON public.sys_role_definitions(role_id, resource_code);
 
 -- Notifications
@@ -784,8 +796,8 @@ ALTER TABLE public.sys_roles               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sys_role_definitions    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.teams                   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.projects                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sys_project_access      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.entities                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sys_entity_access       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sys_user_permissions    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sys_user_preferences    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_broadcasts ENABLE ROW LEVEL SECURITY;
@@ -833,12 +845,12 @@ CREATE POLICY "Admin Manage Profiles" ON public.profiles FOR ALL USING (
     public.check_permission('page_settings_usuarios', 'update')
 );
 
-CREATE POLICY "View Authorized Projects" ON public.projects FOR SELECT USING (
-    id IN (SELECT project_id FROM public.sys_project_access WHERE user_id = auth.uid())
-    OR public.check_permission('page_settings_proyectos', 'read')
+CREATE POLICY "View Authorized Entities" ON public.entities FOR SELECT USING (
+    id IN (SELECT entity_id FROM public.sys_entity_access WHERE user_id = auth.uid())
+    OR public.check_permission('page_settings_entities', 'read')
 );
-CREATE POLICY "Manage Projects" ON public.projects FOR ALL USING (
-    public.check_permission('page_settings_proyectos', 'update', id)
+CREATE POLICY "Manage Entities" ON public.entities FOR ALL USING (
+    public.check_permission('page_settings_entities', 'update', id)
 );
 
 -- 10.4 SYNC TABLES (PowerSync specific)
@@ -849,14 +861,14 @@ CREATE POLICY "Admin Manage Permissions" ON public.sys_user_permissions FOR ALL 
     public.check_permission('page_settings_usuarios', 'update')
 );
 
-CREATE POLICY "Sync Own Project Access" ON public.sys_project_access FOR SELECT USING (
+CREATE POLICY "Sync Own Entity Access" ON public.sys_entity_access FOR SELECT USING (
     user_id = auth.uid()
 );
-CREATE POLICY "View Project Access" ON public.sys_project_access FOR SELECT USING (
-    project_id IN (SELECT public.get_my_project_ids())
+CREATE POLICY "View Entity Access" ON public.sys_entity_access FOR SELECT USING (
+    entity_id IN (SELECT public.get_my_entity_ids())
 );
-CREATE POLICY "Admin Manage Project Access" ON public.sys_project_access FOR ALL USING (
-    public.check_permission('page_settings_proyectos', 'update')
+CREATE POLICY "Admin Manage Entity Access" ON public.sys_entity_access FOR ALL USING (
+    public.check_permission('page_settings_entities', 'update')
 );
 
 -- 10.5 USER PREFERENCES

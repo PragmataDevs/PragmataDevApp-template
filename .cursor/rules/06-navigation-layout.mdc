@@ -1,0 +1,106 @@
+---
+description: Estructura de navegación y layouts de la plantilla Pragmata. Aplica siempre al diseñar o modificar rutas, sidebar, header o layouts.
+alwaysApply: true
+---
+
+# Navegación y Layouts — Reglas Pragmata
+
+## Estructura Visual Canónica
+
+```
+┌─ Navbar (Header) ──────────────────────────────────────────┐
+│  [≡ Mobile]  [EntitySelector]        [Chat][🔔][👤 Perfil] │
+└────────────────────────────────────────────────────────────┘
+┌─ Sidebar ──────┐  ┌─ Content Area ────────────────────────┐
+│ 🏠 Dashboard   │  │                                        │
+│ 👤 Mi Perfil   │  │   <Outlet />                           │
+│ ────────────── │  │                                        │
+│ ⚙ Configuración│  │                                        │
+│   Roles        │  │                                        │
+│   Usuarios     │  │                                        │
+│   Entidades    │  │                                        │
+│ ────────────── │  │                                        │
+│ ▼ Workspace    │  │                                        │
+│   Resumen      │  │                                        │
+│   Tareas       │  │                                        │
+│   Costos       │  │                                        │
+│   Contratos    │  │                                        │
+└────────────────┘  └────────────────────────────────────────┘
+```
+
+## Reglas de Orden en el Sidebar
+
+El orden de las secciones en el sidebar es FIJO e INMUTABLE:
+
+1. **Rutas globales sin grupo** (Dashboard, Mi Perfil) — siempre arriba
+2. `────` separador
+3. **Configuración** (grupo `settings`) — roles, usuarios, entidades
+4. `────` separador
+5. **Workspace** (sección dinámica) — rutas del contexto de Entity activo
+
+> ❌ PROHIBIDO invertir Configuración y Workspace. Configuración siempre ANTES del Workspace.
+
+## EntitySelector
+
+- **Vive en el Navbar (Header)**, no en el sidebar.
+- Solo se muestra cuando **ambas** condiciones son verdad:
+  1. `VITE_ENABLE_MULTI_ENTITY=true`
+  2. La ruta activa está dentro de `/workspace/:entityId/*`
+- En cualquier otra ruta (Dashboard, Configuración, Perfil) el selector **no se renderiza**.
+- Al seleccionar una entity, navega a `/workspace/:entityId/dashboard` y persiste el ID en `localStorage`.
+
+```tsx
+// Implementación canónica en Header.tsx
+const isInWorkspace = !!useMatch('/workspace/:entityId/*');
+{MULTI_ENTITY_ENABLED && isInWorkspace && <EntitySelector />}
+```
+
+## Layouts
+
+| Layout | Archivo | Propósito |
+|---|---|---|
+| `AppLayout` | `src/components/layout/AppLayout.tsx` | Shell universal (Sidebar + Header + Outlet). Envuelve TODAS las rutas autenticadas incluyendo workspace. |
+| `WorkspaceLayout` | `src/components/layout/WorkspaceLayout.tsx` | Solo provee contexto de Entity. No tiene sidebar propio. Renderiza `<Outlet />`. |
+| `PublicLayout` | `src/components/layout/PublicLayout.tsx` | Rutas públicas sin autenticación (login, landing). |
+
+> ❌ PROHIBIDO agregar un sidebar propio a `WorkspaceLayout`. El sidebar es responsabilidad exclusiva de `AppLayout`.
+
+## Estructura de Rutas
+
+```
+/                      → PublicLayout → LandingPage
+/login                 → PublicLayout → LoginPage
+/auth/callback         → PublicLayout → CallbackPage
+
+/ (AppLayout)
+  /dashboard           → DashboardPage
+  /profile             → ProfilePage
+  /settings/roles      → RolesPage
+  /settings/usuarios   → UsuariosPage
+  /settings/entities   → EntitiesPage
+
+  /workspace/:entityId (WorkspaceLayout — Outlet only)
+    /dashboard         → Workspace DashboardPage
+    /tasks             → TasksPage (Kanban)
+    /costos            → CostosPage
+    /contracts         → ContractsPage
+```
+
+## Entity vs Proyecto (Terminología)
+
+| Nivel | Nombre canónico | Nota |
+|---|---|---|
+| Código / DB | `Entity` / `entities` | Genérico, inmutable en el codebase |
+| UI / Frontend | Configurable via `VITE_ENTITY_LABEL` | Default: `"Entidad"`. Por cliente: `"Proyecto"`, `"Obra"`, `"Caso"`, `"Campaña"` |
+
+- La tabla en DB se llama `entities`, no `projects`.
+- El parámetro de URL es `:entityId`, no `:projectId`.
+- Los resource codes de permisos usan el prefijo `page_workspace_*` para rutas de workspace y `page_settings_entities` para gestión.
+
+## Feature Flags de Navegación
+
+| Variable | Efecto |
+|---|---|
+| `VITE_ENTITY_LABEL=Proyecto` | Cambia el label "Entidad" por "Proyecto" en toda la UI |
+| `VITE_ENABLE_MULTI_ENTITY=true` | Muestra el EntitySelector en el Navbar |
+| `VITE_ENABLE_MULTI_ENTITY=false` | Oculta el EntitySelector (modo single-entity) |
