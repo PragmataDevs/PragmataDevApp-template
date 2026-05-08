@@ -17,7 +17,7 @@ import {
   useProjects,
   PROJECT_STATUS_CONFIG,
   type ProjectWithMembers,
-  type ProjectCreatePayload,
+  type ProjectInput,
 } from '@/features/projects/hooks/useProjects';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import ProjectFormModal from '@/features/projects/components/ProjectFormModal';
@@ -102,7 +102,7 @@ export default function ProyectosPage() {
     }
   };
 
-  const handleSave = async (data: ProjectCreatePayload) => {
+  const handleSave = async (data: ProjectInput) => {
     setSaving(true);
     try {
       if (editingProject) {

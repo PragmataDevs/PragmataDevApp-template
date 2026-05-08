@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { X, CalendarDays, MapPin, FileCode, ImagePlus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import type { ProjectRow, ProjectCreatePayload } from '../hooks/useProjects';
+import type { ProjectRow, ProjectInput } from '../hooks/useProjects';
 import { PROJECT_STATUS_CONFIG } from '../hooks/useProjects';
 import { resolveSignedUrls } from '@/lib/storage';
 
 interface ProjectFormModalProps {
   project?: ProjectRow | null;
   onClose: () => void;
-  onSave: (data: ProjectCreatePayload) => Promise<void>;
+  onSave: (data: ProjectInput) => Promise<void>;
   saving?: boolean;
   totalProjects?: number;
 }

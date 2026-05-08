@@ -32,7 +32,7 @@ export interface NotificationAttachment {
   file_size: number | null;
 }
 
-export interface SendNotificationPayload {
+export interface NotificationInput {
   target_type: BroadcastTargetType;
   target_id?: string; // user_id or role_id (null for 'all')
   type: NotificationType;
@@ -174,7 +174,7 @@ export function useNotifications() {
 
   // ── Send notification (direct or broadcast) ──
   const sendNotification = useCallback(
-    async (payload: SendNotificationPayload) => {
+    async (payload: NotificationInput) => {
       if (!profile) throw new Error('No profile');
 
       // 1. If target is a single user → direct insert

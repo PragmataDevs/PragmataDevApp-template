@@ -17,12 +17,10 @@ export type RoleDefinitionRow = Omit<RoleDefinition, 'granted_actions'> & {
   granted_actions: string | ResourceAction[];
 };
 
-/** Payload for creating/updating a role */
-export interface RoleSavePayload {
-  name: string;
-  description: string;
+/** Input para crear/actualizar un rol — campos editables derivados de Role */
+export type RoleInput = Pick<Role, 'name' | 'description'> & {
   permissions: GrantedPermissions;
-}
+};
 
 /** Extended role with user count for the list view */
 export interface RoleWithCount extends RoleRow {
@@ -177,7 +175,7 @@ export function useRoles() {
   // Writes ALWAYS go to Supabase (cloud). PowerSync syncs down automatically.
 
   const createRole = useCallback(
-    async (payload: RoleSavePayload) => {
+    async (payload: RoleInput) => {
       // 1. Insert the role
       const { data: newRole, error: roleError } = await supabase
         .from('sys_roles')
@@ -221,7 +219,7 @@ export function useRoles() {
   // ── Update role ──────────────────────────────────────────
 
   const updateRole = useCallback(
-    async (roleId: string, payload: RoleSavePayload) => {
+    async (roleId: string, payload: RoleInput) => {
       // 1. Update role metadata
       const { error: roleError } = await supabase
         .from('sys_roles')

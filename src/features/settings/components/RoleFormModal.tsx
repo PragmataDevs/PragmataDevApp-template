@@ -3,7 +3,7 @@ import { X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import PermissionsPanel from './PermissionsPanel';
 import type { GrantedPermissions } from './PermissionsPanel';
-import type { RoleSavePayload } from '@/features/roles/hooks/useRoles';
+import type { RoleInput } from '@/features/roles/hooks/useRoles';
 
 interface RoleFormModalProps {
   role?: {
@@ -12,7 +12,7 @@ interface RoleFormModalProps {
     description?: string | null;
   } | null;
   onClose: () => void;
-  onSave: (data: RoleSavePayload) => Promise<void>;
+  onSave: (data: RoleInput) => Promise<void>;
   saving?: boolean;
   fetchRoleDefinitions?: (roleId: string) => Promise<GrantedPermissions>;
 }

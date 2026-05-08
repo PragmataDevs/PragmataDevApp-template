@@ -5,8 +5,8 @@ import PermissionsPanel from '@/features/settings/components/PermissionsPanel';
 import type { GrantedPermissions } from '@/features/settings/components/PermissionsPanel';
 import type { AccessLevel } from '@/types/users/profile';
 import type {
-  UserCreatePayload,
-  UserUpdatePayload,
+  UserCreateInput,
+  UserUpdateInput,
   RoleOption,
   UserWithRole,
   ProjectOption,
@@ -16,7 +16,7 @@ interface UserFormModalProps {
   user?: UserWithRole | null;
   roles: RoleOption[];
   onClose: () => void;
-  onSave: (data: UserCreatePayload | UserUpdatePayload) => Promise<void>;
+  onSave: (data: UserCreateInput | UserUpdateInput) => Promise<void>;
   saving?: boolean;
   /** Loads the permissions template for a given role */
   onFetchRoleDefinitions: (roleId: string) => Promise<GrantedPermissions>;
@@ -190,7 +190,7 @@ export default function UserFormModal({
     };
 
     if (isEditing) {
-      const updatePayload: UserUpdatePayload = {
+      const updatePayload: UserUpdateInput = {
         full_name: fullName,
         role_id: roleId,
         access_level: accessLevel,
@@ -201,7 +201,7 @@ export default function UserFormModal({
       };
       await onSave(updatePayload);
     } else {
-      const createPayload: UserCreatePayload = {
+      const createPayload: UserCreateInput = {
         full_name: fullName,
         email,
         role_id: roleId,

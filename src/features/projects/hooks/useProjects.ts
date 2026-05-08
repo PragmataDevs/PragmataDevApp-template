@@ -35,19 +35,11 @@ export interface ProjectImageAsset {
   uploaded_at: string;
 }
 
-export interface ProjectCreatePayload {
-  name: string;
-  code?: string | null;
-  description?: string | null;
-  location?: string | null;
-  budget?: number | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  project_status?: ProjectRow['project_status'];
-  images?: File[];
-}
-
-export type ProjectUpdatePayload = ProjectCreatePayload;
+/** Input de formulario para crear/actualizar un proyecto — derivado de Project + imágenes */
+export type ProjectInput = Pick<Project, 'name' | 'project_status'> &
+  Partial<Pick<Project, 'code' | 'description' | 'location' | 'budget' | 'start_date' | 'end_date'>> & {
+    images?: File[];
+  };
 
 // ─── Status Config ───────────────────────────────────────────
 
@@ -208,7 +200,7 @@ export function useProjects() {
   }, []);
 
   const createProject = useCallback(
-    async (data: ProjectCreatePayload) => {
+    async (data: ProjectInput) => {
       if (!profile) throw new Error('No profile');
 
       const { data: project, error: insertErr } = await supabase
@@ -266,7 +258,7 @@ export function useProjects() {
   // ── Update project ─────────────────────────────────────
 
   const updateProject = useCallback(
-    async (projectId: string, data: ProjectUpdatePayload) => {
+    async (projectId: string, data: ProjectInput) => {
       let nextMetadata: Record<string, any> | undefined;
 
       if (data.images && data.images.length > 0) {

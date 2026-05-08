@@ -58,7 +58,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="flex items-center gap-4">
         <button 
           onClick={onMenuClick}
-          className="p-2 -ml-2 text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] md:hidden rounded-lg hover:bg-[color:var(--pragmata-surface-2)]"
+          className="p-2 -ml-2 text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] md:hidden rounded-pragmata hover:bg-[color:var(--pragmata-surface-2)]"
         >
           <Menu className="w-6 h-6" />
         </button>
@@ -106,7 +106,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
             {/* Dropdown Menu */}
             {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-[color:var(--pragmata-surface)] rounded-xl shadow-lg border border-[color:var(--pragmata-border)] py-1 origin-top-right animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute right-0 mt-2 w-56 bg-[color:var(--pragmata-surface)] rounded-pragmata shadow-lg border border-[color:var(--pragmata-border)] py-1 origin-top-right animate-in fade-in zoom-in-95 duration-200">
                     <div className="px-4 py-3 border-b border-[color:var(--pragmata-border)] md:hidden">
                       <p className="text-sm font-semibold text-[color:var(--pragmata-fg)]">{user?.email}</p>
                       <p className="text-xs text-[color:var(--pragmata-muted)] capitalize">{profile?.access_level}</p>
@@ -115,7 +115,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                     <div className="p-1">
                         <NavLink 
                           to="/profile" 
-                          className="flex items-center gap-2 px-3 py-2 text-sm text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] rounded-lg"
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] rounded-pragmata"
                             onClick={() => setIsProfileOpen(false)}
                         >
                             <User className="w-4 h-4" />
@@ -126,7 +126,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                     <div className="border-t border-[color:var(--pragmata-border)] p-1 mt-1">
                         <button 
                             onClick={handleSignOut}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-pragmata transition-colors"
                         >
                             <LogOut className="w-4 h-4" />
                             Cerrar Sesión

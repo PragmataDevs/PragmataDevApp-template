@@ -1,5 +1,23 @@
 import type { AuditBase } from '../core/base';
 
+export function createEmptyRole(userId: string): Role {
+  return {
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    created_by: userId,
+    updated_by: userId,
+    version: 0,
+    status: 'active',
+    deleted_at: null,
+    name: '',
+    description: null,
+    is_system_role: false,
+    can_be_customized: true,
+    is_dev_role: false,
+  };
+}
+
 export interface Role extends AuditBase {
   name: string;
   description: string | null;

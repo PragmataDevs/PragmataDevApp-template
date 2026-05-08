@@ -1,5 +1,28 @@
 import type { AuditBase, UUID } from '../core/base';
 
+export function createEmptyTeam(userId: string): Team {
+  return {
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    created_by: userId,
+    updated_by: userId,
+    version: 0,
+    status: 'active',
+    deleted_at: null,
+    name: '',
+    slug: '',
+    logo_url: null,
+    is_platform_owner: false,
+    tax_id: null,
+    address: null,
+    web_url: null,
+    contact_email: null,
+    owner_id: userId,
+    team_status: 'active',
+  };
+}
+
 /**
  * Team: La Organización o Empresa.
  * Es la dueña de los proyectos y quien paga la suscripción (Multitenancy).

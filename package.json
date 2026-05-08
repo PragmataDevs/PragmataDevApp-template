@@ -9,17 +9,21 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "db:seed": "tsx scripts/seed-resources.ts"
+    "db:seed": "tsx scripts/seed-resources.ts",
+    "db:sync": "tsx scripts/sync-resources.ts"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@journeyapps/wa-sqlite": "^1.4.1",
     "@powersync/react": "^1.8.2",
     "@powersync/web": "^1.32.0",
     "lucide-react": "^0.563.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-hook-form": "^7.75.0",
     "react-router-dom": "^7.13.0",
-    "supabase": "^2.75.5"
+    "supabase": "^2.75.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

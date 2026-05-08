@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
-import type { AccessLevel, Profile } from '@/types/users/profile';
+import type { Profile } from '@/types/users/profile';
 import type { GrantedPermissions } from '@/features/settings/components/PermissionsPanel';
 
 // ─── Feature flag ────────────────────────────────────────────
@@ -32,30 +32,19 @@ export interface UserWithRole extends UserRow {
   role_name: string;
 }
 
-/** Payload for creating a new user */
-export interface UserCreatePayload {
-  full_name: string;
-  email: string;
-  role_id: string;
-  access_level: AccessLevel;
-  job_title?: string;
-  phone?: string;
-  is_role_synced: boolean;
-  customPermissions?: GrantedPermissions;
-  project_ids?: string[];
-}
+/** Input para crear un nuevo usuario — campos del formulario derivados de Profile */
+export type UserCreateInput = Pick<Profile, 'full_name' | 'email' | 'role_id' | 'access_level' | 'is_role_synced'> &
+  Partial<Pick<Profile, 'job_title' | 'phone'>> & {
+    customPermissions?: GrantedPermissions;
+    project_ids?: string[];
+  };
 
-/** Payload for updating an existing profile */
-export interface UserUpdatePayload {
-  full_name: string;
-  role_id: string;
-  access_level: AccessLevel;
-  job_title?: string;
-  phone?: string;
-  is_role_synced: boolean;
-  customPermissions?: GrantedPermissions;
-  project_ids?: string[];
-}
+/** Input para actualizar perfil — mismos campos editables del formulario */
+export type UserUpdateInput = Pick<Profile, 'full_name' | 'role_id' | 'access_level' | 'is_role_synced'> &
+  Partial<Pick<Profile, 'job_title' | 'phone'>> & {
+    customPermissions?: GrantedPermissions;
+    project_ids?: string[];
+  };
 
 /** Result of creating a user */
 export interface CreateUserResult {
@@ -356,7 +345,7 @@ export function useUsers() {
   // 3. Return result
 
   const createUser = useCallback(
-    async (payload: UserCreatePayload): Promise<CreateUserResult> => {
+    async (payload: UserCreateInput): Promise<CreateUserResult> => {
       // Step 1: Create auth user via Edge Function
       // The Edge Function generates an internal password and sends a
       // "reset password" email via Supabase Auth so the user sets their own.
@@ -455,7 +444,7 @@ export function useUsers() {
   // Writes directly to profiles table (no Edge Function needed)
 
   const updateUser = useCallback(
-    async (userId: string, payload: UserUpdatePayload) => {
+    async (userId: string, payload: UserUpdateInput) => {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({

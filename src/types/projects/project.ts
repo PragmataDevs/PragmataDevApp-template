@@ -1,5 +1,28 @@
 import type { AuditBase, UUID } from '../core/base';
 
+export function createEmptyProject(userId: string, teamId: string): Project {
+  return {
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    created_by: userId,
+    updated_by: userId,
+    version: 0,
+    status: 'active',
+    deleted_at: null,
+    team_id: teamId,
+    name: '',
+    code: null,
+    description: null,
+    project_status: 'planning',
+    location: null,
+    budget: null,
+    start_date: null,
+    end_date: null,
+    metadata: undefined,
+  };
+}
+
 /**
  * Project: La unidad de trabajo (Obra, Campaña, Caso).
  */

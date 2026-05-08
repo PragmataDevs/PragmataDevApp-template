@@ -15,7 +15,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { useUsers, type UserWithRole, type UserCreatePayload, type UserUpdatePayload } from '@/features/users/hooks/useUsers';
+import { useUsers, type UserWithRole, type UserCreateInput, type UserUpdateInput } from '@/features/users/hooks/useUsers';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import { resolveSignedUrl } from '@/lib/storage';
 import UserFormModal from '@/features/users/components/UserFormModal';
@@ -156,13 +156,13 @@ export default function UsuariosPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = async (data: UserCreatePayload | UserUpdatePayload) => {
+  const handleSave = async (data: UserCreateInput | UserUpdateInput) => {
     setSaving(true);
     try {
       if (editingUser) {
-        await updateUser(editingUser.id, data as UserUpdatePayload);
+        await updateUser(editingUser.id, data as UserUpdateInput);
       } else {
-        const result = await createUser(data as UserCreatePayload);
+        const result = await createUser(data as UserCreateInput);
         setCreatedEmail(result.email);
       }
       setIsModalOpen(false);

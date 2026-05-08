@@ -73,7 +73,7 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
         to={route.path}
         onClick={onClose}
         className={({ isActive }) => `
-          flex items-center text-sm font-medium rounded-xl transition-all duration-200
+          flex items-center text-sm font-medium rounded-pragmata transition-all duration-200
           ${isCollapsed ? 'justify-center px-2 py-3' : `${indented ? 'pl-10 pr-3' : 'px-3'} py-2.5`}
           ${isActive
             ? 'bg-[color:var(--pragmata-accent-soft)] text-[color:var(--pragmata-accent)] shadow-sm ring-1 ring-[color:var(--pragmata-border)]'
@@ -121,7 +121,7 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
             onToggleCollapse();
             setExpandedGroups((prev) => ({ ...prev, [key]: true }));
           }}
-          className="w-full flex justify-center px-2 py-3 rounded-xl hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
+          className="w-full flex justify-center px-2 py-3 rounded-pragmata hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
           title={meta.label}
         >
           <GroupIcon className={`w-5 h-5 ${isActive ? 'text-[color:var(--pragmata-accent)]' : 'text-[color:var(--pragmata-muted)]'}`} />
@@ -135,7 +135,7 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
         <button
           onClick={() => toggleGroup(key)}
           className={`
-            w-full flex items-center text-sm font-medium rounded-xl transition-all duration-200 px-3 py-2.5
+            w-full flex items-center text-sm font-medium rounded-pragmata transition-all duration-200 px-3 py-2.5
             ${isActive
               ? 'text-[color:var(--pragmata-accent)]'
               : 'text-[color:var(--pragmata-muted)] hover:bg-[color:var(--pragmata-surface-2)] hover:text-[color:var(--pragmata-fg)]'}
@@ -191,7 +191,7 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
           <img
             src={PragmataIcon}
             alt="Pragmata"
-            className="h-8 w-8 rounded-lg bg-[color:var(--pragmata-surface-2)] p-1.5 border border-[color:var(--pragmata-border)]"
+            className="h-8 w-8 rounded-pragmata bg-[color:var(--pragmata-surface-2)] p-1.5 border border-[color:var(--pragmata-border)]"
           />
           {!isCollapsed && (
             <span className="font-bold text-lg tracking-tight text-[color:var(--pragmata-fg)]">Pragmata</span>

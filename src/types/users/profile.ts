@@ -5,6 +5,30 @@ export type AccessLevel =
   | 'admin'      // Puede ver TODOS los datos de SU Team
   | 'member';    // Solo puede ver SU propios datos y los de sus proyectos asignados
 
+export function createEmptyProfile(userId: string, teamId: string): Profile {
+  return {
+    id: userId,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    created_by: userId,
+    updated_by: userId,
+    version: 0,
+    status: 'active',
+    deleted_at: null,
+    email: '',
+    full_name: null,
+    avatar_url: null,
+    phone: null,
+    job_title: null,
+    team_id: teamId,
+    role_id: '',
+    access_level: 'member',
+    is_role_synced: true,
+    role_variables: undefined,
+    profile_status: 'active',
+  };
+}
+
 /**
  * Profile: Identidad UNIFICADA del usuario.
  * Define quién es, dónde trabaja y qué rol base tiene.
