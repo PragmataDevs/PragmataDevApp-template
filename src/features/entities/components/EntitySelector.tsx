@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronsUpDown, Layers, Check, Search, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { ENTITY_STATUS_CONFIG, ENTITY_LABEL } from '@/types/entities/entity';
+import { ENTITY_STATUS_CONFIG, ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
 
 const STORAGE_KEY = 'pragmata_last_entity_id';
 const POWERSYNC_ENABLED = import.meta.env.VITE_ENABLE_POWERSYNC === 'true';
@@ -156,7 +156,7 @@ export default function EntitySelector() {
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-6 text-xs text-[color:var(--pragmata-muted)]">
-                {searchTerm ? 'Sin resultados' : `Sin ${ENTITY_LABEL.toLowerCase()}s`}
+                {searchTerm ? 'Sin resultados' : `Sin ${ENTITY_LABEL_PLURAL.toLowerCase()}`}
               </div>
             ) : (
               filtered.map((entity) => {
@@ -197,7 +197,7 @@ export default function EntitySelector() {
               className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] rounded-lg transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
-              Gestionar {ENTITY_LABEL.toLowerCase()}s
+              Gestionar {ENTITY_LABEL_PLURAL.toLowerCase()}
             </button>
           </div>
         </div>

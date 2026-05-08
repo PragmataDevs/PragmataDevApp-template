@@ -22,7 +22,7 @@ import {
   type EntityInput,
 } from '@/features/entities/hooks/useEntities';
 import { usePermission } from '@/features/auth/hooks/usePermission';
-import { ENTITY_LABEL } from '@/types/entities/entity';
+import { ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
 import ProjectFormModal from '@/features/projects/components/ProjectFormModal';
 import ProjectMembersPanel from '@/features/projects/components/ProjectMembersPanel';
 
@@ -139,7 +139,7 @@ export default function EntitiesPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Layers className="w-5 h-5 text-[color:var(--pragmata-accent)]" />
-            <h1 className="text-2xl font-bold text-[color:var(--pragmata-fg)]">{ENTITY_LABEL}s</h1>
+            <h1 className="text-2xl font-bold text-[color:var(--pragmata-fg)]">{ENTITY_LABEL_PLURAL}</h1>
           </div>
           <p className="text-[color:var(--pragmata-muted)]">
             Gestiona las entidades de trabajo y controla el acceso de los miembros.
@@ -335,7 +335,7 @@ export default function EntitiesPage() {
                 <Layers className="h-6 w-6 text-[color:var(--pragmata-muted)]" />
               </div>
               <h3 className="text-lg font-medium text-[color:var(--pragmata-fg)]">
-                {searchTerm || statusFilter !== 'all' ? 'No se encontraron entidades' : `Sin ${ENTITY_LABEL.toLowerCase()}s aún`}
+                {searchTerm || statusFilter !== 'all' ? `No se encontraron ${ENTITY_LABEL_PLURAL.toLowerCase()}` : `Sin ${ENTITY_LABEL_PLURAL.toLowerCase()} aún`}
               </h3>
               <p className="text-[color:var(--pragmata-muted)] mt-1 max-w-sm">
                 {searchTerm || statusFilter !== 'all' ? 'Intenta con otros filtros.' : `Crea tu primer ${ENTITY_LABEL.toLowerCase()} para empezar.`}

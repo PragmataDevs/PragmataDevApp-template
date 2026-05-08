@@ -9,7 +9,7 @@ alwaysApply: true
 
 ```
 ┌─ Navbar (Header) ──────────────────────────────────────────┐
-│  [≡ Mobile]  [EntitySelector]        [Chat][🔔][👤 Perfil] │
+│  [≡ Mobile]  [EntitySelector*]       [Chat][🔔][👤 Perfil] │
 └────────────────────────────────────────────────────────────┘
 ┌─ Sidebar ──────┐  ┌─ Content Area ────────────────────────┐
 │ 🏠 Dashboard   │  │                                        │
@@ -23,9 +23,9 @@ alwaysApply: true
 │ ▼ Workspace    │  │                                        │
 │   Resumen      │  │                                        │
 │   Tareas       │  │                                        │
-│   Costos       │  │                                        │
-│   Contratos    │  │                                        │
 └────────────────┘  └────────────────────────────────────────┘
+* EntitySelector solo visible con VITE_ENABLE_MULTI_ENTITY=true
+  y ruta activa dentro de /workspace/:entityId/*
 ```
 
 ## Reglas de Orden en el Sidebar
@@ -55,6 +55,33 @@ const isInWorkspace = !!useMatch('/workspace/:entityId/*');
 {MULTI_ENTITY_ENABLED && isInWorkspace && <EntitySelector />}
 ```
 
+## Resolución del Entity Activo — hook `useActiveEntity`
+
+El botón "Workspace" en el sidebar NO depende del EntitySelector para funcionar.
+Usa el hook `useActiveEntity` (`src/features/entities/hooks/useActiveEntity.ts`) que resuelve el entityId con esta cadena de prioridad:
+
+```
+1. URL params   /workspace/:entityId/*   (fuente de verdad dentro del workspace)
+2. localStorage  pragmata_last_entity_id  (última entity visitada)
+3. Primera entity activa en orden alfabético  (fetch automático a Supabase)
+4. null          → no existen entities todavía
+```
+
+**Comportamiento del botón "Workspace" en el sidebar:**
+- Si ya estás en `/workspace/*`: toggle expand/collapse del submenú.
+- Si estás en otra ruta: navega automáticamente a `/workspace/:resolvedEntityId/dashboard`.
+
+**Comportamiento de los links del submenú Workspace (Resumen, Tareas, etc.):**
+- Los links son **SIEMPRE clickeables**, nunca griseados ni deshabilitados.
+- Si `activeEntityId` está resuelto: navegan a `/workspace/:entityId/:ruta`.
+- Si `activeEntityId` aún es `null` (hook cargando): navegan a `/workspace/none/:ruta`.
+- La página destino detecta `entityId === "none"` y:
+  1. Espera a que `useActiveEntity` resuelva (auto-redirect cuando llega).
+  2. Si nunca resuelve (no hay entities en DB): muestra estado vacío con CTA "Ir a Entidades".
+
+> ❌ **Prohibido** griseado o `cursor-default` en links del submenú Workspace. Siempre deben ser navegables.
+> ❌ **Prohibido** bloquear la navegación al Workspace hasta que el usuario haya interactuado con el EntitySelector. La resolución es automática.
+
 ## Layouts
 
 | Layout | Archivo | Propósito |
@@ -82,8 +109,10 @@ const isInWorkspace = !!useMatch('/workspace/:entityId/*');
   /workspace/:entityId (WorkspaceLayout — Outlet only)
     /dashboard         → Workspace DashboardPage
     /tasks             → TasksPage (Kanban)
-    /costos            → CostosPage
-    /contracts         → ContractsPage
+    /config            → Workspace ConfigPage (hideInMenu: true)
+
+  /workspace/none/:ruta → fallback cuando no hay entityId resuelto.
+                          La página destino hace auto-redirect o muestra empty state.
 ```
 
 ## Entity vs Proyecto (Terminología)

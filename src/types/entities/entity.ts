@@ -94,9 +94,23 @@ export function createEmptyEntity(userId: string, teamId: string): Entity {
 // Env config helpers
 // ---------------------------------------------------------------------------
 
-/** The UI label for "Entity" (e.g., "Proyecto", "Obra", "Cliente") */
+/** The UI label for "Entity" singular (e.g., "Proyecto", "Obra", "Cliente") */
 export const ENTITY_LABEL =
   (import.meta.env.VITE_ENTITY_LABEL as string | undefined) ?? 'Entidad';
+
+/**
+ * Plural form of ENTITY_LABEL.
+ * Can be overridden via VITE_ENTITY_LABEL_PLURAL, otherwise derived automatically:
+ * words ending in a vowel → +s ("Proyecto" → "Proyectos")
+ * words ending in a consonant → +es ("Entidad" → "Entidades")
+ */
+export const ENTITY_LABEL_PLURAL: string = (() => {
+  const override = import.meta.env.VITE_ENTITY_LABEL_PLURAL as string | undefined;
+  if (override) return override;
+  const vowels = ['a', 'e', 'i', 'o', 'u', 'á', 'é', 'í', 'ó', 'ú'];
+  const last = ENTITY_LABEL.slice(-1).toLowerCase();
+  return vowels.includes(last) ? `${ENTITY_LABEL}s` : `${ENTITY_LABEL}es`;
+})();
 
 /** Whether the app supports multiple entities (shows EntitySelector) */
 export const MULTI_ENTITY_ENABLED =

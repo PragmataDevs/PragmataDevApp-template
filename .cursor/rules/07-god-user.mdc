@@ -1,0 +1,94 @@
+---
+description: Regla inmutable del usuario dios — bypass total de RLS, acceso sin restricciones a todo.
+globs: docs/database/**/*.sql,src/features/auth/**,src/lib/auth/**
+alwaysApply: true
+---
+
+# El Usuario Dios — Regla Inmutable
+
+## Definición
+
+El **usuario dios** es aquel cuyo perfil cumple:
+```sql
+profiles.access_level = 'god'
+AND teams.is_platform_owner = TRUE   -- equipo del perfil
+```
+
+Identificado en código SQL por la función `public.is_god()`.
+
+## La Regla
+
+> **El god user SIEMPRE puede ver y hacer todo, sin excepción.**
+> Ninguna política RLS, ningún guard de frontend, ninguna validación de
+> permisos puede bloquear a un usuario god.
+
+## Implementación en Base de Datos
+
+### Función helper (obligatoria)
+
+```sql
+CREATE OR REPLACE FUNCTION public.is_god()
+RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER SET search_path = public STABLE AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.profiles p
+        JOIN public.teams t ON t.id = p.team_id
+        WHERE p.id = auth.uid()
+          AND p.access_level = 'god'
+          AND t.is_platform_owner = TRUE
+    );
+$$;
+```
+
+### Patrón obligatorio en TODA policy RLS
+
+```sql
+-- SIEMPRE primera condición, antes de cualquier otra:
+CREATE POLICY "nombre_politica" ON public.tabla
+    FOR SELECT USING (
+        public.is_god()          -- ← PRIMERO, siempre
+        OR <condicion_normal>
+    );
+```
+
+### check_permission() — cortocircuito god
+
+```sql
+IF user_profile.access_level = 'god' THEN
+    IF EXISTS (SELECT 1 FROM public.teams WHERE id = user_profile.team_id AND is_platform_owner = TRUE) THEN
+        RETURN TRUE;             -- ← retorna antes de evaluar cualquier permiso
+    END IF;
+END IF;
+```
+
+## Lo que el god user NO necesita
+
+- Entradas en `sys_entity_access` para ver entidades.
+- Entradas en `sys_user_permissions` para ejecutar acciones.
+- Rol con permisos asignados en `sys_role_definitions`.
+- Estar en ningún workspace ni equipo específico.
+
+## Seed del usuario dios
+
+Ver `docs/database/02_seed_god_user.sql`. El script:
+1. Crea el equipo con `is_platform_owner = TRUE`.
+2. Crea el perfil con `access_level = 'god'`.
+
+Sin esas dos condiciones, `is_god()` retorna FALSE.
+
+## Regla de Frontend
+
+En el frontend, el god user debe tener acceso a **todas las secciones**
+del sidebar y **todas las rutas** sin verificación adicional.
+
+```ts
+// En cualquier guard de permisos:
+if (profile?.access_level === 'god') return true;
+```
+
+## Invariantes que NUNCA deben romperse
+
+1. `is_god()` debe ser la **primera** condición en toda policy RLS.
+2. `check_permission()` debe retornar TRUE para god **antes** de evaluar recursos/acciones.
+3. Al crear una nueva tabla con RLS, **siempre** agregar `is_god()` como primera condición.
+4. El seed script (`02_seed_god_user.sql`) es la única forma oficial de crear un god user.
+5. El god user puede existir en múltiples instalaciones/clientes — es el super-admin de la instancia.

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { NavLink, useLocation, useMatch } from 'react-router-dom';
+import { NavLink, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { ChevronDown, Settings, Layers } from 'lucide-react';
 import PragmataIcon from '@/assets/pragmata-devs-icon.png';
 import { APP_ROUTES, WORKSPACE_ROUTES } from '@/app/routes.config';
 import { usePermission } from '@/features/auth/hooks/usePermission';
-import { ENTITY_LABEL } from '@/types/entities/entity';
+import { useActiveEntity } from '@/features/entities/hooks/useActiveEntity';
 import type { AppRoute } from '@/app/navigation';
 import type { ComponentType } from 'react';
 
@@ -26,9 +26,12 @@ interface SidebarProps {
 export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: SidebarProps) {
   const { hasPermission } = usePermission();
   const location = useLocation();
+  const navigate = useNavigate();
   const workspaceMatch = useMatch('/workspace/:entityId/*');
-  const activeEntityId = workspaceMatch?.params?.entityId;
-  const isInWorkspace = !!activeEntityId;
+  const isInWorkspace = !!workspaceMatch;
+
+  // Resolved entity: URL > localStorage > first entity alphabetically
+  const activeEntityId = useActiveEntity();
 
   const [isWorkspaceExpanded, setWorkspaceExpanded] = useState(() =>
     location.pathname.startsWith('/workspace')
@@ -230,14 +233,15 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
 
           {/* ─── WORKSPACE section ─────────────────────────── */}
           <div>
-            {!isCollapsed && (
-              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--pragmata-muted-2)]">
-                Workspace
-              </p>
-            )}
-
             <button
-              onClick={() => setWorkspaceExpanded(p => !p)}
+              onClick={() => {
+                if (!isInWorkspace && activeEntityId) {
+                  navigate(`/workspace/${activeEntityId}/dashboard`);
+                  setWorkspaceExpanded(true);
+                } else {
+                  setWorkspaceExpanded(p => !p);
+                }
+              }}
               className={`
                 w-full flex items-center text-sm font-medium rounded-pragmata transition-all duration-200
                 ${isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2.5'}
@@ -245,28 +249,31 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
                   ? 'text-[color:var(--pragmata-accent)]'
                   : 'text-[color:var(--pragmata-muted)] hover:bg-[color:var(--pragmata-surface-2)] hover:text-[color:var(--pragmata-fg)]'}
               `}
-              title={isCollapsed ? ENTITY_LABEL : undefined}
+              title={isCollapsed ? 'Workspace' : undefined}
             >
               <div className={isCollapsed ? '' : 'mr-3'}>
                 <Layers className={`w-5 h-5 ${isInWorkspace ? 'text-[color:var(--pragmata-accent)]' : 'text-[color:var(--pragmata-muted)]'}`} />
               </div>
               {!isCollapsed && (
                 <>
-                  <span className="truncate flex-1 text-left">{ENTITY_LABEL}</span>
+                  <span className="truncate flex-1 text-left">Workspace</span>
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isWorkspaceExpanded ? '' : '-rotate-90'}`} />
                 </>
               )}
             </button>
 
-            {/* Workspace routes — only shown when an entity is active */}
-            {!isCollapsed && activeEntityId && (
+            {!isCollapsed && (
               <div className={`overflow-hidden transition-all duration-200 ${isWorkspaceExpanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="mt-1 space-y-1">
                   {WORKSPACE_ROUTES
                     .filter(r => !r.hideInMenu && (!r.resourceCode || hasPermission(r.resourceCode)))
                     .map(route => {
                       const Icon = route.icon;
-                      const to = `/workspace/${activeEntityId}/${route.path}`;
+                      // Always render a real link — if entity is resolved use it,
+                      // if not the WorkspacePage itself will handle the empty state.
+                      const to = activeEntityId
+                        ? `/workspace/${activeEntityId}/${route.path}`
+                        : `/workspace/none/${route.path}`;
                       return (
                         <NavLink
                           key={route.path}

@@ -144,12 +144,10 @@ Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
 │ ▼ Workspace²   │
 │   Resumen      │
 │   Tareas       │
-│   Costos       │
-│   Contratos    │
 └────────────────┘
 
 ¹ EntitySelector: visible en navbar cuando VITE_ENABLE_MULTI_ENTITY=true
-² Workspace: se despliega en sidebar cuando hay una entity activa (/workspace/:entityId/*)
+² Workspace: links SIEMPRE clickeables — nunca griseados ni deshabilitados
 ```
 
 ### Orden del Sidebar (FIJO e INMUTABLE)
@@ -187,8 +185,10 @@ Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
   /workspace/:entityId  (WorkspaceLayout — Outlet only)
     /dashboard
     /tasks
-    /costos
-    /contracts
+    /config            (hideInMenu: true)
+
+  /workspace/none/:ruta  ← fallback cuando entityId aún no está resuelto.
+                           La página hace auto-redirect o muestra empty state.
 ```
 
 ### Entity vs "Proyecto" — Terminología
@@ -198,6 +198,32 @@ Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
 | Código / DB | `Entity` / `entities` | — (no cambia) |
 | URL params | `:entityId` | — (no cambia) |
 | UI / Frontend | `VITE_ENTITY_LABEL` | `"Proyecto"`, `"Obra"`, `"Cliente"`, `"Caso"` |
+
+### Resolución del Entity Activo — `useActiveEntity`
+
+El sidebar nunca bloquea el acceso al Workspace. El hook `useActiveEntity` resuelve el entityId automáticamente. Depende de `isAuthenticated` y `sessionEpoch` de `useAuth()` para re-ejecutarse cuando la sesión cambia.
+
+```
+Prioridad:
+  1. URL params   /workspace/:entityId/*   ← fuente de verdad dentro del workspace
+  2. localStorage  pragmata_last_entity_id  ← última entity visitada
+  3. Primera entity activa (orden alfabético) ← fetch automático a Supabase
+                                               Solo se ejecuta si isAuthenticated=true
+  4. null — no existen entities todavía
+```
+
+**Comportamiento del botón "Workspace" en el sidebar:**
+- Dentro de `/workspace/*`: toggle del submenú.
+- Fuera de workspace: navega directo a `/workspace/:resolvedId/dashboard`.
+
+**Comportamiento de los links del submenú (Resumen, Tareas, etc.):**
+- **Siempre son `<NavLink>` clickeables**, nunca `<div>` deshabilitados.
+- Con `activeEntityId` resuelto → `/workspace/:entityId/:ruta`.
+- Sin resolver → `/workspace/none/:ruta`.
+- La página en `/workspace/none/*` espera al hook y hace auto-redirect cuando llega el ID, o muestra empty state si no hay entities en DB.
+
+> ❌ **Prohibido** griseado o `cursor-default` en links del submenú Workspace.
+> ❌ **Prohibido** requerir interacción con EntitySelector para acceder al Workspace.
 
 ### EntitySelector — Reglas de Visibilidad
 
@@ -639,15 +665,57 @@ Sistema de permisos completamente funcional con RLS y función maestra `check_pe
 - `sys_user_permissions`: La tabla final donde el frontend lee los permisos (aplanados).
 
 **Funciones de Seguridad:**
-- `check_permission(resource, action, project_id)`: Valida acceso con double-gate (God/Admin bypass).
+- `is_god()`: **Helper primario**. Retorna TRUE si `profiles.access_level = 'god'` y `teams.is_platform_owner = TRUE`. Siempre se evalúa **primero** en toda policy RLS.
+- `check_permission(resource, action, entity_id?)`: Triple-gate (God bypass → Admin bypass → Granular).
 - `get_my_team_id()`: Helper SECURITY DEFINER para evitar recursión infinita en RLS.
+- `get_my_entity_ids()`: Helper para listar las entidades accesibles del usuario actual.
 - `handle_permission_sync()`: Trigger que mantiene `sys_user_permissions` sincronizado.
 
-**RLS Policies Activos:**
-- **Profiles**: View Self + View Teammates (sin recursión)
-- **Projects**: Double-gate (whitelist + permission check)
-- **Teams**: Own team only
-- **Permisos**: Sync Own Permissions (para PowerSync)
+---
+
+### 4.4.1 El Usuario Dios — Regla Inmutable
+
+> **El god user siempre puede ver y hacer todo. Sin excepción.**
+
+El god user es quien tiene `access_level = 'god'` en `profiles` y cuyo equipo tiene `is_platform_owner = TRUE`.
+
+**Por qué existe este nivel:**
+Un instalador, el equipo de PragmataDevs, o el super-admin del cliente necesita poder diagnosticar, configurar y operar el sistema sin barreras. Ningún error de configuración de permisos debe dejarlo fuera.
+
+**Qué no necesita el god user:**
+- Registros en `sys_entity_access` para ver entidades.
+- Registros en `sys_user_permissions` para ejecutar acciones.
+- Pertenecer a ningún workspace o equipo específico más allá del suyo.
+
+**Implementación:**
+```sql
+-- Función helper (debe existir en toda instalación)
+public.is_god() → BOOLEAN
+
+-- Patrón obligatorio en TODA policy RLS nueva:
+CREATE POLICY "nombre" ON public.tabla
+    FOR SELECT USING (
+        public.is_god()    ← PRIMERA CONDICIÓN, siempre
+        OR <regla_normal>
+    );
+```
+
+**Invariantes que nunca deben romperse:**
+1. `is_god()` es siempre la primera condición en cada policy RLS.
+2. `check_permission()` retorna TRUE para god antes de evaluar cualquier recurso/acción.
+3. Toda tabla nueva con RLS debe incluir `is_god()` de entrada.
+4. El seed del god user vive en `02_seed_god_user.sql` — es la única vía oficial.
+
+**Parche para DBs existentes:** ejecutar `06_god_bypass.sql`.
+
+---
+
+**RLS Policies Activos (patrón resumido):**
+- **Todas las tablas**: `public.is_god() OR <condición_normal>` (god siempre primero).
+- **Entities**: god ve todas; miembros solo las de `sys_entity_access`.
+- **Tasks**: god ve todas; otros requieren `sys_entity_access` y permisos.
+- **Profiles**: god ve todos; otros ven solo propio equipo.
+- **Chat/Notificaciones**: god lo ve todo; otros solo lo suyo.
 
 ---
 

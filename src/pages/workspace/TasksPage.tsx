@@ -1,16 +1,31 @@
-import { useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import { Plus, RefreshCw } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Plus, RefreshCw, Layers } from 'lucide-react';
 import { useTasks } from '@/features/tasks/hooks/useTasks';
 import { KanbanBoard } from '@/features/tasks/components/KanbanBoard';
 import { TaskFormModal } from '@/features/tasks/components/TaskFormModal';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { useActiveEntity } from '@/features/entities/hooks/useActiveEntity';
 import type { Task, TaskStatus } from '@/types/tasks/task';
 import { parseTagsField } from '@/types/tasks/task.schema';
 import type { TaskFormValues } from '@/types/tasks/task.schema';
 
 export default function TasksPage() {
-  const { entityId } = useParams<{ entityId: string }>();
+  const { entityId: rawEntityId } = useParams<{ entityId: string }>();
+  const navigate = useNavigate();
+  const resolvedEntityId = useActiveEntity();
+
+  // "none" is the fallback slug used when sidebar has no entity yet
+  const noEntitySelected = !rawEntityId || rawEntityId === 'none';
+  const entityId = noEntitySelected ? undefined : rawEntityId;
+
+  // Auto-navigate once activeEntity resolves
+  useEffect(() => {
+    if (noEntitySelected && resolvedEntityId) {
+      navigate(`/workspace/${resolvedEntityId}/tasks`, { replace: true });
+    }
+  }, [noEntitySelected, resolvedEntityId, navigate]);
+
   const hook = useTasks(entityId);
 
   // Modal state
@@ -82,6 +97,34 @@ export default function TasksPage() {
       setSubmitting(false);
     }
   }, [entityId, editingTask, hook]);
+
+  // -------------------------------------------------------------------------
+  // No entity selected — show selector state
+  // -------------------------------------------------------------------------
+  if (noEntitySelected) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+        <div className="p-4 rounded-full bg-[color:var(--pragmata-accent-soft)]">
+          <Layers className="w-8 h-8 text-[color:var(--pragmata-accent)]" />
+        </div>
+        <h2 className="text-lg font-semibold text-[color:var(--pragmata-fg)]">
+          Selecciona una entidad
+        </h2>
+        <p className="text-sm text-[color:var(--pragmata-muted)] max-w-xs">
+          Ve a <strong>Configuración → Entidades</strong> y abre una entidad,
+          o crea una nueva para empezar a gestionar tareas.
+        </p>
+        <Link
+          to="/settings/entities"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white
+            bg-[color:var(--pragmata-accent)] rounded-pragmata hover:opacity-90 transition-opacity"
+        >
+          <Layers className="w-4 h-4" />
+          Ir a Entidades
+        </Link>
+      </div>
+    );
+  }
 
   // -------------------------------------------------------------------------
   // Totals for subtitle

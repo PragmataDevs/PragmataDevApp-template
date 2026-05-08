@@ -1,6 +1,13 @@
 -- ==============================================================================
--- PRAGMATA SECURITY ENGINE (v2.0)
+-- PRAGMATA SECURITY ENGINE (v3.0)
 -- "The Master Key Framework" + Chat + Notifications (consolidated)
+--
+-- GOD USER RULE (immutable):
+--   access_level = 'god' + team.is_platform_owner = TRUE → BYPASS TOTAL.
+--   El god user NO necesita estar en sys_entity_access.
+--   El god user NO necesita tener permisos en sys_user_permissions.
+--   Ninguna RLS policy puede bloquear al god user.
+--   Implementado via: is_god() → usado como primera condición en todas las policies.
 --
 -- Includes:
 -- 1. Core Extensions
@@ -500,44 +507,46 @@ $$;
 -- 8.1 THE MASTER KEY: public.check_permission()
 CREATE OR REPLACE FUNCTION public.check_permission(
     requested_resource TEXT,
-    requested_action TEXT,
+    requested_action   TEXT,
     context_project_id UUID DEFAULT NULL
 )
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+STABLE
 AS $$
 DECLARE
-    current_uid UUID;
-    user_profile RECORD;
-    has_action BOOLEAN;
+    current_uid  UUID := auth.uid();
+    user_profile public.profiles%ROWTYPE;
+    has_action   BOOLEAN;
 BEGIN
-    current_uid := auth.uid();
-
-    IF current_uid IS NULL THEN
-        RETURN FALSE;
-    END IF;
+    IF current_uid IS NULL THEN RETURN FALSE; END IF;
 
     SELECT * INTO user_profile FROM public.profiles WHERE id = current_uid;
+    IF NOT FOUND THEN RETURN FALSE; END IF;
 
-    IF user_profile IS NULL
-       OR user_profile.profile_status <> 'active'
-       OR user_profile.status <> 'active' THEN
+    IF user_profile.profile_status <> 'active' OR user_profile.status <> 'active' THEN
         RETURN FALSE;
     END IF;
 
-    -- GOD: full access if team is platform owner
+    -- GOD: bypass total — ninguna otra regla aplica
     IF user_profile.access_level = 'god' THEN
-        IF EXISTS (SELECT 1 FROM public.teams WHERE id = user_profile.team_id AND is_platform_owner = TRUE) THEN
+        IF EXISTS (
+            SELECT 1 FROM public.teams
+            WHERE id = user_profile.team_id AND is_platform_owner = TRUE
+        ) THEN
             RETURN TRUE;
         END IF;
     END IF;
 
-    -- ADMIN: full access scoped to own team
+    -- ADMIN: acceso total en su propio equipo
     IF user_profile.access_level = 'admin' THEN
         IF context_project_id IS NOT NULL THEN
-            IF EXISTS (SELECT 1 FROM public.projects WHERE id = context_project_id AND team_id = user_profile.team_id) THEN
+            IF EXISTS (
+                SELECT 1 FROM public.entities
+                WHERE id = context_project_id AND team_id = user_profile.team_id
+            ) THEN
                 RETURN TRUE;
             END IF;
         ELSE
@@ -545,7 +554,7 @@ BEGIN
         END IF;
     END IF;
 
-    -- MEMBER: project whitelist + granular permissions
+    -- MEMBER: whitelist de entidad + permisos granulares
     IF context_project_id IS NOT NULL THEN
         IF NOT EXISTS (
             SELECT 1 FROM public.sys_entity_access
@@ -563,6 +572,26 @@ BEGIN
 
     RETURN COALESCE(has_action, FALSE);
 END;
+$$;
+
+-- 8.1b HELPER: is_god() — cortocircuito explícito para políticas RLS
+-- Usar como PRIMERA condición en todas las policies:  public.is_god() OR ...
+-- El god user NUNCA debe ser bloqueado por una política RLS.
+CREATE OR REPLACE FUNCTION public.is_god()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.profiles p
+        JOIN public.teams t ON t.id = p.team_id
+        WHERE p.id    = auth.uid()
+          AND p.access_level = 'god'
+          AND t.is_platform_owner = TRUE
+    );
 $$;
 
 -- 8.2 HELPERS for RLS (avoid recursion)
@@ -811,119 +840,127 @@ ALTER TABLE public.chat_message_reads      ENABLE ROW LEVEL SECURITY;
 -- 10.2 SYSTEM CATALOG POLICIES
 CREATE POLICY "Public Read Resources" ON public.sys_resources FOR SELECT USING (true);
 CREATE POLICY "Admin Write Resources" ON public.sys_resources FOR ALL USING (
-    public.check_permission('page_settings_roles', 'update')
+    public.is_god() OR public.check_permission('page_settings_roles', 'update')
 );
 
 CREATE POLICY "Public Read Roles" ON public.sys_roles FOR SELECT USING (true);
 CREATE POLICY "Admin Write Roles" ON public.sys_roles FOR ALL USING (
-    public.check_permission('page_settings_roles', 'update')
+    public.is_god() OR public.check_permission('page_settings_roles', 'update')
 );
 
 CREATE POLICY "Public Read RoleDefs" ON public.sys_role_definitions FOR SELECT USING (true);
 CREATE POLICY "Admin Write RoleDefs" ON public.sys_role_definitions FOR ALL USING (
-    public.check_permission('page_settings_roles', 'update')
+    public.is_god() OR public.check_permission('page_settings_roles', 'update')
 );
 
 -- 10.3 BUSINESS ENTITIES POLICIES
 CREATE POLICY "View Own Team" ON public.teams FOR SELECT USING (
-    id IN (SELECT team_id FROM public.profiles WHERE id = auth.uid())
+    public.is_god()
+    OR id IN (SELECT team_id FROM public.profiles WHERE id = auth.uid())
 );
 CREATE POLICY "Admin Edit Team" ON public.teams FOR UPDATE USING (
-    public.check_permission('page_settings_usuarios', 'update')
+    public.is_god() OR public.check_permission('page_settings_usuarios', 'update')
 );
 
 CREATE POLICY "View Self" ON public.profiles FOR SELECT USING (
-    id = auth.uid()
+    public.is_god() OR id = auth.uid()
 );
 CREATE POLICY "View Teammates" ON public.profiles FOR SELECT USING (
-    team_id = public.get_my_team_id()
+    public.is_god() OR team_id = public.get_my_team_id()
 );
 CREATE POLICY "Edit Self" ON public.profiles FOR UPDATE USING (
-    id = auth.uid()
+    public.is_god() OR id = auth.uid()
 );
 CREATE POLICY "Admin Manage Profiles" ON public.profiles FOR ALL USING (
-    public.check_permission('page_settings_usuarios', 'update')
+    public.is_god() OR public.check_permission('page_settings_usuarios', 'update')
 );
 
+-- GOD ve TODAS las entidades sin necesitar sys_entity_access
 CREATE POLICY "View Authorized Entities" ON public.entities FOR SELECT USING (
-    id IN (SELECT entity_id FROM public.sys_entity_access WHERE user_id = auth.uid())
+    public.is_god()
+    OR id IN (SELECT entity_id FROM public.sys_entity_access WHERE user_id = auth.uid())
     OR public.check_permission('page_settings_entities', 'read')
 );
 CREATE POLICY "Manage Entities" ON public.entities FOR ALL USING (
-    public.check_permission('page_settings_entities', 'update', id)
+    public.is_god() OR public.check_permission('page_settings_entities', 'update', id)
 );
 
 -- 10.4 SYNC TABLES (PowerSync specific)
 CREATE POLICY "Sync Own Permissions" ON public.sys_user_permissions FOR SELECT USING (
-    user_id = auth.uid()
+    public.is_god() OR user_id = auth.uid()
 );
 CREATE POLICY "Admin Manage Permissions" ON public.sys_user_permissions FOR ALL USING (
-    public.check_permission('page_settings_usuarios', 'update')
+    public.is_god() OR public.check_permission('page_settings_usuarios', 'update')
 );
 
 CREATE POLICY "Sync Own Entity Access" ON public.sys_entity_access FOR SELECT USING (
-    user_id = auth.uid()
+    public.is_god() OR user_id = auth.uid()
 );
 CREATE POLICY "View Entity Access" ON public.sys_entity_access FOR SELECT USING (
-    entity_id IN (SELECT public.get_my_entity_ids())
+    public.is_god() OR entity_id IN (SELECT public.get_my_entity_ids())
 );
 CREATE POLICY "Admin Manage Entity Access" ON public.sys_entity_access FOR ALL USING (
-    public.check_permission('page_settings_entities', 'update')
+    public.is_god() OR public.check_permission('page_settings_entities', 'update')
 );
 
 -- 10.5 USER PREFERENCES
 CREATE POLICY "Manage Own Preferences" ON public.sys_user_preferences FOR ALL USING (
-    user_id = auth.uid()
+    public.is_god() OR user_id = auth.uid()
 );
 
 -- 10.6 NOTIFICATIONS
 CREATE POLICY "View Own Notifications" ON public.notifications
-    FOR SELECT USING (recipient_id = auth.uid());
+    FOR SELECT USING (public.is_god() OR recipient_id = auth.uid());
 
 CREATE POLICY "Update Own Notifications" ON public.notifications
-    FOR UPDATE USING (recipient_id = auth.uid());
+    FOR UPDATE USING (public.is_god() OR recipient_id = auth.uid());
 
 CREATE POLICY "Send Direct Notification" ON public.notifications
     FOR INSERT WITH CHECK (
-        sender_id = auth.uid()
-        AND public.check_permission('feature_notifications_send', 'create')
+        public.is_god()
+        OR (sender_id = auth.uid() AND public.check_permission('feature_notifications_send', 'create'))
     );
 
 CREATE POLICY "Send Broadcast" ON public.notification_broadcasts
     FOR INSERT WITH CHECK (
-        public.check_permission('feature_notifications_send', 'broadcast')
+        public.is_god() OR public.check_permission('feature_notifications_send', 'broadcast')
     );
 
 CREATE POLICY "View Own Broadcasts" ON public.notification_broadcasts
     FOR SELECT USING (
-        sender_id = auth.uid()
+        public.is_god()
+        OR sender_id = auth.uid()
         OR id IN (SELECT broadcast_id FROM public.notifications WHERE recipient_id = auth.uid())
     );
 
 CREATE POLICY "View Notification Attachments" ON public.notification_attachments
     FOR SELECT USING (
-        notification_id IN (SELECT id FROM public.notifications WHERE recipient_id = auth.uid())
+        public.is_god()
+        OR notification_id IN (SELECT id FROM public.notifications WHERE recipient_id = auth.uid())
         OR broadcast_id IN (SELECT broadcast_id FROM public.notifications WHERE recipient_id = auth.uid())
     );
 
 CREATE POLICY "Insert Notification Attachments" ON public.notification_attachments
     FOR INSERT WITH CHECK (
-        public.check_permission('feature_notifications_send', 'create')
+        public.is_god() OR public.check_permission('feature_notifications_send', 'create')
     );
 
 -- 10.7 CHAT
 CREATE POLICY "View My Conversations" ON public.chat_conversations
-    FOR SELECT USING (created_by = auth.uid() OR public.is_chat_participant(id));
+    FOR SELECT USING (
+        public.is_god() OR created_by = auth.uid() OR public.is_chat_participant(id)
+    );
 
 CREATE POLICY "Create Conversation" ON public.chat_conversations
-    FOR INSERT WITH CHECK (created_by = auth.uid());
+    FOR INSERT WITH CHECK (public.is_god() OR created_by = auth.uid());
 
 CREATE POLICY "View Conversation Participants" ON public.chat_participants
-    FOR SELECT USING (public.is_chat_participant(conversation_id));
+    FOR SELECT USING (public.is_god() OR public.is_chat_participant(conversation_id));
 
 CREATE POLICY "Add Participant" ON public.chat_participants
     FOR INSERT WITH CHECK (
-        user_id = auth.uid()
+        public.is_god()
+        OR user_id = auth.uid()
         OR public.is_chat_participant(conversation_id)
         OR EXISTS (
             SELECT 1 FROM public.chat_conversations
@@ -932,13 +969,13 @@ CREATE POLICY "Add Participant" ON public.chat_participants
     );
 
 CREATE POLICY "View Conversation Messages" ON public.chat_messages
-    FOR SELECT USING (public.is_chat_participant(conversation_id));
+    FOR SELECT USING (public.is_god() OR public.is_chat_participant(conversation_id));
 
 CREATE POLICY "Send Message" ON public.chat_messages
     FOR INSERT WITH CHECK (
-        sender_id = auth.uid()
-        AND public.is_chat_participant(conversation_id)
+        public.is_god()
+        OR (sender_id = auth.uid() AND public.is_chat_participant(conversation_id))
     );
 
 CREATE POLICY "Manage Own Read Receipts" ON public.chat_message_reads
-    FOR ALL USING (user_id = auth.uid());
+    FOR ALL USING (public.is_god() OR user_id = auth.uid());

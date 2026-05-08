@@ -98,76 +98,76 @@ ALTER TABLE public.task_comments ENABLE ROW LEVEL SECURITY;
 
 -- TASKS -----------------------------------------------------------------------
 
--- SELECT: cualquier miembro del proyecto puede ver las tareas activas
+-- GOD siempre ve y puede hacer todo; el resto sigue las reglas normales
 CREATE POLICY "tasks_select" ON public.tasks
     FOR SELECT USING (
-        status = 'active'
-        AND (
+        public.is_god()
+        OR (status = 'active' AND (
             entity_id IN (
                 SELECT entity_id FROM public.sys_entity_access
                 WHERE user_id = auth.uid()
             )
             OR public.check_permission('page_workspace_tasks', 'read')
-        )
+        ))
     );
 
--- INSERT: miembro de la entity con permiso create
 CREATE POLICY "tasks_insert" ON public.tasks
     FOR INSERT WITH CHECK (
-        created_by = auth.uid()
-        AND (
+        public.is_god()
+        OR (created_by = auth.uid() AND (
             entity_id IN (
                 SELECT entity_id FROM public.sys_entity_access
                 WHERE user_id = auth.uid()
             )
             OR public.check_permission('page_workspace_tasks', 'create')
-        )
+        ))
     );
 
--- UPDATE: creador, asignado, o admin con permiso update
 CREATE POLICY "tasks_update" ON public.tasks
     FOR UPDATE USING (
-        (created_by = auth.uid() OR assigned_to = auth.uid())
+        public.is_god()
+        OR (created_by = auth.uid() OR assigned_to = auth.uid())
         OR public.check_permission('page_workspace_tasks', 'update', entity_id)
     );
 
--- DELETE: solo borrado lógico vía UPDATE; hard-delete solo para admins
 CREATE POLICY "tasks_delete" ON public.tasks
     FOR DELETE USING (
-        public.check_permission('page_workspace_tasks', 'delete', entity_id)
+        public.is_god()
+        OR public.check_permission('page_workspace_tasks', 'delete', entity_id)
     );
 
 -- TASK_COMMENTS ---------------------------------------------------------------
 
 CREATE POLICY "task_comments_select" ON public.task_comments
     FOR SELECT USING (
-        status = 'active'
-        AND task_id IN (
+        public.is_god()
+        OR (status = 'active' AND task_id IN (
             SELECT id FROM public.tasks
             WHERE entity_id IN (
                 SELECT entity_id FROM public.sys_entity_access
                 WHERE user_id = auth.uid()
             )
-        )
+        ))
     );
 
 CREATE POLICY "task_comments_insert" ON public.task_comments
     FOR INSERT WITH CHECK (
-        created_by = auth.uid()
-        AND task_id IN (
+        public.is_god()
+        OR (created_by = auth.uid() AND task_id IN (
             SELECT id FROM public.tasks
             WHERE entity_id IN (
                 SELECT entity_id FROM public.sys_entity_access
                 WHERE user_id = auth.uid()
             )
-        )
+        ))
     );
 
 CREATE POLICY "task_comments_update" ON public.task_comments
-    FOR UPDATE USING (created_by = auth.uid());
+    FOR UPDATE USING (public.is_god() OR created_by = auth.uid());
 
 CREATE POLICY "task_comments_delete" ON public.task_comments
     FOR DELETE USING (
-        created_by = auth.uid()
+        public.is_god()
+        OR created_by = auth.uid()
         OR public.check_permission('page_workspace_tasks', 'delete')
     );
