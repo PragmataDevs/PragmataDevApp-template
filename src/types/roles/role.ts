@@ -8,10 +8,6 @@ export interface Role extends AuditBase {
   is_dev_role: boolean;
 }
 
-export interface RoleDefinition {
-  id: string;
-  role_id: string;
-  resource_code: string;
-  granted_actions: string[];
-  conditions: string | null;
-}
+// Fuente canónica de RoleDefinition: src/types/auth/rbac.ts
+// Re-exportado aquí para compatibilidad de imports existentes.
+export type { RoleDefinition } from '@/types/auth/rbac';

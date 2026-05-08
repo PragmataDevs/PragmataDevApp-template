@@ -1,12 +1,34 @@
-# DOCUMENTO MAESTRO: ARQUITECTURA PRAGMATA v1.2
+# DOCUMENTO MAESTRO: ARQUITECTURA PRAGMATA v2.0
 
-**Proyecto:** Plantilla Universal Offline-First (SaaS / Enterprise)
-**Stack:** React + Vite + Supabase + PowerSync + Tailwind
-**Última Actualización:** 16 de Abril 2026
+**Proyecto:** Plantilla Universal — Fábrica de Software Industrial (SaaS / Enterprise / Ecommerce / IA)
+**Stack:** React + Vite + Astro + Supabase + PowerSync + Tailwind + pgvector
+**Última Actualización:** 8 de Mayo 2026
+
+---
+
+## 0. Manifiesto: La Fábrica de Software Industrial
+
+PragmataDevs opera como una **fábrica de software modular**. No construimos aplicaciones aisladas. Construimos un **Chasis Universal** capaz de desplegar tres canales de negocio desde una única fuente de verdad:
+
+| Pilar | Stack | Propósito | Feature Flag |
+| :--- | :--- | :--- | :--- |
+| **Público** (SEO/Ecommerce) | Astro + Tailwind | Web ultrarrápida, SEO técnico, catálogo, tienda | `VITE_ENABLE_ECOMMERCE` |
+| **Operativo** (ERP/Admin) | React + Vite + Supabase | Dashboard ERP, CRUD, permisos, reportes | siempre activo |
+| **Intelligence** (IA Core) | Edge Functions + pgvector + LLMs | Búsqueda semántica, resúmenes, extracción de datos | `VITE_ENABLE_AI` |
+
+**Principios de ingeniería industrial aplicados al código:**
+- **Estandarización Total:** Una entidad = un solo modelo TypeScript que extiende `AuditBase`. Prohibido crear variaciones.
+- **Desacoplamiento de Infraestructura:** Auth, DB y Sync son intercambiables via Provider Pattern.
+- **Offline-First / Online-Fit:** PowerSync + SQLite activable por `.env`. Si el cliente no requiere offline → `VITE_ENABLE_POWERSYNC=false`.
+- **Módulos Prendibles/Apagables:** Ecommerce, IA y Sync se activan/desactivan via `.env`. No son decisiones arquitectónicas irreversibles.
+
+---
 
 ---
 
 ## 1. Stack Tecnológico
+
+### 1.1 Pilar Operativo (ERP/Admin) — Core
 
 | Capa | Tecnología | Función Principal |
 | :--- | :--- | :--- |
@@ -19,11 +41,34 @@
 | **Deployment** | Vercel | Hosting con flujo de ramas (Main, Develop, Preview). |
 | **Auth** | Supabase Auth | Sistema de autenticación con JWT. |
 
+### 1.2 Pilar Público (SEO/Ecommerce)
+
+| Capa | Tecnología | Función Principal |
+| :--- | :--- | :--- |
+| **Framework Web** | Astro 4+ | SSG/SSR ultrarrápido, 0 JS por defecto, SEO técnico. |
+| **Islas React** | `@astrojs/react` | Componentes interactivos (carrito, filtros) como islas hidratadas. |
+| **Imágenes** | `<Image>` de Astro | Optimización automática: WebP, lazy load, responsive. |
+| **Base de Datos** | Supabase (anon key, solo lectura pública) | Catálogo, precios, stock — RLS `SELECT` público. |
+| **Payments** | Stripe / MercadoPago (Edge Function) | Checkout seguro via Edge Function intermedia. |
+| **Deployment** | Vercel (SSR) o Netlify (SSG) | CDN global, preview por rama. |
+
+### 1.3 Pilar Intelligence (IA Core)
+
+| Capa | Tecnología | Función Principal |
+| :--- | :--- | :--- |
+| **Embeddings** | pgvector (PostgreSQL) | Búsqueda semántica sobre datos del negocio. |
+| **LLM Gateway** | Supabase Edge Functions | Intermediario seguro entre cliente y APIs de IA. |
+| **Modelos** | OpenAI / Anthropic / Gemini | Generación, resúmenes, extracción de datos. |
+| **Vectorización** | `text-embedding-3-small` (OpenAI) | Embeddings de documentos y registros. |
+| **UI IA** | `src/features/ai/` | Componentes de búsqueda, resumen y asistente. |
+
 ---
 
-## 2. Estructura de Directorios (Feature-Based)
+## 2. Estructura de Directorios (Monorepo Feature-Based)
 
 Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
+
+### Pilar Operativo (`/src`)
 
 ```text
 /src
@@ -44,11 +89,12 @@ Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
   │   │   ├── hooks/              # useAuth, usePermission
   │   │   └── providers/          # AuthProvider (Context global)
   │   ├── projects/               # Gestión de proyectos (CRUD, miembros, selector)
-  │   │   ├── components/         # UI específica del módulo
-  │   │   ├── hooks/              # Querys a Supabase (useProjects)
   │   ├── roles/                  # Gestión de roles y permisos
   │   ├── users/                  # Gestión de usuarios y asignaciones
-  │   └── settings/               # Componentes compartidos de configuración
+  │   ├── settings/               # Componentes compartidos de configuración
+  │   └── ai/                     # [VITE_ENABLE_AI] Módulo de IA
+  │       ├── components/         # AISearch, AISummaryPanel, AIAssistant
+  │       └── hooks/              # useAISearch, useAISummarize
   │
   ├── lib/                        # Infraestructura y Motores
   │   ├── db/                     # Configuración PowerSync + Schema Local
@@ -67,6 +113,39 @@ Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
   │   └── settings/               # Roles, Usuarios, Proyectos
   │
   └── types/                      # Definiciones de TypeScript (DB Interfaces)
+      ├── core/base.ts            # AuditBase — la raíz de todo modelo
+      └── <dominio>/              # Un archivo por entidad de negocio
+```
+
+### Pilar Público (`/packages/web`) — Astro
+
+```text
+packages/web/
+  src/
+    pages/              # .astro — rutas SSG/SSR ([slug].astro para dinámicas)
+    components/         # .astro y .tsx (islas React para interactividad)
+    layouts/
+      BaseLayout.astro  # HTML base con SEOHead (<title>, og:image, canonical)
+    lib/
+      supabase.ts        # Cliente Supabase (anon key — solo lectura pública)
+    styles/
+      global.css         # Tailwind base + tokens compartidos
+  astro.config.mjs       # Integración React, sitemap, image optimizer
+```
+
+### Pilar Intelligence (`/supabase/functions`) — Edge Functions
+
+```text
+supabase/functions/
+  ai-search/             # Búsqueda semántica con pgvector
+    index.ts
+  ai-summarize/          # Resúmenes de documentos/registros
+    index.ts
+  ai-extract/            # Extracción de datos de PDFs/imágenes
+    index.ts
+  _shared/
+    openai.ts            # Cliente OpenAI reutilizable
+    pgvector.ts          # Helpers de embeddings
 ```
 
 ---
@@ -789,3 +868,291 @@ Antes del chunking manual el chunk principal era ~536 kB (warning `>500 kB`). La
 3. **Prohibido** subir `chunkSizeWarningLimit` para silenciar un warning sin resolver la causa.
 4. **Al agregar una dependencia**, ejecutar `pnpm build` y registrar el delta de tamaño en el PR usando la plantilla del [bundle-chunck-strategy.md §6](bundle-chunck-strategy.md).
 5. No importar librerías de vendor en `providers/`, `App.tsx` ni `main.tsx` de forma estática si se puede diferir a la ruta consumidora.
+
+---
+
+## 11. Pilar Público: SEO / Ecommerce (Astro)
+
+### 11.1 Filosofía
+
+El Pilar Público es la **cara pública del negocio**. Su objetivo es captar tráfico orgánico (SEO técnico) y convertir visitantes en clientes (Ecommerce). Astro es la herramienta ideal: genera HTML estático o SSR con 0 JS por defecto, lo que garantiza Core Web Vitals perfectos.
+
+**Principio clave:** el Pilar Público **solo lee** de Supabase (anon key con RLS `SELECT` público). Toda escritura (pedidos, registros, pagos) pasa por Edge Functions del Pilar Operativo o Intelligence.
+
+### 11.2 Arquitectura SEO
+
+```astro
+---
+// layouts/BaseLayout.astro
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+  canonical?: string;
+}
+const { title, description, ogImage, canonical } = Astro.props;
+---
+<html lang="es">
+  <head>
+    <title>{title} | PragmataDevs</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    <meta name="robots" content="index, follow" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+```
+
+**Reglas SEO:**
+- Toda página exporta `title` único y `description` entre 120–160 caracteres.
+- Rutas dinámicas usan `getStaticPaths()` para generar URLs en build time (SSG).
+- Imágenes siempre con `<Image>` de Astro (convierte a WebP + `width`/`height` obligatorios para evitar CLS).
+- Sitemap automático con `@astrojs/sitemap`.
+- Structured Data (JSON-LD) en páginas de producto y landing.
+
+### 11.3 Arquitectura Ecommerce
+
+```
+Catálogo          →  tabla `productos` (Supabase, RLS SELECT público)
+Carrito           →  localStorage / sessionStorage (isla React)
+Checkout          →  Edge Function `create-order` (valida stock, crea pedido)
+Pago              →  Edge Function `create-payment` (Stripe/MercadoPago webhook)
+Confirmación      →  página /pedido/[id] (SSR con datos del pedido)
+```
+
+**Tabla mínima de catálogo:**
+
+```sql
+CREATE TABLE productos (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre        TEXT NOT NULL,
+  descripcion   TEXT,
+  precio        NUMERIC(10,2) NOT NULL,
+  stock         INTEGER NOT NULL DEFAULT 0,
+  imagenes      TEXT[],           -- URLs de Supabase Storage
+  slug          TEXT UNIQUE NOT NULL,
+  categoria_id  UUID REFERENCES categorias(id),
+  status        TEXT NOT NULL DEFAULT 'active',
+  -- AuditBase fields...
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_by    UUID REFERENCES auth.users(id),
+  updated_by    UUID REFERENCES auth.users(id),
+  deleted_at    TIMESTAMPTZ,
+  version       INTEGER NOT NULL DEFAULT 0
+);
+
+-- RLS: lectura pública para productos activos
+CREATE POLICY "productos_public_read" ON productos
+  FOR SELECT USING (status = 'active');
+```
+
+### 11.4 Integración con el Pilar Operativo
+
+El administrador gestiona el catálogo desde el Pilar Operativo (ERP). El Pilar Público lee los mismos datos via Supabase anon key. No hay sincronización manual: comparten la misma base de datos.
+
+```
+ERP (Operativo) → CRUD productos → Supabase PostgreSQL ← lectura → Astro (Público)
+```
+
+---
+
+## 12. Pilar Intelligence: IA Core
+
+### 12.1 Filosofía
+
+El Pilar Intelligence convierte los datos del negocio en **inteligencia accionable**. Los LLMs nunca son llamados directamente desde el cliente — siempre pasan por Edge Functions que validan permisos, limitan costos y registran el uso.
+
+**Principio:** la IA lee los mismos datos que el ERP (tablas con AuditBase). Los embeddings son una capa adicional sobre los registros existentes, no un nuevo silo de datos.
+
+### 12.2 Arquitectura de Embeddings
+
+```sql
+-- Tabla de embeddings (extender por entidad)
+CREATE TABLE embeddings (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  entidad      TEXT NOT NULL,        -- 'contratos', 'proyectos', etc.
+  entidad_id   UUID NOT NULL,
+  content      TEXT NOT NULL,        -- texto embebido
+  embedding    vector(1536),         -- OpenAI text-embedding-3-small
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Índice para búsqueda aproximada (HNSW)
+CREATE INDEX ON embeddings USING hnsw (embedding vector_cosine_ops);
+```
+
+**Flujo de vectorización:**
+1. Trigger Postgres o Edge Function `embed-on-change` escucha `INSERT`/`UPDATE` en tablas relevantes.
+2. Genera embedding via OpenAI y guarda en `embeddings`.
+3. El cliente invoca `ai-search` con la query del usuario.
+4. `ai-search` vectoriza la query y hace `SELECT ... ORDER BY embedding <=> $1 LIMIT 10`.
+
+### 12.3 Edge Functions IA
+
+```typescript
+// supabase/functions/ai-search/index.ts
+import { serve } from 'https://deno.land/std/http/server.ts';
+import { createClient } from '@supabase/supabase-js';
+import OpenAI from 'openai';
+
+serve(async (req) => {
+  const { query, project_id } = await req.json();
+  const openai = new OpenAI({ apiKey: Deno.env.get('OPENAI_API_KEY') });
+
+  // 1. Vectorizar query
+  const { data: [{ embedding }] } = await openai.embeddings.create({
+    model: 'text-embedding-3-small',
+    input: query,
+  });
+
+  // 2. Buscar registros similares (RLS garantiza scope del proyecto)
+  const supabase = createClient(/* ... */);
+  const { data } = await supabase.rpc('match_embeddings', {
+    query_embedding: embedding,
+    project_id,
+    match_count: 10,
+  });
+
+  return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
+});
+```
+
+### 12.4 Feature Flag y Guard en el Cliente
+
+```typescript
+// Activar en .env
+VITE_ENABLE_AI=true
+
+// Guard en rutas (routes.config.ts)
+const AI_ENABLED = import.meta.env.VITE_ENABLE_AI === 'true';
+{ path: 'ai', element: AI_ENABLED ? <AISearchPage /> : <Navigate to="/" /> }
+
+// Hook de invocación
+export function useAISearch() {
+  const { isAuthenticated } = useAuth();
+
+  const search = useCallback(async (query: string, projectId: string) => {
+    if (!isAuthenticated) return [];
+    const { data, error } = await supabase.functions.invoke('ai-search', {
+      body: { query, project_id: projectId },
+    });
+    if (error) throw error;
+    return data as SearchResult[];
+  }, [isAuthenticated]);
+
+  return { search };
+}
+```
+
+### 12.5 Costos y Límites
+
+| Servicio | Modelo | Costo aprox. | Límite recomendado |
+| :--- | :--- | :--- | :--- |
+| Embeddings | `text-embedding-3-small` | $0.02 / 1M tokens | Sin límite en vectorización batch |
+| Búsqueda semántica | pgvector | $0 (PostgreSQL) | HNSW soporta millones de vectores |
+| Resúmenes | `gpt-4o-mini` | $0.15 / 1M tokens | Máx. 3 resúmenes/min por usuario |
+| Extracción | `gpt-4o` | $2.5 / 1M tokens | Solo en features premium |
+
+Registrar cada llamada en tabla `ai_usage` (entidad, operación, tokens, usuario, costo_estimado) para control de gastos.
+
+---
+
+## 13. Sistema de Diseño Pragmata (UI Industrial)
+
+> Referencia completa de componentes: `.cursor/rules/02-ui-components.mdc`
+
+### 13.1 Principios de Diseño de Autoridad
+
+**Estética Stripe/Linear:** sobria, limpia, funcional. El diseño jamás compite con los datos.
+
+| Token | Valor | Uso |
+| :--- | :--- | :--- |
+| `rounded-pragmata` | 4px | Todos los contenedores, botones, inputs |
+| `brand-accent` | #0EA5E9 | Única acción primaria por sección |
+| `brand-dark` | #0F172A | Headings y texto crítico |
+| `brand-steel` | #334155 | Cuerpo de texto y labels |
+| `brand-surface` | #F8FAFC | Fondos de cards e inputs |
+| Spacing base | `p-6` cards, `gap-4` elementos | Nunca `p-2` en contenedores principales |
+
+### 13.2 Anatomía de una Vista (Page Layout)
+
+Toda vista interior sigue esta estructura:
+
+```
+┌─ PageHeader ──────────────────────────────────────────────────┐
+│  Breadcrumb: Dashboard > Módulo > Sub-item                     │
+│  Título: h1 font-extrabold                    [Acciones]       │
+└───────────────────────────────────────────────────────────────┘
+┌─ Contenido Principal ─────────────────────────────────────────┐
+│  grid grid-cols-1 lg:grid-cols-3 gap-6                         │
+│  ┌─ Panel Principal ─────────┐  ┌─ Panel Lateral ────────────┐│
+│  │  Tabla / Formulario / etc │  │  Stats, Acciones rápidas   ││
+│  └───────────────────────────┘  └────────────────────────────┘│
+└───────────────────────────────────────────────────────────────┘
+```
+
+### 13.3 Jerarquía de Modales
+
+| Tipo | `max-w` | Uso |
+| :--- | :--- | :--- |
+| Confirmación destructiva | `max-w-sm` | "¿Eliminar este registro?" |
+| Formulario simple | `max-w-lg` | Crear/Editar entidades simples |
+| Formulario complejo | `max-w-2xl` | Formularios con múltiples secciones |
+| Vista previa / Detalle | `max-w-4xl` | PDF, galería, detalle expandido |
+| Wizard / Multi-paso | `max-w-3xl` | Onboarding, configuración guiada |
+
+**Regla de footer:** siempre "Cancelar" a la izquierda, acción principal a la derecha. El botón principal refleja el verbo de la acción: "Guardar", "Confirmar", "Eliminar".
+
+### 13.4 PDF Previewer
+
+El visor de PDF usa un `<iframe>` liviano por defecto (sin dependencias extra). Solo instalar `react-pdf` si el cliente necesita anotaciones o control página a página.
+
+```
+Caso de uso          │ Solución
+─────────────────────┼──────────────────────────────────
+Solo ver             │ <iframe src={url}> (0 deps)
+Descargar            │ <a href={url} download>
+Múltiples páginas    │ react-pdf (chunk dedicado)
+Anotaciones          │ react-pdf + pdfjs-dist (chunk dedicado)
+```
+
+### 13.5 Carrusel de Imágenes
+
+`embla-carousel-react` como dependencia estándar (ligera, sin opiniones). Chunk dedicado en `vite.config.ts`.
+
+**Variantes:**
+- **Producto:** autoplay desactivado, miniaturas debajo, zoom en click.
+- **Galería:** lightbox en click, controles teclado (←/→), contador "3 / 12".
+- **Onboarding:** autoplay 4s, puntos de navegación, sin controles laterales.
+
+### 13.6 Jerarquía de Botones
+
+Máximo **1 botón `primary`** por sección visual. El resto son `outline`, `ghost` o `destructive`.
+
+```
+Primary    → Acción principal de la pantalla (Guardar, Crear, Confirmar)
+Outline    → Acción secundaria (Cancelar, Exportar, Ver detalle)
+Ghost      → Acciones en listas/tablas (Editar, Menú de opciones)
+Destructive → Solo para confirmación de eliminación
+Link       → Navegación sin peso visual
+```
+
+**Estado de carga:** siempre mostrar `<Loader2 className="animate-spin" />` + texto descriptivo. Nunca deshabilitar sin feedback visual.
+
+### 13.7 Estados de la UI
+
+Toda lista/tabla/sección debe manejar los 4 estados:
+
+| Estado | Componente | Descripción |
+| :--- | :--- | :--- |
+| `loading` | Skeleton (no spinner de página) | Placeholders del mismo shape que el contenido |
+| `empty` | EmptyState con icono + CTA | Mensaje específico del contexto, botón para crear el primero |
+| `error` | ErrorState con retry | Mensaje de error + botón "Reintentar" |
+| `data` | El componente real | Siempre con paginación si >20 registros |

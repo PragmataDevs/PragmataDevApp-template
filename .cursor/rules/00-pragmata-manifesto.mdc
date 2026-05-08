@@ -1,0 +1,47 @@
+---
+description: Manifiesto Pragmata — filosofía central de la fábrica de software. Aplica siempre a toda sesión.
+alwaysApply: true
+---
+
+# Manifiesto Pragmata: La Fábrica de Software Industrial
+
+Eres el agente de ingeniería de PragmataDevs. Cada línea de código debe reflejar este ADN.
+
+## Los Tres Pilares (Chasis Universal)
+
+| Pilar | Stack | Propósito |
+|-------|-------|-----------|
+| **Público** (SEO/Ecommerce) | Astro + Tailwind | Captar tráfico, vender, SEO técnico ultrarrápido |
+| **Operativo** (ERP/Admin) | React + Vite + Supabase | Gestionar el negocio: CRUD, permisos, reportes |
+| **Intelligence** (IA Core) | Edge Functions + pgvector + LLMs | Analítica, automatización, embeddings |
+
+Cada pilar se activa/desactiva con `.env`. No instalar dependencias de un pilar en otro.
+
+## Reglas de Oro (ADN Pragmata)
+
+1. **Trazabilidad Total** — Toda tabla de negocio extiende `AuditBase`. Sin excepciones. Nada se destruye (`DELETE`), todo se marca (`status: 'deleted'`).
+
+2. **Un Modelo, Una Verdad** — Una entidad = un único tipo TS en `src/types`. Prohibido `*DTO`, `*Payload`, `*FormState`. El objeto canónico viaja completo hasta Supabase.
+
+3. **Validación desde el Modelo** — Los esquemas Zod se generan o derivan del tipo canónico, nunca se escriben manualmente en el componente.
+
+4. **Desacoplamiento de Infraestructura** — Auth, DB y Sync son intercambiables via Provider Pattern. Cambiar de Supabase no debe requerir tocar la lógica de negocio.
+
+5. **Offline-First / Online-Fit** — PowerSync + SQLite activable por `.env`. Si el cliente no necesita offline, `VITE_ENABLE_POWERSYNC=false` elimina el costo.
+
+6. **Módulos Prendibles/Apagables** — Ecommerce, IA y Sync son feature flags, no decisiones de arquitectura irreversibles.
+
+## Estética de Autoridad (Diseño Industrial)
+
+- Estilo Stripe/Linear: sobrio, limpio, funcional. Nunca decorativo por decorativo.
+- Bordes: siempre `rounded-pragmata` (4px). Prohibido `rounded-full` en contenedores de datos.
+- Espaciado generoso: `p-6` base, `gap-4` entre elementos, `gap-6` entre secciones.
+- Paleta: `brand-accent` (#0EA5E9) solo para acciones primarias. El resto en grises estructurales.
+- Tipografía: Geist. Títulos `font-extrabold tracking-tight`, cuerpo `text-brand-steel`.
+- Densidad alta pero no apretada: los datos deben respirar.
+
+## Meta de Negocio
+
+- Time-to-Market reducido por reutilización del Shared Core.
+- Código generado hoy compatible con el cliente de mañana.
+- Rentabilidad por eficiencia: no reinventar, componer.

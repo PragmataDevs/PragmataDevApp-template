@@ -1,0 +1,233 @@
+---
+description: Sistema de diseño Pragmata — modales, vistas con breadcrumb, botones, PDF previewer, carruseles de imágenes.
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# Sistema de Diseño Pragmata (Estilo Industrial)
+
+## Tokens Base
+
+```
+border-radius: rounded-pragmata (4px)  — nunca rounded-full en contenedores
+spacing base: p-6 cards, gap-4 elementos, gap-6 secciones
+color acción: brand-accent #0EA5E9
+color texto: brand-dark #0F172A (headings), brand-steel #334155 (body)
+shadow: shadow-sm default, shadow-md en hover
+```
+
+## Vistas con Breadcrumb (Page Layout)
+
+Toda vista de nivel 2+ muestra breadcrumb + título + acciones en una `PageHeader`.
+
+```tsx
+// Estructura obligatoria de página interior
+<div className="flex flex-col gap-6 p-6">
+  {/* Header de página */}
+  <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-1">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-sm text-brand-steel">
+        <Link to="/dashboard">Dashboard</Link>
+        <ChevronRight size={14} />
+        <Link to="/contratos">Contratos</Link>
+        <ChevronRight size={14} />
+        <span className="text-brand-dark font-medium">Detalle</span>
+      </nav>
+      <h1 className="text-2xl font-bold tracking-tight text-brand-dark">
+        Contrato #001
+      </h1>
+    </div>
+    {/* Acciones de página */}
+    <div className="flex items-center gap-3">
+      <Button variant="outline">Exportar</Button>
+      <Button>Guardar</Button>
+    </div>
+  </div>
+
+  {/* Contenido */}
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {/* ... */}
+  </div>
+</div>
+```
+
+## Modales (Dialogs)
+
+Usar `Dialog` de shadcn/ui. Reglas:
+
+- **Crear/Editar:** `max-w-lg` (formularios simples) o `max-w-2xl` (complejos).
+- **Confirmar destructivo:** `max-w-sm` con botón rojo `variant="destructive"`.
+- **Vista previa / detalle:** `max-w-4xl` o `max-w-5xl` con scroll interno.
+- El título describe la acción: "Nuevo Contrato", "Editar Usuario", "Confirmar eliminación".
+- Footer siempre tiene "Cancelar" (izquierda) y acción principal (derecha).
+
+```tsx
+<Dialog open={open} onOpenChange={setOpen}>
+  <DialogContent className="max-w-lg">
+    <DialogHeader>
+      <DialogTitle className="text-brand-dark font-bold">Nuevo Contrato</DialogTitle>
+      <DialogDescription className="text-brand-steel">
+        Completa los campos para registrar el contrato.
+      </DialogDescription>
+    </DialogHeader>
+
+    <form className="flex flex-col gap-4 py-2">
+      {/* campos */}
+    </form>
+
+    <DialogFooter className="gap-2">
+      <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+      <Button type="submit" disabled={loading}>
+        {loading ? <Loader2 className="animate-spin" size={16} /> : 'Guardar'}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+## Botones — Jerarquía Obligatoria
+
+```tsx
+// Acción primaria (1 por vista)
+<Button className="bg-brand-accent hover:bg-sky-600 text-white">
+  Guardar
+</Button>
+
+// Acción secundaria
+<Button variant="outline">Cancelar</Button>
+
+// Acción destructiva
+<Button variant="destructive">Eliminar</Button>
+
+// Acción ghost (en tablas/listas)
+<Button variant="ghost" size="sm"><MoreHorizontal size={16} /></Button>
+
+// Cargando — siempre mostrar spinner, nunca deshabilitar sin feedback
+<Button disabled={loading}>
+  {loading && <Loader2 className="mr-2 animate-spin" size={16} />}
+  Guardando...
+</Button>
+```
+
+Regla: **máximo 1 botón primary por sección visual**. Los demás son `outline` o `ghost`.
+
+## PDF Previewer
+
+Chunk dedicado. Import dinámico obligatorio. Usar `react-pdf` o visor con iframe/embed.
+
+```tsx
+// Visor liviano con iframe (sin dependencia extra)
+<div className="flex flex-col gap-2">
+  <div className="flex items-center justify-between">
+    <span className="text-sm font-medium text-brand-dark">Vista previa</span>
+    <Button variant="ghost" size="sm" asChild>
+      <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+        <ExternalLink size={14} className="mr-1" /> Abrir en nueva pestaña
+      </a>
+    </Button>
+  </div>
+  <div className="border border-gray-200 rounded-pragmata overflow-hidden bg-gray-50"
+       style={{ height: 520 }}>
+    <iframe
+      src={`${pdfUrl}#toolbar=0&navpanes=0`}
+      className="w-full h-full"
+      title="Vista previa PDF"
+    />
+  </div>
+</div>
+
+// Si se necesita react-pdf: import dinámico con chunk propio en vite.config.ts
+// 'pdf': ['react-pdf', 'pdfjs-dist']
+```
+
+## Carrusel de Imágenes
+
+Usar `embla-carousel-react`. Chunk dedicado en vite.config.ts: `'carousel': ['embla-carousel-react']`.
+
+```tsx
+import useEmblaCarousel from 'embla-carousel-react';
+
+function ImageCarousel({ images }: { images: { url: string; alt: string }[] }) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
+
+  return (
+    <div className="relative">
+      <div className="overflow-hidden rounded-pragmata border border-gray-200" ref={emblaRef}>
+        <div className="flex">
+          {images.map((img, i) => (
+            <div key={i} className="flex-none w-full">
+              <img
+                src={img.url} alt={img.alt}
+                className="w-full h-64 object-cover"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Controles */}
+      <button
+        onClick={() => emblaApi?.scrollPrev()}
+        className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/90 rounded-pragmata shadow-sm border border-gray-200"
+      >
+        <ChevronLeft size={16} />
+      </button>
+      <button
+        onClick={() => emblaApi?.scrollNext()}
+        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/90 rounded-pragmata shadow-sm border border-gray-200"
+      >
+        <ChevronRight size={16} />
+      </button>
+    </div>
+  );
+}
+```
+
+## Tablas de Datos
+
+```tsx
+// Estructura base: header fijo, filas con hover, acciones en última columna
+<div className="border border-gray-200 rounded-pragmata overflow-hidden">
+  <table className="w-full text-sm">
+    <thead className="bg-gray-50 border-b border-gray-200">
+      <tr>
+        <th className="text-left px-4 py-3 font-medium text-brand-steel">Nombre</th>
+        <th className="text-left px-4 py-3 font-medium text-brand-steel">Estado</th>
+        <th className="w-12 px-4 py-3" />
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-gray-100">
+      {rows.map(row => (
+        <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+          <td className="px-4 py-3 text-brand-dark font-medium">{row.nombre}</td>
+          <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
+          <td className="px-4 py-3">
+            <RowActionsMenu row={row} />
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+```
+
+## Estados Vacíos y de Carga
+
+```tsx
+// Empty state
+<div className="flex flex-col items-center justify-center py-16 gap-3">
+  <div className="w-12 h-12 rounded-pragmata bg-gray-100 flex items-center justify-center">
+    <FileX size={20} className="text-brand-steel" />
+  </div>
+  <p className="font-medium text-brand-dark">Sin registros</p>
+  <p className="text-sm text-brand-steel">Crea el primero para comenzar.</p>
+  <Button size="sm">Nuevo registro</Button>
+</div>
+
+// Loading skeleton — nunca spinner de página completa para listas
+<div className="space-y-2">
+  {[...Array(5)].map((_, i) => (
+    <div key={i} className="h-12 bg-gray-100 animate-pulse rounded-pragmata" />
+  ))}
+</div>
+```

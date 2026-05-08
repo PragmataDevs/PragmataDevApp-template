@@ -132,36 +132,6 @@ export function useConversations() {
     }
   }, [authLoading, isAuthenticated, profile]);
 
-          const readMessageIds = (readData || []).map((r) => r.message_id);
-
-          let unreadQuery = supabase
-            .from('chat_messages')
-            .select('id', { count: 'exact', head: true })
-            .eq('conversation_id', conv.id)
-            .neq('sender_id', profile.id);
-
-          if (readMessageIds.length > 0) {
-            unreadQuery = unreadQuery.not('id', 'in', `(${readMessageIds.join(',')})`);
-          }
-
-          const { count } = await unreadQuery;
-
-          return {
-            ...conv,
-            last_message: msgs?.[0] || null,
-            unread_count: count || 0,
-          } as Conversation;
-        })
-      );
-
-      setConversations(conversationsWithLastMessage);
-    } catch (err: any) {
-      console.error('Error fetching conversations:', err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [profile]);
-
   // Create a new conversation
   const createConversation = useCallback(
     async (participantIds: string[], name?: string) => {

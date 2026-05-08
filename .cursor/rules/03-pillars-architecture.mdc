@@ -1,0 +1,101 @@
+---
+description: Arquitectura de los Tres Pilares Pragmata — Público (SEO/Ecommerce), Operativo (ERP), Intelligence (IA). Feature flags y separación de responsabilidades.
+alwaysApply: true
+---
+
+# Arquitectura de Tres Pilares
+
+## Pilar Operativo — ERP/Admin (React + Vite)
+
+Ruta: `src/` (este repositorio). El chasis principal.
+
+- Todos los módulos ERP viven en `src/features/<modulo>/`.
+- Acceso protegido: `RouteGuard` + `RBAC` con `check_permission()`.
+- Lectura offline-ready: PowerSync → SQLite cuando `VITE_ENABLE_POWERSYNC=true`.
+- Feature flag: siempre activo (es el core).
+
+## Pilar Público — SEO/Ecommerce (Astro)
+
+Ruta: `packages/web/` (repo separado o workspace Astro).
+
+**Reglas de integración:**
+- Comparte `src/types/` via path alias o package `@pragmata/types` (workspace).
+- NO importa hooks React del pilar Operativo. Solo tipos y helpers puros.
+- Comunicación con Supabase: solo lectura pública (RLS `anon` key).
+- Activar con: `VITE_ENABLE_ECOMMERCE=true` en el shell operativo (para widgets embebidos).
+- SEO: cada página Astro exporta `<SEOHead>` con `title`, `description`, `og:image`.
+- Estructura mínima:
+
+```
+packages/web/
+  src/
+    pages/          # .astro — rutas estáticas y dinámicas ([slug].astro)
+    components/     # .astro y .tsx (islas React)
+    layouts/        # BaseLayout.astro con SEOHead
+    lib/
+      supabase.ts   # Cliente Supabase solo con anon key
+      types.ts      # Re-export de @pragmata/types
+```
+
+**Restricciones:**
+- Prohibido server-side mutations desde Astro. Toda escritura va al pilar Operativo o Edge Functions.
+- Imágenes: usar `<Image>` de Astro para optimización automática (WebP + lazy load).
+- Catálogos de productos leen directamente de Supabase con RLS `SELECT` público.
+
+## Pilar Intelligence — IA Core (Edge Functions + pgvector)
+
+Ruta: `supabase/functions/` + `src/features/ai/`.
+
+**Reglas de integración:**
+- Los servicios IA son Edge Functions invocadas desde el pilar Operativo.
+- Activar con: `VITE_ENABLE_AI=true`.
+- Nunca llamar LLMs directamente desde el cliente (expone API keys).
+- Embeddings en `pgvector`: tabla `embeddings` con `content`, `embedding vector(1536)`, FK a entidad.
+- Patrón de invocación desde el cliente:
+
+```ts
+// ✅ CORRECTO — Edge Function intermedia
+const { data } = await supabase.functions.invoke('ai-search', {
+  body: { query: 'buscar contratos de obra civil', project_id: currentProject.id },
+});
+
+// ❌ PROHIBIDO — llamada directa a OpenAI/Anthropic desde el cliente
+const res = await fetch('https://api.openai.com/v1/...', { headers: { Authorization: `Bearer ${apiKey}` } });
+```
+
+**Edge Functions mínimas del core IA:**
+- `ai-search`: búsqueda semántica sobre embeddings del proyecto.
+- `ai-summarize`: resumen de documentos/registros.
+- `ai-extract`: extracción de datos de PDFs/imágenes.
+
+## Feature Flags — Variables de Entorno
+
+| Variable | Pilar | Descripción |
+|----------|-------|-------------|
+| `VITE_ENABLE_POWERSYNC` | Operativo | Activa SQLite offline via PowerSync |
+| `VITE_ENABLE_AI` | Intelligence | Activa features de IA en la UI |
+| `VITE_ENABLE_ECOMMERCE` | Público | Activa widgets de ecommerce embebidos |
+
+**Patrón de guard en código:**
+
+```ts
+// Guard de feature flag — siempre en el entry point del módulo
+const AI_ENABLED = import.meta.env.VITE_ENABLE_AI === 'true';
+
+// En rutas
+{ path: 'ai', element: AI_ENABLED ? <AIPage /> : <Navigate to="/" /> }
+
+// En componentes
+{AI_ENABLED && <AIAssistantPanel />}
+```
+
+## Shared Core — Lo Que Siempre Se Reutiliza
+
+```
+src/types/          → Modelos canónicos (todos los pilares)
+src/lib/supabase/   → Cliente Supabase (Operativo + Intelligence)
+src/lib/auth/       → Helpers de autenticación
+src/components/ui/  → Primitivos shadcn (Operativo; Astro usa copia ligera)
+```
+
+El Shared Core **nunca** importa de pilares específicos. Flujo de dependencias: `shared-core ← pilares`.

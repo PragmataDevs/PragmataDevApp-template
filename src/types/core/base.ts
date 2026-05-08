@@ -44,19 +44,31 @@ export interface AppRoute {
   path: string;
   name: string; // Identificador interno o Label del menú
   icon?: ComponentType<{ className?: string, size?: number }>; // Lucide Icon
-  
+
   // -- Componente --
   // Usamos Lazy para code-splitting automático
   element: LazyExoticComponent<ComponentType<any>> | ComponentType<any>;
-  
+
   // -- UI Context --
   layout: RouteLayoutType;
   hideInMenu?: boolean; // Para rutas que existen pero no salen en el sidebar (ej: detalles de contratos)
   hideProjectSelector?: boolean; // Requerimiento específico: Ocultar selector en ciertas pantallas globales
-  
+
+  // -- RBAC --
+  // Código del recurso en sys_resources. Si está definido, RouteGuard valida permiso 'read' antes de montar.
+  // Si es undefined, la ruta es accesible a cualquier usuario autenticado.
+  resourceCode?: string;
+
+  // -- Sidebar agrupación --
+  // Identificador de grupo para agrupar rutas en el sidebar (ej: 'settings').
+  group?: string;
+
+  // -- Nivel de administración --
+  // Si es 'Admin', RouteGuard exige que el usuario sea admin global o god.
+  admin_level?: AdminLevelType;
+
   // -- Jerarquía --
   children?: AppRoute[];
-  // children_resource eliminado (usar RBAC)
 }
 
 // ─── Documentos (Base transversal) ───────────────────────────

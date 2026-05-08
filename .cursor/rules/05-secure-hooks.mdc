@@ -1,0 +1,68 @@
+---
+description: Patrón obligatorio para hooks protegidos por sesión — sessionEpoch, withSessionRetry, gates de auth.
+globs: src/features/**/hooks/**/*.ts,src/features/**/hooks/**/*.tsx
+alwaysApply: false
+---
+
+# Hooks Protegidos por Sesión
+
+## Patrón Mínimo Obligatorio
+
+Todo hook que consulte tablas con RLS debe seguir este template:
+
+```ts
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { withSessionRetry } from '@/lib/auth/sessionRetry';
+
+export function useContratos() {
+  const { profile, loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
+  const [data, setData] = useState<Contrato[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    if (authLoading || !isAuthenticated) {
+      setLoading(true);
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await withSessionRetry(async () => {
+        const res = await supabase.from('contratos').select('*').eq('status', 'active');
+        if (res.error) throw res.error;
+        return res.data as Contrato[];
+      }, 'useContratos.fetchData');
+      setData(result ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }, [authLoading, isAuthenticated, profile]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    void fetchData();
+  }, [authLoading, isAuthenticated, fetchData, sessionEpoch]); // sessionEpoch = re-run tras TOKEN_REFRESHED
+
+  return { data, loading, refetch: fetchData };
+}
+```
+
+## Checklist para Cada Hook Nuevo
+
+- [ ] Lee `loading`, `isAuthenticated`, `sessionEpoch` desde `useAuth()`.
+- [ ] Gate `if (authLoading || !isAuthenticated) return` al inicio del fetch.
+- [ ] Queries envueltas en `withSessionRetry`.
+- [ ] `useEffect` incluye `sessionEpoch` en sus dependencias.
+- [ ] No `await` de queries dentro de `onAuthStateChange`.
+- [ ] No llama `supabase.auth.refreshSession()` manualmente.
+
+## Regla de Lectura: PowerSync vs Supabase
+
+```ts
+// Leer según feature flag — usar el helper del db provider
+import { useDb } from '@/lib/db/useDb';
+
+const db = useDb(); // retorna SQLite (PowerSync) o supabase client según flag
+
+// La query es idéntica en ambos casos gracias al provider pattern
+const rows = await db.from('contratos').select('*');
+```

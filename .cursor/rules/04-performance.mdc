@@ -1,0 +1,65 @@
+---
+description: Reglas de performance — code splitting, chunks manuales, lazy loading obligatorio.
+globs: vite.config.ts,**/*.tsx,src/app/**
+alwaysApply: false
+---
+
+# Performance: Bundle y Code Splitting
+
+## Reglas Obligatorias
+
+1. **Toda página** se importa con `React.lazy` en `routes.config.ts`. Import estático de páginas = prohibido.
+2. **Toda librería >50 kB** evaluada para chunk manual en `vite.config.ts`.
+3. **Prohibido** subir `chunkSizeWarningLimit` para silenciar warnings.
+4. **Al agregar dependencia nueva**: ejecutar `pnpm build` y registrar delta en el PR.
+
+## Chunks Manuales Obligatorios
+
+```ts
+// vite.config.ts — manualChunks
+manualChunks: {
+  'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+  'supabase': ['@supabase/supabase-js', '@supabase/auth-helpers-react'],
+  'powersync': ['@powersync/web', '@journeyapps/wa-sqlite'],
+  'icons': ['lucide-react'],
+  // Agregar cuando se instalen:
+  'pdf': ['react-pdf', 'pdfjs-dist'],
+  'carousel': ['embla-carousel-react'],
+  'charts': ['recharts'],
+  'editor': ['@tiptap/react'],
+}
+```
+
+## Lazy Loading de Páginas
+
+```tsx
+// ✅ CORRECTO — routes.config.ts
+const DashboardPage = React.lazy(() => import('@/pages/dashboard/DashboardPage'));
+const ContratosPage = React.lazy(() => import('@/pages/contratos/ContratosPage'));
+
+// ❌ PROHIBIDO — import estático de páginas
+import DashboardPage from '@/pages/dashboard/DashboardPage';
+```
+
+## Carga Condicional de Módulos Pesados
+
+```tsx
+// PDF — solo cargar cuando el usuario abre el visor
+const [pdfVisible, setPdfVisible] = useState(false);
+const PDFViewer = pdfVisible
+  ? React.lazy(() => import('@/components/PDFViewer'))
+  : null;
+
+// Mapa / Editor — mismo patrón
+```
+
+## Línea Base de Chunks (actualizar por sprint)
+
+| Chunk | Tamaño aprox. | Último update |
+|-------|---------------|---------------|
+| `index` | ~183 kB | Abr 2026 |
+| `react-vendor` | ~190 kB | Abr 2026 |
+| `supabase` | ~163 kB | Abr 2026 |
+| `icons` | ~70 kB | Abr 2026 |
+
+Referencia completa: `docs/bundle-chunck-strategy.md`.

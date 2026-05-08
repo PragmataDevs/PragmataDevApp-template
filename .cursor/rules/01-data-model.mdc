@@ -1,0 +1,114 @@
+---
+description: Reglas del modelo de datos Pragmata — AuditBase, modelo único, OCC, borrado lógico.
+globs: **/*.ts,**/*.tsx
+alwaysApply: false
+---
+
+# Modelo de Datos: Reglas de Oro
+
+## AuditBase es Obligatorio
+
+Toda entidad de negocio extiende `AuditBase`. Sin excepciones.
+
+```ts
+// ✅ CORRECTO
+export interface Contrato extends AuditBase {
+  numero: string;
+  nombre: string;
+  proyecto_id: string;
+}
+
+// ❌ PROHIBIDO — entidad sin trazabilidad
+export interface Contrato {
+  id: string;
+  nombre: string;
+}
+```
+
+`AuditBase` provee: `id`, `created_at`, `updated_at`, `created_by`, `updated_by`, `status`, `deleted_at`, `version`.
+
+## Un Modelo — Una Verdad
+
+Ubicación: `src/types/<dominio>/<entidad>.ts`. Un solo tipo, importado donde se necesite.
+
+```ts
+// ❌ PROHIBIDO
+type ContratoPayload = Omit<Contrato, keyof AuditBase>;
+interface ContratoFormState { nombre: string; monto: number; }
+
+// ✅ PERMITIDO — derivados explícitos con propósito claro
+interface ContratoWithMembers extends Contrato { member_count: number }
+type ContratoOption = Pick<Contrato, 'id' | 'nombre'>
+```
+
+## createEmpty — Instancia en Blanco
+
+Cada tipo tiene su factory en el mismo archivo:
+
+```ts
+export function createEmptyContrato(userId: string): Contrato {
+  return {
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    created_by: userId,
+    updated_by: userId,
+    version: 0,
+    status: 'active',
+    deleted_at: null,
+    numero: '', nombre: '', proyecto_id: '',
+  };
+}
+```
+
+## Persistencia con OCC (Optimistic Concurrency Control)
+
+```ts
+// INSERT — version queda en 0 (trigger la sube en el primer UPDATE)
+await supabase.from('contratos').insert(toPersist).select().single();
+
+// UPDATE — siempre con lock de versión
+const { data } = await supabase
+  .from('contratos')
+  .update(toPersist)
+  .eq('id', toPersist.id)
+  .eq('version', toPersist.version)  // ← OBLIGATORIO
+  .select().single();
+
+if (!data) {
+  await recargar(toPersist.id);
+  throw new Error('conflict'); // UI muestra diff lado a lado
+}
+setContrato(data as Contrato); // version ya incrementada por trigger
+```
+
+## Borrado Lógico — Nunca DELETE
+
+```ts
+// ✅ CORRECTO
+const deleted: Contrato = {
+  ...contrato,
+  status: 'deleted',
+  deleted_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  updated_by: profile.id,
+};
+await supabase.from('contratos').upsert(deleted);
+
+// ❌ PROHIBIDO
+await supabase.from('contratos').delete().eq('id', id);
+```
+
+## Esquema Zod — Derivado del Tipo, No Manual
+
+```ts
+// ✅ CORRECTO — Zod refleja el modelo canónico
+const contratoSchema = z.object({
+  numero: z.string().min(1),
+  nombre: z.string().min(1),
+  proyecto_id: z.string().uuid(),
+  monto_total: z.number().positive(),
+});
+
+// ❌ PROHIBIDO — schema duplicado con campos distintos al modelo
+```

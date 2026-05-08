@@ -56,11 +56,18 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
             if (error) throw error;
 
         } else if (op.op === UpdateType.DELETE) {
-            // Delete
+            // Borrado lógico — nunca DELETE físico (ADN Pragmata).
+            // Si PowerSync emite un DELETE, lo convertimos en soft delete.
+            // En flujo normal esto no debería ocurrir porque el cliente siempre
+            // hace upsert con status: 'deleted', pero lo cubrimos como red de seguridad.
             const { error } = await supabase
-               .from(table)
-               .delete()
-               .eq('id', id);
+              .from(table)
+              .update({
+                status: 'deleted',
+                deleted_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', id);
 
             if (error) throw error;
         }
