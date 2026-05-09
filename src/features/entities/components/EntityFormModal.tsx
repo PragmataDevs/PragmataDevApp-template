@@ -1,90 +1,91 @@
 import { useState, useEffect } from 'react';
 import { X, CalendarDays, MapPin, FileCode, ImagePlus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import type { ProjectRow, ProjectInput } from '../hooks/useProjects';
-import { PROJECT_STATUS_CONFIG } from '../hooks/useProjects';
+import type { EntityRow, EntityInput } from '@/features/entities/hooks/useEntities';
+import { ENTITY_STATUS_CONFIG } from '@/features/entities/hooks/useEntities';
+import { ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
 import { resolveSignedUrls } from '@/lib/storage';
 
-interface ProjectFormModalProps {
-  project?: ProjectRow | null;
+interface EntityFormModalProps {
+  entity?: EntityRow | null;
   onClose: () => void;
-  onSave: (data: ProjectInput) => Promise<void>;
+  onSave: (data: EntityInput) => Promise<void>;
   saving?: boolean;
-  totalProjects?: number;
+  /** Count of existing entities (same team) — used to suggest next code on create */
+  totalEntities?: number;
 }
 
-/**
- * Genera un código automático: PR-{INICIALES}-{CONSECUTIVO}
- * Ej: "Torre Reforma" con 5 proyectos → PR-TR-006
- */
-function generateProjectCode(projectName: string, totalProjects: number): string {
-  const words = projectName.trim().split(/\s+/).filter(Boolean);
+/** Auto code: EN-{INITIALS}-{NNN} */
+function generateEntityCode(name: string, totalEntities: number): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
   const initials = words
     .map((w) => w[0])
     .join('')
     .toUpperCase()
-    .slice(0, 3); // max 3 letras
+    .slice(0, 3);
 
-  const consecutive = String(totalProjects + 1).padStart(3, '0');
-  return `PR-${initials || 'XX'}-${consecutive}`;
+  const consecutive = String(totalEntities + 1).padStart(3, '0');
+  return `EN-${initials || 'XX'}-${consecutive}`;
 }
 
-export default function ProjectFormModal({ project, onClose, onSave, saving = false, totalProjects = 0 }: ProjectFormModalProps) {
-  const [name, setName] = useState(project?.name || '');
-  const [code, setCode] = useState(project?.code || '');
-  const [codeManuallyEdited, setCodeManuallyEdited] = useState(!!project?.code);
-  const [description, setDescription] = useState(project?.description || '');
-  const [location, setLocation] = useState(project?.location || '');
-  const [startDate, setStartDate] = useState(project?.start_date || '');
-  const [endDate, setEndDate] = useState(project?.end_date || '');
+export default function EntityFormModal({
+  entity,
+  onClose,
+  onSave,
+  saving = false,
+  totalEntities = 0,
+}: EntityFormModalProps) {
+  const [name, setName] = useState(entity?.name || '');
+  const [code, setCode] = useState(entity?.code || '');
+  const [codeManuallyEdited, setCodeManuallyEdited] = useState(!!entity?.code);
+  const [description, setDescription] = useState(entity?.description || '');
+  const [location, setLocation] = useState(entity?.location || '');
+  const [startDate, setStartDate] = useState(entity?.start_date || '');
+  const [endDate, setEndDate] = useState(entity?.end_date || '');
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
-  const [projectStatus, setProjectStatus] = useState<ProjectRow['project_status']>(
-    project?.project_status || 'planning'
+  const [entityStatus, setEntityStatus] = useState<EntityRow['entity_status']>(
+    entity?.entity_status || 'planning'
   );
 
-  const isEditing = !!project;
+  const isEditing = !!entity;
 
-  // Auto-generate code when name changes (only in create mode)
   useEffect(() => {
     if (!isEditing && !codeManuallyEdited && name.trim()) {
-      setCode(generateProjectCode(name, totalProjects));
+      setCode(generateEntityCode(name, totalEntities));
     }
     if (!isEditing && !name.trim()) {
       setCode('');
     }
-  }, [name, isEditing, codeManuallyEdited, totalProjects]);
+  }, [name, isEditing, codeManuallyEdited, totalEntities]);
 
-  // Cleanup preview URLs
   useEffect(() => {
     return () => {
       imagePreviews.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [imagePreviews]);
 
-  // Load existing project images (edit mode)
   useEffect(() => {
     let cancelled = false;
 
     const loadExistingImages = async () => {
-      if (!project) {
+      if (!entity) {
         setExistingImageUrls([]);
         return;
       }
 
-      const rawImages = Array.isArray((project.metadata as any)?.images)
-        ? (project.metadata as any).images
+      const rawImages = Array.isArray((entity.metadata as Record<string, unknown> | undefined)?.images)
+        ? (entity.metadata as { images?: unknown }).images
         : [];
 
-      if (!rawImages.length) {
+      if (!Array.isArray(rawImages) || !rawImages.length) {
         setExistingImageUrls([]);
         return;
       }
 
-      // Support both formats: [{ path: '...' }] and ['...']
       const paths = rawImages
-        .map((img: any) => (typeof img === 'string' ? img : img?.path))
+        .map((img: unknown) => (typeof img === 'string' ? img : (img as { path?: string })?.path))
         .filter(Boolean) as string[];
 
       if (!paths.length) {
@@ -96,7 +97,7 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
         const urls = await resolveSignedUrls('attachments', paths);
         if (!cancelled) setExistingImageUrls(urls);
       } catch (err) {
-        console.error('Error resolving project image URLs:', err);
+        console.error('Error resolving entity image URLs:', err);
         if (!cancelled) setExistingImageUrls([]);
       }
     };
@@ -105,7 +106,7 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
     return () => {
       cancelled = true;
     };
-  }, [project]);
+  }, [entity]);
 
   const handleAddImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
@@ -133,33 +134,34 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
       location: location || null,
       start_date: startDate || null,
       end_date: endDate || null,
-      project_status: projectStatus,
+      entity_status: entityStatus,
       images,
     });
   };
 
+  const labelLower = ENTITY_LABEL.toLowerCase();
+
   return (
     <>
-      {/* Overlay */}
       <div
         className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
           className="bg-[color:var(--pragmata-surface)] rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden pointer-events-auto flex flex-col border border-[color:var(--pragmata-border)]"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="px-6 py-4 border-b border-[color:var(--pragmata-border)] flex items-center justify-between bg-[color:var(--pragmata-surface)]">
             <div>
               <h2 className="text-xl font-bold text-[color:var(--pragmata-fg)]">
-                {isEditing ? 'Editar Proyecto' : 'Crear Nuevo Proyecto'}
+                {isEditing ? `Editar ${ENTITY_LABEL}` : `Nuevo ${ENTITY_LABEL}`}
               </h2>
               <p className="text-sm text-[color:var(--pragmata-muted)] mt-1">
-                {isEditing ? 'Modifica la información del proyecto' : 'Define un nuevo proyecto de trabajo'}
+                {isEditing
+                  ? `Actualiza los datos de este ${labelLower}`
+                  : `Define un ${labelLower} para agrupar trabajo en el workspace`}
               </p>
             </div>
             <Button
@@ -171,20 +173,18 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
             />
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
             <div className="p-6 space-y-8">
-              {/* Información Básica */}
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-[color:var(--pragmata-muted)] uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1 h-3 rounded-full bg-[color:var(--pragmata-accent)]"></span>
-                  Información Básica
+                  <span className="w-1 h-3 rounded-full bg-[color:var(--pragmata-accent)]" />
+                  Información básica
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-[color:var(--pragmata-fg)] mb-2">
-                      Nombre del Proyecto <span className="text-[color:var(--pragmata-danger)]">*</span>
+                      Nombre <span className="text-[color:var(--pragmata-danger)]">*</span>
                     </label>
                     <input
                       type="text"
@@ -192,7 +192,7 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full px-4 py-2.5 bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg text-sm text-[color:var(--pragmata-fg)] placeholder:text-[color:var(--pragmata-muted-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pragmata-accent)] focus:border-transparent transition-all"
-                      placeholder="Ej: Torre Reforma 505"
+                      placeholder={`Nombre del ${labelLower}`}
                     />
                   </div>
 
@@ -214,7 +214,6 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
                         setCodeManuallyEdited(true);
                       }}
                       onBlur={() => {
-                        // Si el usuario borra el campo, volver a auto-generar
                         if (!code.trim() && !isEditing) {
                           setCodeManuallyEdited(false);
                         }
@@ -229,11 +228,13 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
                       Estado
                     </label>
                     <select
-                      value={projectStatus}
-                      onChange={(e) => setProjectStatus(e.target.value as ProjectRow['project_status'])}
+                      value={entityStatus}
+                      onChange={(e) =>
+                        setEntityStatus(e.target.value as EntityRow['entity_status'])
+                      }
                       className="w-full px-4 py-2.5 bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg text-sm text-[color:var(--pragmata-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pragmata-accent)] focus:border-transparent transition-all"
                     >
-                      {Object.entries(PROJECT_STATUS_CONFIG).map(([key, cfg]) => (
+                      {Object.entries(ENTITY_STATUS_CONFIG).map(([key, cfg]) => (
                         <option key={key} value={key}>
                           {cfg.label}
                         </option>
@@ -250,17 +251,16 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
                       onChange={(e) => setDescription(e.target.value)}
                       rows={3}
                       className="w-full px-4 py-2.5 bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg text-sm text-[color:var(--pragmata-fg)] placeholder:text-[color:var(--pragmata-muted-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pragmata-accent)] focus:border-transparent transition-all resize-none"
-                      placeholder="Describe el alcance del proyecto..."
+                      placeholder="Describe el alcance…"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Ubicación e Imágenes */}
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-[color:var(--pragmata-muted)] uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1 h-3 rounded-full bg-[color:var(--pragmata-accent)]"></span>
-                  Ubicación e Imágenes
+                  <span className="w-1 h-3 rounded-full bg-[color:var(--pragmata-accent)]" />
+                  Ubicación e imágenes
                 </h3>
 
                 <div className="grid grid-cols-1 gap-4">
@@ -274,14 +274,14 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       className="w-full px-4 py-2.5 bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg text-sm text-[color:var(--pragmata-fg)] placeholder:text-[color:var(--pragmata-muted-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pragmata-accent)] focus:border-transparent transition-all"
-                      placeholder="Ej: CDMX, Col. Reforma"
+                      placeholder="Ej: CDMX"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-[color:var(--pragmata-fg)] mb-2">
                       <ImagePlus className="inline h-3.5 w-3.5 mr-1 opacity-60" />
-                      Imágenes del Proyecto
+                      Imágenes
                     </label>
                     <label className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-[color:var(--pragmata-border)] rounded-lg cursor-pointer hover:border-[color:var(--pragmata-accent)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors">
                       <ImagePlus className="h-4 w-4 text-[color:var(--pragmata-muted)]" />
@@ -301,7 +301,7 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
                           <div key={`${preview}-${index}`} className="relative group">
                             <img
                               src={preview}
-                              alt={`preview-${index}`}
+                              alt=""
                               className="w-full h-20 object-cover rounded-md border border-[color:var(--pragmata-border)]"
                             />
                             <button
@@ -326,7 +326,7 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
                             <img
                               key={`${url}-${index}`}
                               src={url}
-                              alt={`project-image-${index}`}
+                              alt=""
                               className="w-full h-20 object-cover rounded-md border border-[color:var(--pragmata-border)]"
                             />
                           ))}
@@ -337,10 +337,9 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
                 </div>
               </div>
 
-              {/* Fechas */}
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-[color:var(--pragmata-muted)] uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1 h-3 rounded-full bg-[color:var(--pragmata-accent)]"></span>
+                  <span className="w-1 h-3 rounded-full bg-[color:var(--pragmata-accent)]" />
                   Fechas
                 </h3>
 
@@ -348,7 +347,7 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
                   <div>
                     <label className="block text-sm font-medium text-[color:var(--pragmata-fg)] mb-2">
                       <CalendarDays className="inline h-3.5 w-3.5 mr-1 opacity-60" />
-                      Fecha de Inicio
+                      Inicio
                     </label>
                     <input
                       type="date"
@@ -361,7 +360,7 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
                   <div>
                     <label className="block text-sm font-medium text-[color:var(--pragmata-fg)] mb-2">
                       <CalendarDays className="inline h-3.5 w-3.5 mr-1 opacity-60" />
-                      Fecha de Fin
+                      Fin
                     </label>
                     <input
                       type="date"
@@ -374,21 +373,12 @@ export default function ProjectFormModal({ project, onClose, onSave, saving = fa
               </div>
             </div>
 
-            {/* Footer */}
             <div className="px-6 py-4 border-t border-[color:var(--pragmata-border)] flex items-center justify-end gap-3 bg-[color:var(--pragmata-surface-2)]">
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={onClose}
-                disabled={saving}
-              >
+              <Button variant="secondary" type="button" onClick={onClose} disabled={saving}>
                 Cancelar
               </Button>
-              <Button
-                type="submit"
-                loading={saving}
-              >
-                {isEditing ? 'Guardar Cambios' : 'Crear Proyecto'}
+              <Button type="submit" loading={saving}>
+                {isEditing ? 'Guardar cambios' : `Crear ${ENTITY_LABEL}`}
               </Button>
             </div>
           </form>

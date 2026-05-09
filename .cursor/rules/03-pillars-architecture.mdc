@@ -16,57 +16,104 @@ Ruta: `src/` (este repositorio). El chasis principal.
 
 ## Pilar Público — SEO/Ecommerce (Astro)
 
-Ruta: `packages/web/` (repo separado o workspace Astro).
+Ruta: **`astro/`** (dentro del mismo monorepo). Proyecto Astro independiente con su propio `package.json`.
 
 **Reglas de integración:**
-- Comparte `src/types/` via path alias o package `@pragmata/types` (workspace).
-- NO importa hooks React del pilar Operativo. Solo tipos y helpers puros.
-- Comunicación con Supabase: solo lectura pública (RLS `anon` key).
-- Activar con: `VITE_ENABLE_ECOMMERCE=true` en el shell operativo (para widgets embebidos).
-- SEO: cada página Astro exporta `<SEOHead>` con `title`, `description`, `og:image`.
-- Estructura mínima:
+- NO importa hooks React del pilar Operativo. Solo tipos puros si fuera necesario.
+- Comunicación con Supabase: solo lectura pública (anon key del mismo `.env` raíz: `VITE_SUPABASE_*` inyectadas como públicas en build, u opcionalmente `PUBLIC_SUPABASE_*`).
+- Activar ecommerce público: `PUBLIC_ENABLE_ECOMMERCE=true` en el `.env` raíz o en `astro/.env` (capa opcional).
+- **Landings:** la portada **SEO** canónica es `astro/src/pages/index.astro`. La ruta `/` del ERP (`src/pages/PublicSiteEntry.tsx`) **redirige** al sitio Astro (`VITE_PUBLIC_SITE_URL` o `http://localhost:4321` en dev), sin duplicar landing en React. CTAs en Astro usan `PUBLIC_APP_URL/login` hacia el operativo.
+- SEO: `BaseLayout.astro` con `title`, `description`, OG tags, Schema.org JSON-LD.
+- Estructura real del proyecto:
 
 ```
-packages/web/
+astro/
   src/
-    pages/          # .astro — rutas estáticas y dinámicas ([slug].astro)
-    components/     # .astro y .tsx (islas React)
-    layouts/        # BaseLayout.astro con SEOHead
+    pages/              # .astro — rutas SSR/SSG
+      index.astro       # Landing (prerender = true)
+      productos/
+        index.astro     # Catálogo SSR (prerender = false)
+        [slug].astro    # Producto SSG (prerender = true)
+      checkout.astro    # Carrito + pago (prerender = false)
+    components/
+      islands/          # React islands (client:load/idle/visible)
+        CartButton.tsx
+        CartCheckout.tsx
+    layouts/
+      BaseLayout.astro  # SEO head canónico
     lib/
-      supabase.ts   # Cliente Supabase solo con anon key
-      types.ts      # Re-export de @pragmata/types
+      supabase.ts       # createClient con claves públicas (mapeadas desde .env raíz)
+  public/
+    robots.txt          # Allows all (public site)
+  astro.config.mjs      # output:'hybrid', @astrojs/node, @astrojs/react (sitemap: pendiente / externo)
+  package.json          # Dependencias Astro (independiente de React app)
+  .env.example
 ```
+
+**Setup inicial:**
+```bash
+cd astro && pnpm install              # una vez — dependencias del pilar público
+# desde la raíz del monorepo (ERP + Astro en paralelo para pruebas locales):
+pnpm dev:all                          # :7070 ERP + :4321 Astro — ver docs/SETUP.md §8.0
+# Solo público:  cd astro && pnpm dev
+pnpm build && pnpm start              # prod local Astro (cwd astro/)
+```
+Ver **`docs/SETUP.md` §8** para URLs `.env` (LOCAL vs prod), hybrid + `@astrojs/node` y sitemap.
 
 **Restricciones:**
-- Prohibido server-side mutations desde Astro. Toda escritura va al pilar Operativo o Edge Functions.
+- Prohibido server-side mutations desde Astro. Toda escritura va a Edge Functions.
 - Imágenes: usar `<Image>` de Astro para optimización automática (WebP + lazy load).
-- Catálogos de productos leen directamente de Supabase con RLS `SELECT` público.
+- El carrito vive en `localStorage` + custom event `cart:updated`.
+- Pagos: siempre via Edge Function (`stripe-checkout` o `mp-checkout`), nunca directos al cliente.
 
 ## Pilar Intelligence — IA Core (Edge Functions + pgvector)
 
-Ruta: `supabase/functions/` + `src/features/ai/`.
+Ruta: **`supabase/functions/`** (Deno, deployadas a Supabase).
+
+**Estructura real:**
+```
+supabase/
+  config.toml             # Referencia del proyecto Supabase
+  functions/
+    _shared/
+      cors.ts             # corsHeaders + handleCors()
+      auth.ts             # requireAuth(), createSupabaseClient(), jsonResponse()
+    ai-task-summary/      # Resumen de tareas via OpenAI
+      index.ts
+    stripe-checkout/      # Crear sesión de pago Stripe
+      index.ts
+    stripe-webhook/       # Confirmar pago y crear orden
+      index.ts
+```
+
+**Secrets requeridos** (Supabase Dashboard → Edge Functions → Secrets):
+- `OPENAI_API_KEY`       — para funciones de IA
+- `STRIPE_SECRET_KEY`    — para stripe-checkout
+- `STRIPE_WEBHOOK_SECRET` — para stripe-webhook
+
+**Deploy:**
+```bash
+supabase functions deploy ai-task-summary
+supabase functions deploy stripe-checkout
+supabase functions deploy stripe-webhook
+```
 
 **Reglas de integración:**
-- Los servicios IA son Edge Functions invocadas desde el pilar Operativo.
-- Activar con: `VITE_ENABLE_AI=true`.
 - Nunca llamar LLMs directamente desde el cliente (expone API keys).
-- Embeddings en `pgvector`: tabla `embeddings` con `content`, `embedding vector(1536)`, FK a entidad.
+- Activar con: `VITE_ENABLE_AI=true` en `.env`.
 - Patrón de invocación desde el cliente:
 
 ```ts
-// ✅ CORRECTO — Edge Function intermedia
-const { data } = await supabase.functions.invoke('ai-search', {
-  body: { query: 'buscar contratos de obra civil', project_id: currentProject.id },
+// ✅ CORRECTO — via fetch con JWT del usuario
+const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-task-summary`, {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ entity_id }),
 });
 
-// ❌ PROHIBIDO — llamada directa a OpenAI/Anthropic desde el cliente
+// ❌ PROHIBIDO — directa a OpenAI desde el cliente
 const res = await fetch('https://api.openai.com/v1/...', { headers: { Authorization: `Bearer ${apiKey}` } });
 ```
-
-**Edge Functions mínimas del core IA:**
-- `ai-search`: búsqueda semántica sobre embeddings del proyecto.
-- `ai-summarize`: resumen de documentos/registros.
-- `ai-extract`: extracción de datos de PDFs/imágenes.
 
 ## Feature Flags — Variables de Entorno
 
@@ -74,7 +121,9 @@ const res = await fetch('https://api.openai.com/v1/...', { headers: { Authorizat
 |----------|-------|-------------|
 | `VITE_ENABLE_POWERSYNC` | Operativo | Activa SQLite offline via PowerSync |
 | `VITE_ENABLE_AI` | Intelligence | Activa features de IA en la UI |
-| `VITE_ENABLE_ECOMMERCE` | Público | Activa widgets de ecommerce embebidos |
+| `VITE_ENABLE_ECOMMERCE` | Operativo | Ruta/sidebar **Productos** en Workspace (catálogo admin). `false` → no se registra la ruta. |
+| `PUBLIC_ENABLE_ECOMMERCE` | Público (Astro) | Catálogo, carrito, islas de checkout en el sitio público. |
+| `PUBLIC_APP_URL` | Público (Astro) | URL base del ERP para botones "Iniciar sesión" → `{PUBLIC_APP_URL}/login` (ej. dev `http://localhost:7070`). |
 
 **Patrón de guard en código:**
 

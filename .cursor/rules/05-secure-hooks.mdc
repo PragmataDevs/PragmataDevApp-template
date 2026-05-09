@@ -1,68 +1,114 @@
 ---
 description: Patrón obligatorio para hooks protegidos por sesión — sessionEpoch, withSessionRetry, gates de auth.
-globs: src/features/**/hooks/**/*.ts,src/features/**/hooks/**/*.tsx
+globs: src/features/**/hooks/**/*.ts,src/features/**/hooks/**/*.tsx,src/lib/hooks/**/*.ts
 alwaysApply: false
 ---
 
 # Hooks Protegidos por Sesión
 
-## Patrón Mínimo Obligatorio
+## Patrón Canónico — `useCrudResource` (el estándar de la template)
 
-Todo hook que consulte tablas con RLS debe seguir este template:
+Para cualquier módulo ERP nuevo, usar `useCrudResource` de `src/lib/hooks/useCrudResource.ts`.
+**No escribir hooks CRUD desde cero** — extender este.
+
+```ts
+import { useCrudResource } from '@/lib/hooks/useCrudResource';
+
+// ✅ Uso estándar
+export function useClientes(entityId: string | undefined) {
+  return useCrudResource<Cliente>({
+    table: 'clientes',
+    select: '*, entity:entities(name)',
+    filter: (q) => q.eq('entity_id', entityId!).eq('status', 'active'),
+    orderBy: { column: 'name', ascending: true },
+    realtime: true,
+    enabled: !!entityId,  // no fetchea si entityId es undefined
+  });
+}
+
+// Uso en componente:
+const { data, loading, error, upsert, softDelete, refetch } = useClientes(entityId);
+
+// Insert:  await upsert({ name: 'Acme', entity_id: entityId })
+// Update:  await upsert({ id: '...', name: 'Acme Corp', version: row.version })
+// Delete:  await softDelete(row.id, row.version)
+```
+
+## Qué hace `useCrudResource` internamente
+
+1. Gate auth: solo fetcha cuando `isAuthenticated === true`.
+2. `sessionEpoch` en deps → re-fetcha tras `TOKEN_REFRESHED` o idle.
+3. Fetch envuelto en `withSessionRetry` → recupera sesión si el JWT expira.
+4. Suscripción `postgres_changes` con cleanup correcto (si `realtime: true`).
+5. `upsert` usa `{ onConflict: 'id' }` — insert si no hay `id`, update si tiene.
+6. `softDelete` pasa `version` → OCC: rechaza si hubo un conflicto mid-air.
+7. Actualizaciones optimistas en estado local (sin esperar re-fetch).
+
+## Cuándo escribir un hook custom (en lugar de useCrudResource)
+
+Solo cuando el módulo tiene lógica de negocio específica que no encaja en CRUD simple:
+- Kanban con fractional indexing (`useTasks` — tiene `moveTask`, `getColumn`)
+- Hooks con múltiples tablas relacionadas que se fetch en paralelo
+- Lógica de rollback o saga (ej: crear orden + actualizar stock en una transacción)
+
+En esos casos, **igualmente usar `withSessionRetry` + `sessionEpoch`**.
+
+## Patrón mínimo para hooks custom
 
 ```ts
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
 
-export function useContratos() {
-  const { profile, loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
-  const [data, setData] = useState<Contrato[]>([]);
+export function useMiRecurso(entityId: string | undefined) {
+  const { user, isAuthenticated, sessionEpoch } = useAuth();
+  const [data, setData] = useState<MiRecurso[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (authLoading || !isAuthenticated) {
-      setLoading(true);
-      return;
-    }
+    if (!isAuthenticated || !entityId) { setLoading(false); return; }
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
     setLoading(true);
     try {
       const result = await withSessionRetry(async () => {
-        const res = await supabase.from('contratos').select('*').eq('status', 'active');
-        if (res.error) throw res.error;
-        return res.data as Contrato[];
-      }, 'useContratos.fetchData');
-      setData(result ?? []);
+        const { data, error } = await supabase.from('mi_tabla').select('*').eq('entity_id', entityId);
+        if (error) throw error;
+        return data as MiRecurso[];
+      }, 'useMiRecurso.fetch');
+      if (!ac.signal.aborted) setData(result ?? []);
+    } catch (err) {
+      if (!ac.signal.aborted) setError(err instanceof Error ? err.message : 'Error');
     } finally {
-      setLoading(false);
+      if (!ac.signal.aborted) setLoading(false);
     }
-  }, [authLoading, isAuthenticated, profile]);
+  }, [isAuthenticated, entityId]);
 
   useEffect(() => {
-    if (authLoading) return;
     void fetchData();
-  }, [authLoading, isAuthenticated, fetchData, sessionEpoch]); // sessionEpoch = re-run tras TOKEN_REFRESHED
+    return () => { abortRef.current?.abort(); };
+  }, [fetchData, sessionEpoch]);  // ← sessionEpoch es obligatorio
 
-  return { data, loading, refetch: fetchData };
+  return { data, loading, error, refetch: fetchData };
 }
 ```
 
-## Checklist para Cada Hook Nuevo
+## Checklist para cada hook
 
-- [ ] Lee `loading`, `isAuthenticated`, `sessionEpoch` desde `useAuth()`.
-- [ ] Gate `if (authLoading || !isAuthenticated) return` al inicio del fetch.
-- [ ] Queries envueltas en `withSessionRetry`.
-- [ ] `useEffect` incluye `sessionEpoch` en sus dependencias.
-- [ ] No `await` de queries dentro de `onAuthStateChange`.
-- [ ] No llama `supabase.auth.refreshSession()` manualmente.
+- [ ] Gate: solo fetcha si `isAuthenticated` (y cualquier FK requerida) está definida.
+- [ ] `sessionEpoch` incluido en deps del `useEffect` principal.
+- [ ] Queries dentro de `withSessionRetry`.
+- [ ] `AbortController` para cancelar fetches si el componente se desmonta.
+- [ ] Cleanup del canal realtime en el return de `useEffect`.
+- [ ] No `await` dentro de `onAuthStateChange`.
+- [ ] No `supabase.auth.refreshSession()` manual.
 
 ## Regla de Lectura: PowerSync vs Supabase
 
 ```ts
-// Leer según feature flag — usar el helper del db provider
 import { useDb } from '@/lib/db/useDb';
-
-const db = useDb(); // retorna SQLite (PowerSync) o supabase client según flag
-
-// La query es idéntica en ambos casos gracias al provider pattern
-const rows = await db.from('contratos').select('*');
+const db = useDb(); // retorna SQLite (PowerSync) o supabase client según VITE_ENABLE_POWERSYNC
+const rows = await db.from('clientes').select('*');
 ```

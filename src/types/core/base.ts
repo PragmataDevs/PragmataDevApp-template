@@ -52,7 +52,8 @@ export interface AppRoute {
   // -- UI Context --
   layout: RouteLayoutType;
   hideInMenu?: boolean; // Para rutas que existen pero no salen en el sidebar (ej: detalles de contratos)
-  hideProjectSelector?: boolean; // Requerimiento específico: Ocultar selector en ciertas pantallas globales
+  /** Reservado: ocultar EntitySelector en header cuando se consuma desde layout/ruta */
+  hideEntitySelector?: boolean;
 
   // -- RBAC --
   // Código del recurso en sys_resources. Si está definido, RouteGuard valida permiso 'read' antes de montar.

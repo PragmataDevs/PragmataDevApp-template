@@ -4,15 +4,16 @@ import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { resolveSignedUrl } from '@/lib/storage';
-import type { ProjectMember } from '../hooks/useProjects';
+import type { EntityMember } from '@/features/entities/hooks/useEntities';
+import { ENTITY_LABEL } from '@/types/entities/entity';
 
-interface ProjectMembersPanelProps {
-  projectId: string;
-  projectName: string;
+interface EntityMembersPanelProps {
+  entityId: string;
+  entityName: string;
   onClose: () => void;
-  fetchProjectMembers: (projectId: string) => Promise<ProjectMember[]>;
-  addProjectMember: (projectId: string, userId: string) => Promise<void>;
-  removeProjectMember: (projectId: string, userId: string) => Promise<void>;
+  fetchEntityMembers: (entityId: string) => Promise<EntityMember[]>;
+  addEntityMember: (entityId: string, userId: string) => Promise<void>;
+  removeEntityMember: (entityId: string, userId: string) => Promise<void>;
   canManage: boolean;
 }
 
@@ -48,7 +49,11 @@ function useAvatarUrl(path: string | null) {
   return url;
 }
 
-function MemberAvatar({ member }: { member: { full_name: string | null; email: string; avatar_url: string | null } }) {
+function MemberAvatar({
+  member,
+}: {
+  member: { full_name: string | null; email: string; avatar_url: string | null };
+}) {
   const avatarUrl = useAvatarUrl(member.avatar_url);
   return (
     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[color:var(--pragmata-accent)] to-[color:var(--pragmata-primary)] flex items-center justify-center text-white font-bold text-xs overflow-hidden flex-shrink-0">
@@ -61,17 +66,17 @@ function MemberAvatar({ member }: { member: { full_name: string | null; email: s
   );
 }
 
-export default function ProjectMembersPanel({
-  projectId,
-  projectName,
+export default function EntityMembersPanel({
+  entityId,
+  entityName,
   onClose,
-  fetchProjectMembers,
-  addProjectMember,
-  removeProjectMember,
+  fetchEntityMembers,
+  addEntityMember,
+  removeEntityMember,
   canManage,
-}: ProjectMembersPanelProps) {
+}: EntityMembersPanelProps) {
   const { profile } = useAuth();
-  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [members, setMembers] = useState<EntityMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddUser, setShowAddUser] = useState(false);
@@ -80,24 +85,24 @@ export default function ProjectMembersPanel({
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
-  // ── Load members ───────────────────────────────────────
+  const labelLower = ENTITY_LABEL.toLowerCase();
+
   const loadMembers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchProjectMembers(projectId);
+      const data = await fetchEntityMembers(entityId);
       setMembers(data);
-    } catch (err: any) {
-      console.error('Error loading members:', err.message);
+    } catch (err: unknown) {
+      console.error('Error loading members:', err instanceof Error ? err.message : err);
     } finally {
       setLoading(false);
     }
-  }, [projectId, fetchProjectMembers]);
+  }, [entityId, fetchEntityMembers]);
 
   useEffect(() => {
     loadMembers();
   }, [loadMembers]);
 
-  // ── Load team users (for adding) ──────────────────────
   const loadTeamUsers = useCallback(async () => {
     if (!profile?.team_id) return;
     setLoadingTeam(true);
@@ -113,16 +118,16 @@ export default function ProjectMembersPanel({
       if (error) throw error;
 
       setTeamUsers(
-        (data || []).map((u: any) => ({
-          id: u.id,
-          full_name: u.full_name,
-          email: u.email,
-          avatar_url: u.avatar_url,
-          role_name: u.sys_roles?.name || 'Sin rol',
+        (data || []).map((u: Record<string, unknown>) => ({
+          id: u.id as string,
+          full_name: u.full_name as string | null,
+          email: u.email as string,
+          avatar_url: u.avatar_url as string | null,
+          role_name: (u.sys_roles as { name?: string } | null)?.name || 'Sin rol',
         }))
       );
-    } catch (err: any) {
-      console.error('Error loading team users:', err.message);
+    } catch (err: unknown) {
+      console.error('Error loading team users:', err instanceof Error ? err.message : err);
     } finally {
       setLoadingTeam(false);
     }
@@ -132,34 +137,31 @@ export default function ProjectMembersPanel({
     if (showAddUser) loadTeamUsers();
   }, [showAddUser, loadTeamUsers]);
 
-  // ── Handlers ───────────────────────────────────────────
   const handleAdd = async (userId: string) => {
     setAddingUserId(userId);
     try {
-      await addProjectMember(projectId, userId);
+      await addEntityMember(entityId, userId);
       await loadMembers();
-      // If no more users to add, close add panel
-    } catch (err: any) {
-      alert('Error al agregar miembro: ' + err.message);
+    } catch (err: unknown) {
+      alert('Error al agregar miembro: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setAddingUserId(null);
     }
   };
 
   const handleRemove = async (userId: string) => {
-    if (!confirm('¿Estás seguro de quitar el acceso de este usuario al proyecto?')) return;
+    if (!confirm(`¿Quitar el acceso de este usuario a este ${labelLower}?`)) return;
     setRemovingUserId(userId);
     try {
-      await removeProjectMember(projectId, userId);
+      await removeEntityMember(entityId, userId);
       await loadMembers();
-    } catch (err: any) {
-      alert('Error al quitar miembro: ' + err.message);
+    } catch (err: unknown) {
+      alert('Error al quitar miembro: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setRemovingUserId(null);
     }
   };
 
-  // Filter: users not already members
   const memberUserIds = new Set(members.map((m) => m.user_id));
   const availableUsers = teamUsers.filter(
     (u) =>
@@ -177,20 +179,25 @@ export default function ProjectMembersPanel({
 
   return (
     <>
-      {/* Overlay */}
       <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Panel */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
           className="bg-[color:var(--pragmata-surface)] rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden pointer-events-auto flex flex-col border border-[color:var(--pragmata-border)]"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="px-6 py-4 border-b border-[color:var(--pragmata-border)] flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-[color:var(--pragmata-fg)]">Miembros del Proyecto</h2>
-              <p className="text-sm text-[color:var(--pragmata-muted)] mt-0.5 truncate max-w-[300px]">{projectName}</p>
+              <h2 className="text-lg font-bold text-[color:var(--pragmata-fg)]">
+                Miembros con acceso
+              </h2>
+              <p className="text-sm text-[color:var(--pragmata-muted)] mt-0.5 truncate max-w-[300px]">
+                {entityName}
+              </p>
+              <p className="text-[11px] text-[color:var(--pragmata-muted)] mt-1">
+                Tabla <code className="rounded bg-[color:var(--pragmata-surface-2)] px-1">sys_entity_access</code>{' '}
+                define qué usuarios ven este {labelLower} en el workspace.
+              </p>
             </div>
             <Button
               variant="ghost"
@@ -201,7 +208,6 @@ export default function ProjectMembersPanel({
             />
           </div>
 
-          {/* Toolbar */}
           <div className="px-6 py-3 border-b border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface-2)]/30 flex items-center gap-2">
             {!showAddUser ? (
               <>
@@ -216,7 +222,14 @@ export default function ProjectMembersPanel({
                   />
                 </div>
                 {canManage && (
-                  <Button size="sm" onClick={() => { setShowAddUser(true); setSearchTerm(''); }} icon={<UserPlus className="h-4 w-4" />}>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setShowAddUser(true);
+                      setSearchTerm('');
+                    }}
+                    icon={<UserPlus className="h-4 w-4" />}
+                  >
                     Agregar
                   </Button>
                 )}
@@ -234,21 +247,26 @@ export default function ProjectMembersPanel({
                     autoFocus
                   />
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => { setShowAddUser(false); setSearchTerm(''); }}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setShowAddUser(false);
+                    setSearchTerm('');
+                  }}
+                >
                   Volver
                 </Button>
               </>
             )}
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="h-6 w-6 animate-spin text-[color:var(--pragmata-accent)]" />
               </div>
             ) : showAddUser ? (
-              /* ── Add User List ────────────────────────── */
               <div className="divide-y divide-[color:var(--pragmata-border)]">
                 {loadingTeam ? (
                   <div className="flex items-center justify-center py-12">
@@ -258,11 +276,14 @@ export default function ProjectMembersPanel({
                   <div className="text-center py-12 text-sm text-[color:var(--pragmata-muted)]">
                     {searchTerm
                       ? 'No se encontraron usuarios disponibles'
-                      : 'Todos los miembros del equipo ya están en el proyecto'}
+                      : `Todos los miembros del equipo ya tienen acceso a este ${labelLower}`}
                   </div>
                 ) : (
                   availableUsers.map((user) => (
-                    <div key={user.id} className="flex items-center gap-3 px-6 py-3 hover:bg-[color:var(--pragmata-row-hover)] transition-colors">
+                    <div
+                      key={user.id}
+                      className="flex items-center gap-3 px-6 py-3 hover:bg-[color:var(--pragmata-row-hover)] transition-colors"
+                    >
                       <MemberAvatar member={user} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-[color:var(--pragmata-fg)] truncate">
@@ -286,15 +307,19 @@ export default function ProjectMembersPanel({
                 )}
               </div>
             ) : (
-              /* ── Members List ─────────────────────────── */
               <div className="divide-y divide-[color:var(--pragmata-border)]">
                 {filteredMembers.length === 0 ? (
                   <div className="text-center py-12 text-sm text-[color:var(--pragmata-muted)]">
-                    {searchTerm ? 'No se encontraron miembros' : 'Este proyecto no tiene miembros aún'}
+                    {searchTerm
+                      ? 'No se encontraron miembros'
+                      : `Nadie tiene acceso explícito aún (añade miembros del equipo).`}
                   </div>
                 ) : (
                   filteredMembers.map((member) => (
-                    <div key={member.id} className="flex items-center gap-3 px-6 py-3 hover:bg-[color:var(--pragmata-row-hover)] transition-colors">
+                    <div
+                      key={member.id}
+                      className="group flex items-center gap-3 px-6 py-3 hover:bg-[color:var(--pragmata-row-hover)] transition-colors"
+                    >
                       <MemberAvatar member={member} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-[color:var(--pragmata-fg)] truncate">
@@ -325,10 +350,10 @@ export default function ProjectMembersPanel({
             )}
           </div>
 
-          {/* Footer */}
           <div className="px-6 py-3 border-t border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface-2)]/30">
             <p className="text-xs text-[color:var(--pragmata-muted)]">
-              {members.length} miembro{members.length !== 1 ? 's' : ''} con acceso al proyecto
+              {members.length} usuario{members.length !== 1 ? 's' : ''} con acceso (
+              <span className="font-medium">{ENTITY_LABEL}</span>)
             </p>
           </div>
         </div>

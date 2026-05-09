@@ -23,8 +23,8 @@ import {
 } from '@/features/entities/hooks/useEntities';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import { ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
-import ProjectFormModal from '@/features/projects/components/ProjectFormModal';
-import ProjectMembersPanel from '@/features/projects/components/ProjectMembersPanel';
+import EntityFormModal from '@/features/entities/components/EntityFormModal';
+import EntityMembersPanel from '@/features/entities/components/EntityMembersPanel';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -345,25 +345,24 @@ export default function EntitiesPage() {
         </div>
       )}
 
-      {/* Modals — reuse ProjectFormModal/ProjectMembersPanel until entity-specific ones are built */}
       {isModalOpen && (
-        <ProjectFormModal
-          project={editingEntity as any}
+        <EntityFormModal
+          entity={editingEntity}
           onClose={() => { setIsModalOpen(false); setEditingEntity(null); }}
-          onSave={handleSave as any}
+          onSave={handleSave}
           saving={saving}
-          totalProjects={totalEntityCount}
+          totalEntities={totalEntityCount}
         />
       )}
 
       {membersEntity && (
-        <ProjectMembersPanel
-          projectId={membersEntity.id}
-          projectName={membersEntity.name}
+        <EntityMembersPanel
+          entityId={membersEntity.id}
+          entityName={membersEntity.name}
           onClose={() => setMembersEntity(null)}
-          fetchProjectMembers={fetchEntityMembers as any}
-          addProjectMember={addEntityMember}
-          removeProjectMember={removeEntityMember}
+          fetchEntityMembers={fetchEntityMembers}
+          addEntityMember={addEntityMember}
+          removeEntityMember={removeEntityMember}
           canManage={canUpdate}
         />
       )}

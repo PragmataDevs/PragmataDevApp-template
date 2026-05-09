@@ -1,0 +1,27 @@
+---
+/**
+ * /checkout — Cart + payment page.
+ *
+ * The cart summary is rendered by a React island (CartDrawer).
+ * Payment is submitted via Edge Function → Stripe / MercadoPago.
+ */
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CartCheckout from '../components/islands/CartCheckout';
+---
+
+<BaseLayout
+  title="Checkout"
+  description="Finaliza tu compra de forma segura."
+  noindex={true}
+  hideCart={true}
+>
+  <div style="max-width:700px;margin:0 auto;padding:40px 24px;">
+    <h1 style="font-size:1.75rem;font-weight:700;color:var(--brand-fg);margin:0 0 32px;">
+      Tu carrito
+    </h1>
+    <!-- Full cart + checkout form React island -->
+    <CartCheckout client:load />
+  </div>
+</BaseLayout>

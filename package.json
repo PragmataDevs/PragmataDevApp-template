@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:astro": "pnpm --dir astro dev",
+    "dev:all": "concurrently -k -n erp,astro -c cyan,magenta \"vite\" \"pnpm --dir astro dev\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -23,7 +25,6 @@
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.75.0",
     "react-router-dom": "^7.13.0",
-    "supabase": "^2.75.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -32,6 +33,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.1.2",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.24",
     "dotenv": "^17.2.4",

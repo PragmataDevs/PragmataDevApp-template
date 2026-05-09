@@ -1,19 +1,24 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Plus, RefreshCw, Layers } from 'lucide-react';
+import { Plus, RefreshCw, Layers, Sparkles, X } from 'lucide-react';
 import { useTasks } from '@/features/tasks/hooks/useTasks';
 import { KanbanBoard } from '@/features/tasks/components/KanbanBoard';
 import { TaskFormModal } from '@/features/tasks/components/TaskFormModal';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useActiveEntity } from '@/features/entities/hooks/useActiveEntity';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import type { Task, TaskStatus } from '@/types/tasks/task';
 import { parseTagsField } from '@/types/tasks/task.schema';
 import type { TaskFormValues } from '@/types/tasks/task.schema';
+
+const AI_ENABLED = import.meta.env.VITE_ENABLE_AI === 'true';
+const EDGE_FN_URL = `${import.meta.env.VITE_SUPABASE_URL as string}/functions/v1/ai-task-summary`;
 
 export default function TasksPage() {
   const { entityId: rawEntityId } = useParams<{ entityId: string }>();
   const navigate = useNavigate();
   const resolvedEntityId = useActiveEntity();
+  const { user } = useAuth();
 
   // "none" is the fallback slug used when sidebar has no entity yet
   const noEntitySelected = !rawEntityId || rawEntityId === 'none';
@@ -27,6 +32,37 @@ export default function TasksPage() {
   }, [noEntitySelected, resolvedEntityId, navigate]);
 
   const hook = useTasks(entityId);
+
+  // AI summary state
+  const [aiSummary, setAiSummary]         = useState<string | null>(null);
+  const [aiLoading, setAiLoading]         = useState(false);
+  const [aiError, setAiError]             = useState<string | null>(null);
+
+  const handleAiSummary = useCallback(async () => {
+    if (!entityId || !user) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiSummary(null);
+    try {
+      const { data: sessionData } = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
+      const token = sessionData?.session?.access_token;
+      const res = await fetch(EDGE_FN_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${token ?? ''}`,
+        },
+        body: JSON.stringify({ entity_id: entityId }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { summary } = await res.json() as { summary: string };
+      setAiSummary(summary);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Error al generar resumen');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [entityId, user]);
 
   // Modal state
   const [modalOpen, setModalOpen]     = useState(false);
@@ -152,6 +188,20 @@ export default function TasksPage() {
             >
               <RefreshCw className="w-4 h-4" />
             </button>
+            {AI_ENABLED && (
+              <button
+                onClick={handleAiSummary}
+                disabled={aiLoading}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium
+                  text-[color:var(--pragmata-fg)] border border-[color:var(--pragmata-border)]
+                  bg-[color:var(--pragmata-surface)] rounded-pragmata hover:bg-[color:var(--pragmata-surface-2)]
+                  transition-colors disabled:opacity-50 shadow-sm"
+                title="Resumen IA"
+              >
+                <Sparkles className={`w-4 h-4 text-[color:var(--pragmata-accent)] ${aiLoading ? 'animate-pulse' : ''}`} />
+                <span className="hidden sm:inline">{aiLoading ? 'Analizando...' : 'Resumen IA'}</span>
+              </button>
+            )}
             <button
               onClick={() => handleAdd('backlog')}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white
@@ -163,6 +213,33 @@ export default function TasksPage() {
           </>
         }
       />
+
+      {/* AI Summary panel */}
+      {(aiSummary || aiError) && (
+        <div className={`mx-4 sm:mx-6 mb-4 rounded-xl border p-4 relative ${
+          aiError
+            ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+            : 'bg-[color:var(--pragmata-accent-soft)] border-[color:var(--pragmata-accent)]/30'
+        }`}>
+          <div className="flex items-start gap-3">
+            <Sparkles className={`w-4 h-4 mt-0.5 flex-shrink-0 ${aiError ? 'text-red-500' : 'text-[color:var(--pragmata-accent)]'}`} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold mb-1 text-[color:var(--pragmata-muted)] uppercase tracking-wider">
+                {aiError ? 'Error de IA' : 'Resumen IA'}
+              </p>
+              <p className={`text-sm whitespace-pre-line leading-relaxed ${aiError ? 'text-red-700 dark:text-red-400' : 'text-[color:var(--pragmata-fg)]'}`}>
+                {aiSummary ?? aiError}
+              </p>
+            </div>
+            <button
+              onClick={() => { setAiSummary(null); setAiError(null); }}
+              className="flex-shrink-0 p-1 rounded text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-danger)] transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Kanban Board */}
       <div className="flex-1 overflow-hidden">

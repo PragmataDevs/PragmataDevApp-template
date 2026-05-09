@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation, useMatch, useNavigate } from 'react-router-dom';
-import { ChevronDown, Settings, Layers } from 'lucide-react';
+import { ChevronDown, Settings, Layers, ShoppingCart } from 'lucide-react';
 import PragmataIcon from '@/assets/pragmata-devs-icon.png';
 import { APP_ROUTES, WORKSPACE_ROUTES } from '@/app/routes.config';
 import { usePermission } from '@/features/auth/hooks/usePermission';
@@ -14,6 +14,7 @@ import type { ComponentType } from 'react';
  */
 const SIDEBAR_GROUPS: Record<string, { label: string; icon: ComponentType<{ className?: string }> }> = {
   settings: { label: 'Configuración', icon: Settings },
+  ecommerce: { label: 'Ecommerce', icon: ShoppingCart },
 };
 
 interface SidebarProps {
@@ -222,7 +223,7 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
           )}
 
           {/* ─── CONFIGURACIÓN (grouped routes — above Workspace) ─── */}
-          {Object.entries(groups).map(([key, routes]) => renderGroup(key, routes))}
+          {groups.settings ? renderGroup('settings', groups.settings) : null}
 
           {/* Separator */}
           {!isCollapsed && (
@@ -295,6 +296,16 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
               </div>
             )}
           </div>
+
+          {/* Separator */}
+          {!isCollapsed && groups.ecommerce && (
+            <div className="py-2">
+              <div className="h-px bg-[color:var(--pragmata-border)] mx-3" />
+            </div>
+          )}
+
+          {/* ─── ECOMMERCE section (feature-flagged routes) ─── */}
+          {groups.ecommerce ? renderGroup('ecommerce', groups.ecommerce) : null}
         </nav>
 
         {/* Bottom Area */}

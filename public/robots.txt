@@ -1,0 +1,8 @@
+# robots.txt — Pragmata Operativo (React SPA)
+# Deployed at: https://app.tucliente.com
+#
+# The React ERP requires authentication — nothing here should be indexed.
+# This file blocks ALL crawlers on the app subdomain.
+
+User-agent: *
+Disallow: /

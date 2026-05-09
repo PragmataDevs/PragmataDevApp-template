@@ -95,7 +95,7 @@ Usa el hook `useActiveEntity` (`src/features/entities/hooks/useActiveEntity.ts`)
 ## Estructura de Rutas
 
 ```
-/                      → PublicLayout → LandingPage
+/                      → PublicLayout → redirección a sitio Astro (VITE_PUBLIC_SITE_URL); /login sigue en el ERP
 /login                 → PublicLayout → LoginPage
 /auth/callback         → PublicLayout → CallbackPage
 

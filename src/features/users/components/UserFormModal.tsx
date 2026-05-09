@@ -9,8 +9,9 @@ import type {
   UserUpdateInput,
   RoleOption,
   UserWithRole,
-  ProjectOption,
+  EntityOption,
 } from '../hooks/useUsers';
+import { ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
 
 interface UserFormModalProps {
   user?: UserWithRole | null;
@@ -22,16 +23,16 @@ interface UserFormModalProps {
   onFetchRoleDefinitions: (roleId: string) => Promise<GrantedPermissions>;
   /** Loads the custom permissions for an existing user */
   onFetchUserPermissions: (userId: string) => Promise<GrantedPermissions>;
-  /** Loads active projects for assignment */
-  onFetchProjects: () => Promise<ProjectOption[]>;
-  /** Loads current project assignments for this user */
-  onFetchUserProjects: (userId: string) => Promise<string[]>;
+  /** Catálogo de entities (`entities`) para asignar acceso workspace */
+  onFetchEntities: () => Promise<EntityOption[]>;
+  /** IDs en `sys_entity_access` para este usuario */
+  onFetchUserEntities: (userId: string) => Promise<string[]>;
 }
 
 const ACCESS_LEVELS: { value: AccessLevel; label: string; hint: string }[] = [
   { value: 'god', label: 'God', hint: 'Acceso total a todos los datos de todos los equipos' },
   { value: 'admin', label: 'Admin', hint: 'Acceso total a los datos de su equipo' },
-  { value: 'member', label: 'Member', hint: 'Solo sus datos y proyectos asignados' },
+  { value: 'member', label: 'Member', hint: `Solo sus datos y ${ENTITY_LABEL_PLURAL.toLowerCase()} asignados (sys_entity_access)` },
 ];
 
 export default function UserFormModal({
@@ -42,8 +43,8 @@ export default function UserFormModal({
   saving = false,
   onFetchRoleDefinitions,
   onFetchUserPermissions,
-  onFetchProjects,
-  onFetchUserProjects,
+  onFetchEntities,
+  onFetchUserEntities,
 }: UserFormModalProps) {
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -62,10 +63,9 @@ export default function UserFormModal({
   /** Loading flag while fetching permissions */
   const [loadingPermissions, setLoadingPermissions] = useState(false);
 
-  // ── Project assignment state ──
-  const [projects, setProjects] = useState<ProjectOption[]>([]);
-  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
-  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [entities, setEntities] = useState<EntityOption[]>([]);
+  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
+  const [loadingEntities, setLoadingEntities] = useState(false);
 
   const isEditing = !!user;
 
@@ -123,53 +123,51 @@ export default function UserFormModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // ── Load project catalog ──
   useEffect(() => {
     let cancelled = false;
-    setLoadingProjects(true);
+    setLoadingEntities(true);
 
     (async () => {
       try {
-        const projectOptions = await onFetchProjects();
+        const list = await onFetchEntities();
         if (cancelled) return;
-        setProjects(projectOptions);
+        setEntities(list);
       } catch (err) {
-        console.error('Error fetching projects:', err);
+        console.error('Error fetching entities:', err);
       } finally {
-        if (!cancelled) setLoadingProjects(false);
+        if (!cancelled) setLoadingEntities(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [onFetchProjects]);
+  }, [onFetchEntities]);
 
-  // ── Load selected projects when editing ──
   useEffect(() => {
     if (!isEditing || !user) return;
     let cancelled = false;
 
     (async () => {
       try {
-        const assignedProjectIds = await onFetchUserProjects(user.id);
+        const assigned = await onFetchUserEntities(user.id);
         if (cancelled) return;
-        setSelectedProjectIds(assignedProjectIds);
+        setSelectedEntityIds(assigned);
       } catch (err) {
-        console.error('Error fetching user project assignments:', err);
+        console.error('Error fetching user entity assignments:', err);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [isEditing, onFetchUserProjects, user]);
+  }, [isEditing, onFetchUserEntities, user]);
 
-  const toggleProject = (projectId: string) => {
-    setSelectedProjectIds((prev) =>
-      prev.includes(projectId)
-        ? prev.filter((id) => id !== projectId)
-        : [...prev, projectId]
+  const toggleEntity = (entityId: string) => {
+    setSelectedEntityIds((prev) =>
+      prev.includes(entityId)
+        ? prev.filter((id) => id !== entityId)
+        : [...prev, entityId]
     );
   };
 
@@ -196,7 +194,7 @@ export default function UserFormModal({
         access_level: accessLevel,
         job_title: jobTitle || undefined,
         phone: phone || undefined,
-        project_ids: selectedProjectIds,
+        entity_ids: selectedEntityIds,
         ...permissionsPayload,
       };
       await onSave(updatePayload);
@@ -208,7 +206,7 @@ export default function UserFormModal({
         access_level: accessLevel,
         job_title: jobTitle || undefined,
         phone: phone || undefined,
-        project_ids: selectedProjectIds,
+        entity_ids: selectedEntityIds,
         ...permissionsPayload,
       };
       await onSave(createPayload);
@@ -409,49 +407,53 @@ export default function UserFormModal({
               </div>
             )}
 
-            {/* ── Project Assignment Section ── */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center gap-2">
                 <FolderKanban className="h-4 w-4 text-[color:var(--pragmata-accent)]" />
                 <span className="text-sm font-semibold text-[color:var(--pragmata-fg)]">
-                  Proyectos asignados
+                  {ENTITY_LABEL_PLURAL} (workspace)
                 </span>
                 <span className="inline-flex items-center text-xs text-[color:var(--pragmata-muted-2)] bg-[color:var(--pragmata-surface-2)] px-2 py-0.5 rounded-full">
-                  {selectedProjectIds.length} seleccionados
+                  {selectedEntityIds.length} seleccionados
                 </span>
               </div>
+              <p className="text-[11px] text-[color:var(--pragmata-muted-2)]">
+                Define qué <strong>{ENTITY_LABEL_PLURAL.toLowerCase()}</strong> aparecen para este usuario en{' '}
+                <code className="rounded bg-[color:var(--pragmata-surface-2)] px-1">/workspace/:entityId</code>{' '}
+                (<code className="rounded bg-[color:var(--pragmata-surface-2)] px-1">sys_entity_access</code>).
+              </p>
 
-              {loadingProjects ? (
+              {loadingEntities ? (
                 <div className="flex items-center justify-center py-6 text-[color:var(--pragmata-muted)]">
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  <span className="text-sm">Cargando proyectos…</span>
+                  <span className="text-sm">Cargando…</span>
                 </div>
-              ) : projects.length === 0 ? (
+              ) : entities.length === 0 ? (
                 <p className="text-xs text-[color:var(--pragmata-muted-2)]">
-                  No hay proyectos activos disponibles para asignar.
+                  No hay {ENTITY_LABEL_PLURAL.toLowerCase()} activos para asignar.
                 </p>
               ) : (
                 <div className="max-h-52 overflow-y-auto rounded-lg border border-[color:var(--pragmata-border)] divide-y divide-[color:var(--pragmata-border)]">
-                  {projects.map((project) => {
-                    const checked = selectedProjectIds.includes(project.id);
+                  {entities.map((ent) => {
+                    const checked = selectedEntityIds.includes(ent.id);
                     return (
                       <label
-                        key={project.id}
+                        key={ent.id}
                         className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
                       >
                         <input
                           type="checkbox"
                           checked={checked}
-                          onChange={() => toggleProject(project.id)}
+                          onChange={() => toggleEntity(ent.id)}
                           className="h-4 w-4 rounded border-[color:var(--pragmata-border)] text-[color:var(--pragmata-accent)] focus:ring-[color:var(--pragmata-accent)]"
                         />
                         <div className="min-w-0">
                           <p className="text-sm text-[color:var(--pragmata-fg)] truncate">
-                            {project.name}
+                            {ent.name}
                           </p>
-                          {project.code && (
+                          {ent.code && (
                             <p className="text-[11px] text-[color:var(--pragmata-muted-2)] font-mono">
-                              {project.code}
+                              {ent.code}
                             </p>
                           )}
                         </div>

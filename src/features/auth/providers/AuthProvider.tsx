@@ -34,6 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [permissions, setPermissions] = useState<UserPermissionsMap>({});
+  // loading stays true until BOTH session AND profile are resolved.
+  // This prevents the RouteGuard / useCrudResource flash where loading=false
+  // but profile=null causes hasPermission to return false for every resource.
   const [loading, setLoading] = useState(true);
   const [sessionEpoch, setSessionEpoch] = useState(0);
   const fetchingProfileRef = useRef(false);
@@ -118,14 +121,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const currentUser = session?.user ?? null;
         console.log('[AuthProvider] Initial Session User:', currentUser?.id);
-        if (mounted) setUser(currentUser);
+        if (mounted) {
+          setUser(currentUser);
+          // No user → fully done loading now.
+          // User exists → keep loading=true; the profile effect will call
+          // setLoading(false) once profile + permissions are ready.
+          // This prevents the flash where loading=false but profile=null
+          // causes hasPermission to return false for every resource.
+          if (!currentUser) {
+            setLoading(false);
+          }
+        }
       } catch (e) {
         console.error('[AuthProvider] Init Error:', e);
-      } finally {
-        if (mounted) {
-          console.log('[AuthProvider] Setting loading = false');
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
@@ -178,12 +187,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const userId = user?.id ?? null;
     if (!userId) return;
-    if (lastProfileUserIdRef.current === userId) return;
+
+    if (lastProfileUserIdRef.current === userId) {
+      // Profile already loaded from a prior run (React StrictMode remount).
+      // Profile is in state, just ensure loading is cleared so consumers unblock.
+      setLoading(false);
+      return;
+    }
+
     lastProfileUserIdRef.current = userId;
 
     void (async () => {
       await fetchProfile(userId);
       bumpSessionEpoch();
+      // Only after profile + permissions are fully loaded do we unlock.
+      // This is the single authoritative place for authenticated users.
+      setLoading(false);
     })();
   }, [user?.id]);
 

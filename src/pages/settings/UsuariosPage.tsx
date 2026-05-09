@@ -90,8 +90,8 @@ export default function UsuariosPage() {
     deleteUser,
     fetchRoleDefinitions,
     fetchUserPermissions,
-    fetchProjectsForAssignment,
-    fetchUserProjectAssignments,
+    fetchEntitiesForAssignment,
+    fetchUserEntityAssignments,
   } =
     useUsers();
   const { hasPermission } = usePermission();
@@ -517,8 +517,8 @@ export default function UsuariosPage() {
           saving={saving}
           onFetchRoleDefinitions={fetchRoleDefinitions}
           onFetchUserPermissions={fetchUserPermissions}
-          onFetchProjects={fetchProjectsForAssignment}
-          onFetchUserProjects={fetchUserProjectAssignments}
+          onFetchEntities={fetchEntitiesForAssignment}
+          onFetchUserEntities={fetchUserEntityAssignments}
         />
       )}
 

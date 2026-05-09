@@ -3,7 +3,7 @@
 -- Version: 1.0
 --
 -- Extiende el Security Engine (01_security_engine.sql).
--- REQUIERE que projects y sys_project_access ya existan.
+-- REQUIERE `entities` y `sys_entity_access` (01_security_engine.sql).
 --
 -- Tablas:
 --   tasks        — Tarjetas del Kanban (AuditBase completo)

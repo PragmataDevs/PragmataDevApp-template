@@ -14,7 +14,7 @@
 -- 2. Generic AuditBase trigger (set_updated_at)
 -- 3. Security Catalogs (sys_resources, sys_roles, sys_role_definitions)
 -- 4. Business Tables (teams, profiles, projects)
--- 5. Access Control (sys_project_access, sys_user_permissions, sys_user_preferences)
+-- 5. Access Control (sys_entity_access, sys_user_permissions, sys_user_preferences)
 -- 6. Notifications (broadcasts, notifications, attachments)
 -- 7. Chat (conversations, participants, messages, reads)
 -- 8. Logic Functions & Triggers (security engine + chat/notifications)
@@ -33,7 +33,7 @@
 -- POWERSYNC COMPATIBILITY:
 -- This entire schema is designed for "Offline-First" Sync Rules.
 -- Instead of relying purely on dynamic RLS functions (which don't run on SQLite),
--- we expose explicit access tables (sys_project_access, sys_user_permissions)
+-- we expose explicit access tables (sys_entity_access, sys_user_permissions)
 -- that PowerSync can read to determine WHAT data to download to the device.
 -- ==============================================================================
 
@@ -486,7 +486,7 @@ BEGIN
     FOREACH t IN ARRAY ARRAY[
         'sys_resources', 'sys_roles', 'sys_role_definitions',
         'teams', 'profiles', 'projects',
-        'sys_project_access', 'sys_user_permissions', 'sys_user_preferences',
+        'sys_entity_access', 'sys_user_permissions', 'sys_user_preferences',
         'notification_broadcasts', 'notifications', 'notification_attachments',
         'chat_conversations', 'chat_participants', 'chat_messages', 'chat_message_reads'
     ]

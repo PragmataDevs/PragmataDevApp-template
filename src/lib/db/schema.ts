@@ -38,11 +38,16 @@ export const AppSchema = new Schema([
       new Column({ name: 'id', type: ColumnType.TEXT }),
       new Column({ name: 'user_id', type: ColumnType.TEXT }),
       new Column({ name: 'team_id', type: ColumnType.TEXT }),
-      new Column({ name: 'project_id', type: ColumnType.TEXT }),
       new Column({ name: 'resource_code', type: ColumnType.TEXT }),
       new Column({ name: 'granted_actions', type: ColumnType.TEXT }),
-      new Column({ name: 'is_customized', type: ColumnType.INTEGER }),
       new Column({ name: 'conditions', type: ColumnType.TEXT }),
+      new Column({ name: 'is_customized', type: ColumnType.INTEGER }),
+      new Column({ name: 'created_at', type: ColumnType.TEXT }),
+      new Column({ name: 'updated_at', type: ColumnType.TEXT }),
+      new Column({ name: 'status', type: ColumnType.TEXT }),
+      new Column({ name: 'created_by', type: ColumnType.TEXT }),
+      new Column({ name: 'updated_by', type: ColumnType.TEXT }),
+      new Column({ name: 'deleted_at', type: ColumnType.TEXT }),
     ],
     indexes: [
       Index.createAscending({ name: 'sys_user_permissions_user_id_idx' }, ['user_id'])

@@ -7,11 +7,16 @@ import {
   Layers,
   LayoutDashboard,
   CheckSquare,
+  FileText,
+  Package,
+  ShoppingCart,
+  BarChart3,
 } from 'lucide-react';
 import type { AppRoute } from '@/app/navigation';
 
 // --- Lazy Loading de Páginas ---
-const LandingPage           = lazy(() => import('@/pages/LandingPage'));
+/** `/` redirige al sitio público Astro (no hay landing React duplicada). */
+const PublicSiteEntry       = lazy(() => import('@/pages/PublicSiteEntry'));
 const LoginPage             = lazy(() => import('@/pages/auth/LoginPage'));
 const CallbackPage          = lazy(() => import('@/pages/auth/CallbackPage'));
 const ResetPasswordPage     = lazy(() => import('@/pages/auth/ResetPasswordPage'));
@@ -24,10 +29,17 @@ const RolesPage             = lazy(() => import('@/pages/settings/RolesPage'));
 const UsuariosPage          = lazy(() => import('@/pages/settings/UsuariosPage'));
 const EntitiesPage          = lazy(() => import('@/pages/settings/EntitiesPage'));
 
-// Workspace Pages
-const TasksPage             = lazy(() => import('@/pages/workspace/TasksPage'));
+// Ecommerce Pages (feature-flagged by VITE_ENABLE_ECOMMERCE)
+const ProductsPage          = lazy(() => import('@/pages/ecommerce/ProductsPage'));
+const EcommerceDashboardPage = lazy(() => import('@/pages/ecommerce/EcommerceDashboardPage'));
+const EcommerceSalesPage     = lazy(() => import('@/pages/ecommerce/EcommerceSalesPage'));
 
-const DashboardPlaceholder  = DashboardPage;
+// Workspace Pages
+const TasksPage                 = lazy(() => import('@/pages/workspace/TasksPage'));
+const WorkspaceDashboardPage    = lazy(() => import('@/pages/workspace/WorkspaceDashboardPage'));
+const DocumentsPage             = lazy(() => import('@/pages/workspace/DocumentsPage'));
+
+const ECOMMERCE_ENABLED = import.meta.env.VITE_ENABLE_ECOMMERCE === 'true';
 
 // =============================================================================
 // APP ROUTES (Global Layout: Dashboard, Profile, Settings)
@@ -37,8 +49,8 @@ export const APP_ROUTES: AppRoute[] = [
   // --- Public (no resource code) ---
   {
     path: '/',
-    name: 'Landing',
-    element: LandingPage,
+    name: 'Sitio público',
+    element: PublicSiteEntry,
     layout: 'public',
     hideInMenu: true,
   },
@@ -90,7 +102,7 @@ export const APP_ROUTES: AppRoute[] = [
     element: RolesPage,
     layout: 'app',
     resourceCode: 'page_settings_roles',
-    hideProjectSelector: true,
+    hideEntitySelector: true,
     group: 'settings',
   },
   {
@@ -100,7 +112,7 @@ export const APP_ROUTES: AppRoute[] = [
     element: UsuariosPage,
     layout: 'app',
     resourceCode: 'page_settings_usuarios',
-    hideProjectSelector: true,
+    hideEntitySelector: true,
     group: 'settings',
   },
   {
@@ -110,9 +122,46 @@ export const APP_ROUTES: AppRoute[] = [
     element: EntitiesPage,
     layout: 'app',
     resourceCode: 'page_settings_entities',
-    hideProjectSelector: true,
+    hideEntitySelector: true,
     group: 'settings',
   },
+
+  // --- Ecommerce (group) ---
+  ...(ECOMMERCE_ENABLED
+    ? ([
+        {
+          path: '/ecommerce',
+          name: 'Resumen',
+          icon: ShoppingCart,
+          element: EcommerceDashboardPage,
+          layout: 'app',
+          resourceCode: 'page_ecommerce_dashboard',
+          hideInMenu: false,
+          group: 'ecommerce',
+        },
+        {
+          path: '/ecommerce/products',
+          name: 'Productos',
+          icon: Package,
+          element: ProductsPage,
+          layout: 'app',
+          resourceCode: 'page_ecommerce_products',
+          hideInMenu: false,
+          group: 'ecommerce',
+        },
+        {
+          path: '/ecommerce/sales',
+          name: 'Ventas',
+          icon: BarChart3,
+          element: EcommerceSalesPage,
+          layout: 'app',
+          resourceCode: 'page_ecommerce_orders',
+          hideInMenu: false,
+          group: 'ecommerce',
+        },
+      ] as AppRoute[])
+    : []),
+
 ];
 
 // =============================================================================
@@ -124,7 +173,7 @@ export const WORKSPACE_ROUTES: AppRoute[] = [
     path: 'dashboard',
     name: 'Resumen',
     icon: LayoutDashboard,
-    element: DashboardPlaceholder,
+    element: WorkspaceDashboardPage,
     layout: 'workspace',
     resourceCode: 'page_workspace_dashboard',
     hideInMenu: false,
@@ -139,10 +188,20 @@ export const WORKSPACE_ROUTES: AppRoute[] = [
     hideInMenu: false,
   },
   {
+    path: 'documents',
+    name: 'Documentos',
+    icon: FileText,
+    element: DocumentsPage,
+    layout: 'workspace',
+    resourceCode: 'page_workspace_documents',
+    hideInMenu: false,
+  },
+
+  {
     path: 'config',
     name: 'Configuración',
     icon: Settings,
-    element: DashboardPlaceholder,
+    element: WorkspaceDashboardPage,
     layout: 'workspace',
     resourceCode: 'page_workspace_config',
     hideInMenu: true,

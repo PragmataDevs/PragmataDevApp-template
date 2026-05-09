@@ -1,0 +1,199 @@
+---
+/**
+ * /productos/[slug] — Product detail page.
+ *
+ * SSR (prerender = false) so prices, stock and inventory are always fresh.
+ * Use prerender = true (SSG) only if your catalog is truly static.
+ *
+ * Each product page has:
+ *   - Full SEO (title, description, OG image, canonical)
+ *   - Schema.org Product (name, price, description, image)
+ *   - Add to Cart React island (only loads React for CartButton)
+ */
+export const prerender = false; // SSR — always fresh prices & stock
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CartButton from '../../components/islands/CartButton';
+import { supabase } from '../../lib/supabase';
+
+// ── Fetch single product by slug ──────────────────────────────────────────────
+const { slug } = Astro.params;
+
+const { data: product, error } = await supabase
+  .from('products')
+  .select('*')
+  .eq('slug', slug)
+  .eq('status', 'active')
+  .single();
+
+if (error || !product) {
+  return Astro.redirect('/productos?notfound=1', 302);
+}
+
+const siteUrl  = import.meta.env.PUBLIC_SITE_URL   ?? '';
+const currency = product.currency ?? 'MXN';
+
+const priceFormatted = new Intl.NumberFormat('es-MX', { style: 'currency', currency }).format(product.price);
+const compareFormatted = product.compare_at_price
+  ? new Intl.NumberFormat('es-MX', { style: 'currency', currency }).format(product.compare_at_price)
+  : null;
+
+// discount percentage
+const discount = product.compare_at_price && product.compare_at_price > product.price
+  ? Math.round((1 - product.price / product.compare_at_price) * 100)
+  : null;
+
+// ── Schema.org Product ────────────────────────────────────────────────────────
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name:        product.name,
+  description: product.description ?? product.name,
+  image:       product.image_url ?? `${siteUrl}/og-default.png`,
+  url:         `${siteUrl}/productos/${product.slug}`,
+  offers: {
+    '@type':        'Offer',
+    price:          product.price,
+    priceCurrency:  currency,
+    availability:   product.in_stock
+      ? 'https://schema.org/InStock'
+      : 'https://schema.org/OutOfStock',
+    url:            `${siteUrl}/productos/${product.slug}`,
+  },
+};
+---
+
+<BaseLayout
+  title={product.name}
+  description={product.description ?? `Compra ${product.name} en nuestra tienda`}
+  image={product.image_url ?? undefined}
+  type="product"
+  schema={schema}
+>
+  <div style="max-width:1100px;margin:0 auto;padding:40px 24px;">
+
+    <!-- Breadcrumb -->
+    <nav style="font-size:0.8125rem;color:var(--brand-muted);margin-bottom:32px;">
+      <a href="/"          style="color:var(--brand-muted);text-decoration:none;">Inicio</a>
+      <span style="margin:0 8px;">›</span>
+      <a href="/productos" style="color:var(--brand-muted);text-decoration:none;">Productos</a>
+      {product.category && (
+        <>
+          <span style="margin:0 8px;">›</span>
+          <a href={`/productos?categoria=${encodeURIComponent(product.category)}`} style="color:var(--brand-muted);text-decoration:none;">{product.category}</a>
+        </>
+      )}
+      <span style="margin:0 8px;">›</span>
+      <span style="color:var(--brand-fg);">{product.name}</span>
+    </nav>
+
+    <!-- Product layout -->
+    <div class="product-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;">
+
+      <!-- Image gallery (simplified: shows main image + extra images from metadata.images) -->
+      <div>
+        <div style="border:1px solid var(--brand-border);border-radius:16px;overflow:hidden;background:var(--brand-bg);aspect-ratio:1;display:flex;align-items:center;justify-content:center;">
+          {product.image_url
+            ? <img
+                src={product.image_url}
+                alt={product.name}
+                style="width:100%;height:100%;object-fit:cover;"
+                loading="eager"
+              />
+            : <span style="font-size:5rem;">🛍️</span>
+          }
+        </div>
+
+        <!-- Extra images from metadata.images array (optional) -->
+        {Array.isArray(product.images) && product.images.length > 1 && (
+          <div style="display:flex;gap:8px;margin-top:12px;overflow-x:auto;padding-bottom:4px;">
+            {product.images.slice(0, 6).map((img: string) => (
+              <img
+                src={img}
+                alt={product.name}
+                style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:2px solid var(--brand-border);flex-shrink:0;cursor:pointer;"
+                loading="lazy"
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <!-- Info + Cart -->
+      <div>
+        {product.category && (
+          <p style="font-size:0.8125rem;color:var(--brand-muted);margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;">
+            {product.category}
+          </p>
+        )}
+
+        <h1 style="font-size:clamp(1.5rem,3vw,2rem);font-weight:700;color:var(--brand-fg);margin:0 0 16px;line-height:1.2;">
+          {product.name}
+        </h1>
+
+        <!-- Price -->
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:24px;">
+          <span style="font-size:2rem;font-weight:800;color:var(--brand-fg);">
+            {priceFormatted}
+            <span style="font-size:1rem;font-weight:400;color:var(--brand-muted);margin-left:4px;">{currency}</span>
+          </span>
+          {compareFormatted && (
+            <span style="font-size:1.125rem;color:var(--brand-muted);text-decoration:line-through;">{compareFormatted}</span>
+          )}
+          {discount && (
+            <span style="font-size:0.8125rem;font-weight:700;background:#d1fae5;color:#065f46;padding:3px 8px;border-radius:999px;">
+              -{discount}%
+            </span>
+          )}
+        </div>
+
+        <!-- Description -->
+        {product.description && (
+          <p style="font-size:0.9375rem;color:var(--brand-muted);margin:0 0 32px;line-height:1.7;">
+            {product.description}
+          </p>
+        )}
+
+        <!-- Stock badge -->
+        <div style="margin-bottom:20px;">
+          {product.in_stock
+            ? <span style="font-size:0.8125rem;color:#065f46;font-weight:500;">✓ En stock
+                {product.stock_qty != null && product.stock_qty <= 5 && (
+                  <span style="color:#d97706;"> · Solo quedan {product.stock_qty}</span>
+                )}
+              </span>
+            : <span style="font-size:0.8125rem;color:#dc2626;font-weight:500;">✗ Sin stock — agotado temporalmente</span>
+          }
+        </div>
+
+        <!-- Cart button React island -->
+        <CartButton
+          client:load
+          product={{
+            id:    product.id,
+            name:  product.name,
+            price: product.price,
+            slug:  product.slug,
+            image: product.image_url ?? undefined,
+          }}
+          disabled={!product.in_stock}
+        />
+
+        <!-- Trust badges -->
+        <div style="margin-top:24px;padding:16px;background:var(--brand-surface);border:1px solid var(--brand-border);border-radius:10px;font-size:0.8125rem;color:var(--brand-muted);display:flex;flex-wrap:wrap;gap:12px;">
+          <span>🔒 Pago seguro</span>
+          <span>🚚 Envío gratis</span>
+          <span>↩️ Garantía 30 días</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  @media (max-width: 640px) {
+    .product-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>

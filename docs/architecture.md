@@ -12,7 +12,7 @@ PragmataDevs opera como una **fábrica de software modular**. No construimos apl
 
 | Pilar | Stack | Propósito | Feature Flag |
 | :--- | :--- | :--- | :--- |
-| **Público** (SEO/Ecommerce) | Astro + Tailwind | Web ultrarrápida, SEO técnico, catálogo, tienda | `VITE_ENABLE_ECOMMERCE` |
+| **Público** (SEO/Ecommerce) | Astro + Tailwind | Web ultrarrápida, SEO técnico, catálogo, tienda | ERP catálogo admin: `VITE_ENABLE_ECOMMERCE`; sitio público: `PUBLIC_ENABLE_ECOMMERCE` |
 | **Operativo** (ERP/Admin) | React + Vite + Supabase | Dashboard ERP, CRUD, permisos, reportes | siempre activo |
 | **Intelligence** (IA Core) | Edge Functions + pgvector + LLMs | Búsqueda semántica, resúmenes, extracción de datos | `VITE_ENABLE_AI` |
 
@@ -68,6 +68,8 @@ PragmataDevs opera como una **fábrica de software modular**. No construimos apl
 
 Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
 
+Para añadir un módulo nuevo de forma repetible, usar **`docs/playbook-new-module.md`** (10 pasos: SQL → tipo → hook → rutas → RBAC → sidebar).
+
 ### Pilar Operativo (`/src`)
 
 ```text
@@ -114,7 +116,8 @@ Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
   │   ├── dashboard/              # Dashboard global
   │   ├── profile/                # Perfil de usuario
   │   ├── settings/               # Roles, Usuarios, Entidades
-  │   └── workspace/              # Páginas del Workspace (Tasks, Costos, Contratos…)
+  │   ├── workspace/              # Contexto Entity: resumen, tareas, documentos, config
+  │   └── ecommerce/             # [VITE_ENABLE_ECOMMERCE] Resumen, productos, ventas
   │
   └── types/                      # Definiciones de TypeScript (DB Interfaces)
       ├── core/base.ts            # AuditBase — la raíz de todo modelo
@@ -251,36 +254,34 @@ const isInWorkspace = !!useMatch('/workspace/:entityId/*');
 | `VITE_ENTITY_LABEL` | `"Entidad"` | Label visible en UI para el concepto de Entity |
 | `VITE_ENABLE_MULTI_ENTITY` | `true` | Habilita el EntitySelector (solo visible en rutas `/workspace/*`) |
 
-### Pilar Público (`/packages/web`) — Astro
+### Pilar Público (`astro/`) — Astro
 
 ```text
-packages/web/
+astro/
   src/
-    pages/              # .astro — rutas SSG/SSR ([slug].astro para dinámicas)
-    components/         # .astro y .tsx (islas React para interactividad)
+    pages/                 # .astro — landing, catálogo, checkout (hybrid SSR donde aplica)
+    components/islands/    # React (carrito, checkout)
     layouts/
-      BaseLayout.astro  # HTML base con SEOHead (<title>, og:image, canonical)
+      BaseLayout.astro     # SEO base (<title>, OG, JSON-LD)
     lib/
-      supabase.ts        # Cliente Supabase (anon key — solo lectura pública)
-    styles/
-      global.css         # Tailwind base + tokens compartidos
-  astro.config.mjs       # Integración React, sitemap, image optimizer
+      supabase.ts          # Cliente público (anon)
+  astro.config.mjs         # hybrid + @astrojs/node; env desde raíz del monorepo
+  tailwind.config.mjs      # Extiende tailwind raíz; content apunta a astro/src
 ```
 
-### Pilar Intelligence (`/supabase/functions`) — Edge Functions
+### Pilar Intelligence (`supabase/functions`) — Edge Functions
 
 ```text
 supabase/functions/
-  ai-search/             # Búsqueda semántica con pgvector
-    index.ts
-  ai-summarize/          # Resúmenes de documentos/registros
-    index.ts
-  ai-extract/            # Extracción de datos de PDFs/imágenes
-    index.ts
+  ai-task-summary/        # Resumen de tareas (OpenAI) — plantilla actual
+  stripe-checkout/
+  stripe-webhook/
   _shared/
-    openai.ts            # Cliente OpenAI reutilizable
-    pgvector.ts          # Helpers de embeddings
+    auth.ts
+    cors.ts
 ```
+
+*(Roadmap típico: `ai-search`, extracción de documentos, etc.; siguen el mismo patrón `_shared` + secrets en Dashboard.)*
 
 ---
 
@@ -306,7 +307,7 @@ PragmataDevApp (1 Proyecto Supabase)
 - Secrets / API Keys
 
 **Qué se SEPARA (por branch/database):**
-- Tablas de negocio (`profiles`, `teams`, `projects`, etc.)
+- Tablas de negocio (`profiles`, `teams`, `entities`, …)
 - RLS Policies y Triggers
 - Datos (cada branch tiene su propia data)
 
@@ -314,11 +315,11 @@ PragmataDevApp (1 Proyecto Supabase)
 - Un usuario creado con `auth.admin.createUser()` existe en ambas branches.
 - El `INSERT INTO profiles` va a la branch que corresponda según el `VITE_SUPABASE_URL`.
 - Las Edge Functions no necesitan configuración por branch — el frontend ya rutea al entorno correcto.
-- Las migraciones SQL se ejecutan por branch desde el Dashboard de Supabase.
+- El schema por branch debe mantenerse alineado: flujo **industrial** = SQL versionado en `supabase/migrations/` y aplicación con **`supabase db push`** tras `supabase link` al proyecto/ref correcto (staging vs prod). Los scripts de referencia siguen en `docs/database/*.sql` (véase `docs/SETUP.md` §3). El SQL Editor del Dashboard sigue siendo válido para prototipos o parches puntuales, pero la fuente de verdad del factory template es el repo + CLI.
 
 **Ventajas:**
 - Un solo costo base (~$29/mes: Pro + IPv4)
-- Migraciones centralizadas
+- Migraciones centralizadas y repetibles (CLI + Git)
 - Edge Functions desplegadas una sola vez
 
 ### 3.2 Instancias de PowerSync
@@ -646,13 +647,11 @@ export function createEmptyEntidad(userId: string): Entidad {
     - Si PowerSync **inactivo**: Consulta directo a Supabase (online)
 *   **Escritura (WRITE):** Siempre a Supabase Nube. PowerSync (si activo) detecta el cambio y lo descarga al local automáticamente.
 
-### 4.3 Esquema Multi-Entidad (Abstracto)
+### 4.3 Esquema Multi-Entidad
 
-Para reutilizar la plantilla, usamos nombres genéricos en la BD y específicos en el Frontend.
-
-*   `teams`: Agrupa personas (Empresa Dueña, Contratistas, Clientes).
-*   `projects`: La unidad de trabajo (Obra, Campaña, Caso Legal).
-*   `sys_project_access`: Tabla pivote que define quién tiene acceso a qué proyecto.
+*   `teams`: Agrupa personas (empresa dueña, etc.).
+*   `entities`: Unidad de trabajo canónica en BD (en UI el nombre viene de `VITE_ENTITY_LABEL`: Proyecto, Obra, Caso…).
+*   `sys_entity_access`: Tabla pivote — **qué usuarios pueden ver qué entity** en rutas `/workspace/:entityId/*`. Complementa al RBAC de páginas (`sys_user_permissions`). El usuario **god** no depende de estas filas.
 
 ### 4.4 Seguridad Data-Driven (RBAC Implementado)
 
@@ -747,9 +746,9 @@ La seguridad se aplica en capas concéntricas mediante Layouts y Guards.
 3. **Capa RouteGuard:**
    - *Validación:* ¿El usuario tiene permiso para el `resourceCode` de la ruta?
    - *Acción:* Si no, muestra spinner (loading) o redirige a `/` (forbidden).
-4. **Capa ProjectLayout (futuro):**
-   - *Validación:* ¿El usuario tiene registro en `sys_project_access` para este projectId?
-   - *Acción:* Si no, muestra 403 Forbidden. Si sí, permite módulos internos del proyecto.
+4. **Capa WorkspaceLayout (`/workspace/:entityId/*`):**
+   - *Validación:* RLS y/o membresía vía `sys_entity_access` (y políticas por tabla); el usuario **god** no queda bloqueado (`public.is_god()` primero en policies).
+   - *Acción:* Las páginas del workspace filtran por `entity_id`; si no hay entity resuelta, el hook `useActiveEntity` y las rutas `none` cubren el empty state (véase reglas de navegación).
 
 ### 5.2.1 Ciclo de Vida de Sesión
 
@@ -958,7 +957,7 @@ Supabase Client (Online only)
 Las reglas se definen en **buckets**:
 - `user`: Perfil propio + permisos
 - `user_team`: Team del usuario
-- `projects`: Proyectos autorizados (vía `sys_project_access`)
+- `workspace` / entities: filas de `entities` + `sys_entity_access` autorizadas para el usuario
 - `resources`: Catálogo de recursos del sistema
 - `roles`: Roles y definiciones disponibles
 
@@ -1049,6 +1048,34 @@ Antes del chunking manual el chunk principal era ~536 kB (warning `>500 kB`). La
 
 ## 11. Pilar Público: SEO / Ecommerce (Astro)
 
+### 11.0 Landings, dominio público y login al ERP
+
+Hay **dos** superficies de portada en el monorepo; no son mutuamente excluyentes:
+
+| Superficie | Stack | Ejemplo en dev | Función |
+| :--- | :--- | :--- | :--- |
+| **Sitio público (SEO)** | Astro (`astro/`) | `http://localhost:4321/` | Landing indexable, Schema.org, catálogo si `PUBLIC_ENABLE_ECOMMERCE=true` |
+| **ERP / app** | React (`src/`) | `http://localhost:7070/` | Auth (`/login`), dashboard, Workspace |
+
+**Enlace "Iniciar sesión" desde Astro:** los CTAs de `astro/src/pages/index.astro` usan `PUBLIC_APP_URL` + `/login` (p. ej. en desarrollo `PUBLIC_APP_URL=http://localhost:7070`). Así el visitante del dominio público entra al operativo en el dominio/subdominio correcto.
+
+**Landing React** (eliminada en plantilla): la ruta `/` del ERP (`PublicSiteEntry`) **redirige** al origen Astro (`VITE_PUBLIC_SITE_URL`, o `http://localhost:4321` en dev). El login del operativo sigue en `/login` en el host del ERP.
+
+**Producción típica:** `www.cliente.com` → build Astro · `app.cliente.com` → build React. El operativo **no** sustituye la landing SEO en el dominio público; Astro es la cabecera de marca y conversión; el ERP es la consola autenticada.
+
+**Deploy Astro (hybrid + `@astrojs/node`):** después de `pnpm build` en `astro/`, el servidor es `node ./dist/server/entry.mjs` (en plantilla: `pnpm start`). Para **desarrollo local**, `pnpm dev:all` en la raíz levanta ERP (`:7070`) y Astro (`:4321`) — detalle en **`docs/SETUP.md` §8.0 y §8.3**. Variables de build, VPS/hosting y sitemap: **§8.4–8.8**.
+
+### 11.0.1 Desactivar ecommerce (cliente sin tienda)
+
+| Capa | Acción |
+| :--- | :--- |
+| **ERP** | `VITE_ENABLE_ECOMMERCE=false` u omitir en `.env` → **no** se registra la ruta workspace `products` ni el menú "Productos" (`routes.config.ts`). |
+| **Astro** | `PUBLIC_ENABLE_ECOMMERCE=false` → sin enlaces a catálogo ni carrito flotante en el layout. |
+| **SQL (opcional)** | En instancias sin tienda, puedes **no** aplicar `docs/database/08_ecommerce.sql` / `08b_*`; si ya existen tablas, no se usan con flags apagados. |
+| **RBAC** | Recursos `page_ecommerce_*` pueden quedar definidos; sin ruta activa no impactan la UX. |
+
+El código del módulo (`ProductsPage`, `useProducts`, tipos `product`) permanece en el repo como **referencia de plantilla**; el bundle no incluye la página si la ruta no está en el router (lazy import sin referencia).
+
 ### 11.1 Filosofía
 
 El Pilar Público es la **cara pública del negocio**. Su objetivo es captar tráfico orgánico (SEO técnico) y convertir visitantes en clientes (Ecommerce). Astro es la herramienta ideal: genera HTML estático o SSR con 0 JS por defecto, lo que garantiza Core Web Vitals perfectos.
@@ -1088,7 +1115,7 @@ const { title, description, ogImage, canonical } = Astro.props;
 - Toda página exporta `title` único y `description` entre 120–160 caracteres.
 - Rutas dinámicas usan `getStaticPaths()` para generar URLs en build time (SSG).
 - Imágenes siempre con `<Image>` de Astro (convierte a WebP + `width`/`height` obligatorios para evitar CLS).
-- Sitemap automático con `@astrojs/sitemap`.
+- Sitemap: **`@astrojs/sitemap` retirado del build hybrid** hasta compatibilidad estable con `_routes`; usar generación externa (hosting, script CI) o rehabilitar tras upgrade de Astro/sitemap.
 - Structured Data (JSON-LD) en páginas de producto y landing.
 
 ### 11.3 Arquitectura Ecommerce

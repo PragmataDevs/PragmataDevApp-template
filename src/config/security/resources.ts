@@ -74,29 +74,9 @@ export const APP_RESOURCES: ResourceDefinition[] = [
         default_actions: ['read', 'create', 'update', 'delete']
     },
     {
-        code: 'page_workspace_costs',
-        name: 'Costos',
-        category: 'Workspace',
-        type: 'page',
-        default_actions: ['read', 'create', 'update']
-    },
-    {
-        code: 'page_workspace_costs_budget',
-        name: 'Presupuesto',
-        category: 'Workspace',
-        type: 'page',
-        default_actions: ['read', 'create', 'update']
-    },
-    {
-        code: 'page_workspace_costs_invoices',
-        name: 'Facturas',
-        category: 'Workspace',
-        type: 'page',
-        default_actions: ['read', 'create', 'update']
-    },
-    {
-        code: 'page_workspace_contracts',
-        name: 'Contratos',
+        code: 'page_workspace_documents',
+        name: 'Documentos',
+        description: 'Gestión de documentos de la entidad: contratos, reportes, facturas, etc.',
         category: 'Workspace',
         type: 'page',
         default_actions: ['read', 'create', 'update', 'delete']
@@ -105,6 +85,34 @@ export const APP_RESOURCES: ResourceDefinition[] = [
         code: 'page_workspace_config',
         name: 'Configuración del Workspace',
         category: 'Workspace',
+        type: 'page',
+        default_actions: ['read', 'update']
+    },
+
+    // =================================================================
+    // 3. MODULO: E-COMMERCE (feature-flagged: VITE_ENABLE_ECOMMERCE)
+    // =================================================================
+    {
+        code: 'page_ecommerce_dashboard',
+        name: 'Ecommerce — Resumen',
+        description: 'KPIs y estado general de ventas y pedidos',
+        category: 'Ecommerce',
+        type: 'page',
+        default_actions: ['read']
+    },
+    {
+        code: 'page_ecommerce_products',
+        name: 'Catálogo de Productos',
+        description: 'Crear, editar y eliminar productos del catálogo público',
+        category: 'Ecommerce',
+        type: 'page',
+        default_actions: ['read', 'create', 'update', 'delete']
+    },
+    {
+        code: 'page_ecommerce_orders',
+        name: 'Pedidos',
+        description: 'Ver y gestionar los pedidos recibidos',
+        category: 'Ecommerce',
         type: 'page',
         default_actions: ['read', 'update']
     },

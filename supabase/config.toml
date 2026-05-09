@@ -1,0 +1,58 @@
+# supabase/config.toml — Pragmata Template
+# ──────────────────────────────────────────────────────────────
+# Referencia del proyecto Supabase para el CLI local y deploy.
+# Documentación: https://supabase.com/docs/reference/cli/config
+#
+# SETUP INICIAL:
+#   1. supabase login
+#   2. supabase link --project-ref <tu_project_ref>
+#      (el project_ref es el código de tu URL: https://<ref>.supabase.co)
+#   3. supabase functions deploy <nombre>
+# ──────────────────────────────────────────────────────────────
+
+[api]
+# El puerto local del API (para desarrollo con supabase start)
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[storage]
+file_size_limit = "50MiB"
+
+[auth]
+site_url = "http://localhost:5173"
+# Lista de URLs permitidas para redireccionamiento OAuth
+additional_redirect_urls = [
+  "http://localhost:5173/auth/callback",
+  "https://app.tucliente.com/auth/callback"
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+# ── Edge Functions ────────────────────────────────────────────
+# Los secrets se configura en Supabase Dashboard → Edge Functions → Manage Secrets
+# o via CLI: supabase secrets set OPENAI_API_KEY=sk-...
+#
+# Secrets requeridos por las funciones de esta template:
+#   OPENAI_API_KEY            → ai-task-summary
+#   STRIPE_SECRET_KEY         → stripe-checkout, stripe-webhook
+#   STRIPE_WEBHOOK_SECRET     → stripe-webhook
+#   PUBLIC_SITE_URL           → stripe-checkout (redirect URLs)

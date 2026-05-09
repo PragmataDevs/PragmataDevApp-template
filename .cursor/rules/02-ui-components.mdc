@@ -211,6 +211,72 @@ function ImageCarousel({ images }: { images: { url: string; alt: string }[] }) {
 </div>
 ```
 
+## DataTable Genérico — API Obligatoria
+
+Usar SIEMPRE `<DataTable>` de `@/components/ui/DataTable` para listas en el ERP.
+NUNCA construir tablas `<table>` manuales para datos tabulares.
+
+### Contrato de API
+
+```tsx
+import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
+
+// 1. Columnas: usar `header` (NO `label`), render recibe (cellValue, fullRow)
+const columns = useMemo((): ColumnDef<MiTipo>[] => [
+  {
+    key:    'nombre',       // propiedad del objeto o dot-path 'rel.campo'
+    header: 'Nombre',      // ← SIEMPRE `header`, nunca `label`
+    width:  200,           // px (requerido para sticky columns)
+    render: (_val, row) => <span>{row.nombre}</span>,  // 2do arg = row completo
+  },
+  { key: 'status', header: 'Estado', width: 120 },
+], []);
+
+// 2. Acciones de fila: prop `actions`, NUNCA como columna extra
+const rowActions = useCallback((row: MiTipo) => (
+  <div style={{ display: 'flex', gap: 6 }}>
+    <button onClick={() => handleEdit(row)}>Editar</button>
+    <button onClick={() => handleDelete(row)}>Eliminar</button>
+  </div>
+), [handleEdit, handleDelete]);
+
+// 3. Montar la tabla
+<DataTable<MiTipo>
+  data={items}
+  columns={columns}
+  rowKey="id"           // ← `rowKey`, NO `getRowKey`
+  actions={rowActions}  // ← botones en columna sticky izquierda
+  emptyMessage="Sin registros."
+  emptyDescription="Crea el primero con el botón de arriba."
+/>
+```
+
+### Errores frecuentes a EVITAR
+
+| ❌ Incorrecto | ✅ Correcto |
+|---|---|
+| `label: 'Nombre'` | `header: 'Nombre'` |
+| `render: (row) => ...` | `render: (_val, row) => ...` |
+| `getRowKey={(r) => r.id}` | `rowKey="id"` |
+| Columna `_actions` con botones | Prop `actions={rowActions}` |
+| `columns as any` | `columns={columns}` con tipo explícito |
+| `pageSize=`, `exportFilename=` | No existen — eliminar |
+
+### Filtros tipo Excel
+
+Los filtros ya están integrados en el componente. Cada header tiene:
+- `↑↓` para ordenar A→Z / Z→A
+- `⌄` dropdown con: Ordenar A-Z, Ordenar Z-A, Filtrar por valor, Ocultar columna
+- Barra de búsqueda global arriba
+- Botón "Exportar" genera CSV automáticamente
+
+No necesitas hacer nada adicional — funcionan out-of-the-box.
+
+Para desactivar sort o filter en una columna específica:
+```tsx
+{ key: 'image_url', header: 'Imagen', sortable: false, filterable: false }
+```
+
 ## Estados Vacíos y de Carga
 
 ```tsx

@@ -1,0 +1,86 @@
+---
+/**
+ * /gracias — Order confirmation page.
+ *
+ * Shown after a successful Stripe Checkout redirect.
+ * Receives session_id in the URL (from Stripe redirect).
+ * Clears the cart on client side and shows a confirmation.
+ *
+ * noindex: true — transactional page, should never be indexed.
+ */
+export const prerender = false; // SSR — never cache
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const brand    = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
+const appUrl   = import.meta.env.PUBLIC_APP_URL    ?? '#';
+const siteUrl  = import.meta.env.PUBLIC_SITE_URL   ?? '';
+
+// Stripe passes ?session_id=xxx when redirecting here
+const sessionId = Astro.url.searchParams.get('session_id') ?? '';
+---
+
+<BaseLayout
+  title="¡Gracias por tu compra!"
+  description="Tu pedido fue procesado exitosamente."
+  noindex={true}
+  hideCart={true}
+>
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 24px;background:var(--brand-bg);">
+    <div style="max-width:520px;width:100%;text-align:center;">
+
+      <!-- Success icon -->
+      <div style="width:80px;height:80px;background:linear-gradient(135deg,#d1fae5,#a7f3d0);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:2.5rem;">
+        ✓
+      </div>
+
+      <!-- Title -->
+      <h1 style="font-size:1.75rem;font-weight:800;color:var(--brand-fg);margin:0 0 12px;line-height:1.2;">
+        ¡Gracias por tu compra!
+      </h1>
+      <p style="font-size:1rem;color:var(--brand-muted);margin:0 0 32px;line-height:1.6;">
+        Tu pedido fue procesado correctamente. Recibirás un correo de confirmación en breve.
+      </p>
+
+      <!-- Order ref (if Stripe session available) -->
+      {sessionId && (
+        <div style="background:var(--brand-surface);border:1px solid var(--brand-border);border-radius:10px;padding:16px;margin-bottom:32px;">
+          <p style="margin:0;font-size:0.8125rem;color:var(--brand-muted);">Referencia del pedido</p>
+          <p style="margin:4px 0 0;font-family:monospace;font-size:0.875rem;color:var(--brand-fg);word-break:break-all;">
+            {sessionId}
+          </p>
+        </div>
+      )}
+
+      <!-- Actions -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <a
+          href="/productos"
+          style="display:block;padding:14px 24px;background:var(--brand-accent);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.9375rem;"
+        >
+          Seguir comprando
+        </a>
+        <a
+          href="/"
+          style="display:block;padding:12px 24px;background:var(--brand-surface);color:var(--brand-muted);border:1px solid var(--brand-border);border-radius:10px;text-decoration:none;font-weight:500;font-size:0.875rem;"
+        >
+          Volver al inicio
+        </a>
+      </div>
+
+      <!-- Support note -->
+      <p style="margin:32px 0 0;font-size:0.8125rem;color:var(--brand-muted);">
+        ¿Tienes alguna duda? Escríbenos y te ayudamos.
+      </p>
+    </div>
+  </div>
+</BaseLayout>
+
+<!-- Clear cart on load -->
+<script>
+  try {
+    localStorage.removeItem('pragmata_cart');
+    // Notify any CartDrawer still mounted
+    window.dispatchEvent(new CustomEvent('cart:updated', { detail: [] }));
+  } catch (_) { /* ignore */ }
+</script>

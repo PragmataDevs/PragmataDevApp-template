@@ -36,14 +36,15 @@ export interface UserWithRole extends UserRow {
 export type UserCreateInput = Pick<Profile, 'full_name' | 'email' | 'role_id' | 'access_level' | 'is_role_synced'> &
   Partial<Pick<Profile, 'job_title' | 'phone'>> & {
     customPermissions?: GrantedPermissions;
-    project_ids?: string[];
+    /** Filas en `sys_entity_access`: qué entities puede ver el usuario en el workspace */
+    entity_ids?: string[];
   };
 
 /** Input para actualizar perfil — mismos campos editables del formulario */
 export type UserUpdateInput = Pick<Profile, 'full_name' | 'role_id' | 'access_level' | 'is_role_synced'> &
   Partial<Pick<Profile, 'job_title' | 'phone'>> & {
     customPermissions?: GrantedPermissions;
-    project_ids?: string[];
+    entity_ids?: string[];
   };
 
 /** Result of creating a user */
@@ -59,7 +60,7 @@ export interface RoleOption {
   can_be_customized: boolean;
 }
 
-export interface ProjectOption {
+export interface EntityOption {
   id: string;
   name: string;
   code: string | null;
@@ -279,60 +280,58 @@ export function useUsers() {
     [],
   );
 
-  // ── Project assignments (sys_project_access) ─────────────
+  // ── Entity workspace access (`sys_entity_access`) ─────────
 
-  const fetchProjectsForAssignment = useCallback(async (): Promise<ProjectOption[]> => {
+  const fetchEntitiesForAssignment = useCallback(async (): Promise<EntityOption[]> => {
     const data = await withSessionRetry(async () => {
       const response = await supabase
-        .from('projects')
+        .from('entities')
         .select('id, name, code')
         .eq('status', 'active')
         .order('name');
 
       if (response.error) throw response.error;
       return response.data ?? [];
-    }, 'useUsers.fetchProjectsForAssignment');
+    }, 'useUsers.fetchEntitiesForAssignment');
 
-    return data as ProjectOption[];
+    return data as EntityOption[];
   }, []);
 
-  const fetchUserProjectAssignments = useCallback(async (userId: string): Promise<string[]> => {
+  const fetchUserEntityAssignments = useCallback(async (userId: string): Promise<string[]> => {
     const data = await withSessionRetry(async () => {
       const response = await supabase
-        .from('sys_project_access')
-        .select('project_id')
+        .from('sys_entity_access')
+        .select('entity_id')
         .eq('user_id', userId);
 
       if (response.error) throw response.error;
       return response.data ?? [];
-    }, 'useUsers.fetchUserProjectAssignments');
+    }, 'useUsers.fetchUserEntityAssignments');
 
-    return data.map((row: any) => row.project_id as string);
+    return data.map((row: { entity_id: string }) => row.entity_id);
   }, []);
 
-  const syncUserProjectAssignments = useCallback(
-    async (userId: string, teamId: string, projectIds: string[] | undefined) => {
-      if (!projectIds) return;
+  const syncUserEntityAssignments = useCallback(
+    async (userId: string, teamId: string, entityIds: string[] | undefined) => {
+      if (!entityIds) return;
 
       const { error: deleteError } = await supabase
-        .from('sys_project_access')
+        .from('sys_entity_access')
         .delete()
         .eq('user_id', userId);
 
       if (deleteError) throw deleteError;
 
-      const uniqueProjectIds = Array.from(new Set(projectIds));
-      if (!uniqueProjectIds.length) return;
+      const uniqueEntityIds = Array.from(new Set(entityIds));
+      if (!uniqueEntityIds.length) return;
 
-      const rows = uniqueProjectIds.map((projectId) => ({
+      const rows = uniqueEntityIds.map((entityId) => ({
         user_id: userId,
-        project_id: projectId,
+        entity_id: entityId,
         team_id: teamId,
       }));
 
-      const { error: insertError } = await supabase
-        .from('sys_project_access')
-        .insert(rows);
+      const { error: insertError } = await supabase.from('sys_entity_access').insert(rows);
 
       if (insertError) throw insertError;
     },
@@ -426,8 +425,7 @@ export function useUsers() {
         await upsertUserPermissions(newUserId, callerProfile.team_id, payload.customPermissions);
       }
 
-      // Step 5: Project assignments
-      await syncUserProjectAssignments(newUserId, callerProfile.team_id, payload.project_ids);
+      await syncUserEntityAssignments(newUserId, callerProfile.team_id, payload.entity_ids);
 
       // Step 6: Refresh list
       await fetchUsers();
@@ -437,7 +435,7 @@ export function useUsers() {
         email: payload.email,
       };
     },
-    [fetchUsers, syncUserProjectAssignments, upsertUserPermissions],
+    [fetchUsers, syncUserEntityAssignments, upsertUserPermissions],
   );
 
   // ── Update user profile ──────────────────────────────────
@@ -469,12 +467,12 @@ export function useUsers() {
 
       const userProfile = users.find((u) => u.id === userId);
       if (userProfile) {
-        await syncUserProjectAssignments(userId, userProfile.team_id, payload.project_ids);
+        await syncUserEntityAssignments(userId, userProfile.team_id, payload.entity_ids);
       }
 
       await fetchUsers();
     },
-    [fetchUsers, syncUserProjectAssignments, upsertUserPermissions, users],
+    [fetchUsers, syncUserEntityAssignments, upsertUserPermissions, users],
   );
 
   // ── Toggle status (active ↔ suspended) ──────────────────
@@ -531,8 +529,8 @@ export function useUsers() {
     deleteUser,
     fetchRoleDefinitions,
     fetchUserPermissions,
-    fetchProjectsForAssignment,
-    fetchUserProjectAssignments,
+    fetchEntitiesForAssignment,
+    fetchUserEntityAssignments,
     refetch: fetchUsers,
   };
 }

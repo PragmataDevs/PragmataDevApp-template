@@ -182,7 +182,7 @@ git push origin main
 ### "Data not syncing" en Production
 - Revisa que las tablas estén en la publicación `powersync`
 - Confirma que las Sync Rules incluyan las tablas necesarias
-- Valida que el usuario tenga permisos en `sys_project_access`
+- Valida que existan filas en `sys_entity_access` para ese usuario y las entities que deben sincronizarse (véase `docs/powersync/sync-rules.yaml`). La app también usa `sys_user_permissions` para **acciones en páginas** (RBAC); workspace visibility para members suele ir por `sys_entity_access`.
 
 ### App lenta en Preview (Development)
 - Esperado: sin SQLite local, todo va a Supabase (online)

@@ -11,10 +11,14 @@ Plantilla base para apps web **offline-first** con arquitectura feature-based.
 
 Arquitectura completa: `docs/architecture.md`
 
+Base de datos (schema): scripts en `docs/database/`; flujo industrial con Supabase CLI en **`docs/SETUP.md` §3** (`supabase/migrations`, `db push`).  
+Nuevo feature ERP paso a paso: **`docs/playbook-new-module.md`**.
+
 ## Requisitos
 
 - Node.js 20+
 - pnpm 9+
+- Supabase CLI (sistema) si vas a aplicar migraciones o desplegar Edge Functions — **`docs/SETUP.md` §1**
 
 ## Inicio rápido
 
@@ -32,13 +36,29 @@ cp .env.example .env
 
 3. Completa variables en `.env`.
 
-4. Levanta el proyecto:
+4. (Opcional) Sitio público Astro — una vez:
+
+```bash
+cd astro && pnpm install && cd ..
+```
+
+5. Levanta la app **desde la raíz del repo** (`PragmataDevApp-template/`, no dentro de `astro/`):
+
+Solo ERP (`http://localhost:7070`):
 
 ```bash
 pnpm dev
 ```
 
-La app corre por defecto en `http://localhost:7070`.
+ERP + Astro (`:7070` y `:4321`):
+
+```bash
+pnpm dev:all
+```
+
+Si estás dentro de `astro/`, puedes usar `pnpm dev:all` igualmente (reenvía al `package.json` raíz).
+
+Detalle de URLs en `.env` (local vs producción): **`docs/SETUP.md`** §8.
 
 ## Variables de entorno
 
@@ -56,8 +76,10 @@ Este proyecto requiere:
 
 ## Scripts
 
-- `pnpm dev`: desarrollo local
-- `pnpm build`: build de producción
+- `pnpm dev`: solo ERP (Vite, `:7070`)
+- `pnpm dev:astro`: solo sitio público Astro (`:4321`; requiere `cd astro && pnpm install` antes)
+- `pnpm dev:all`: ERP + Astro en paralelo — script **solo en la raíz** (desde `astro/` también: mismo comando gracias a `pnpm --dir ..`)
+- `pnpm build`: build de producción del ERP
 - `pnpm preview`: preview del build
 - `pnpm lint`: lint del proyecto
 - `pnpm db:seed`: seed de recursos de seguridad
