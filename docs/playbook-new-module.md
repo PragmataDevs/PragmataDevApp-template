@@ -51,7 +51,9 @@ Mantén la lógica de negocio aquí; las páginas solo componen.
 ## 5. Página(s)
 
 - `src/pages/...` — suele ser `workspace/` si depende de `:entityId`, o `settings/` / `ecommerce/` según el caso.
-- UI: `DataTable`, `Button`, tokens `--pragmata-*`, bordes `rounded-pragmata`.
+- UI: `Button`, tokens `--pragmata-*`, bordes `rounded-pragmata`.
+- **Listados tabulares:** obligatorio **`DataTable`** (`@/components/ui/DataTable`). No montar `<table>` manual en páginas. Solo puedes usar otro patrón si el product owner lo indica **explícitamente** (Kanban, calendario, grid tipo spreadsheet, HTML solo para impresión/PDF). Ver `.cursor/rules/02-ui-components.mdc`.
+- CSV masivo: prop opcional **`csv`**. Mínimo **`filename`** + **`fields`** para export / plantilla; **`onImport`** solo donde el dominio lo permita (ej. catálogo). *Por defecto en esta plantilla, usuarios / roles / entidades son solo export — sin carga CSV hasta que se defina.*
 
 ---
 
@@ -87,6 +89,7 @@ Mantén la lógica de negocio aquí; las páginas solo componen.
 - [ ] Flujo probado con usuario **member** (permisos + `sys_entity_access`).
 - [ ] Usuario **god** ve todo sin depender de filas extra.
 - [ ] Sin nuevos `*DTO` / tipos duplicados del mismo concepto.
+- [ ] Listados tabulares usan **`DataTable`** (salvo excepción acordada por escrito).
 - [ ] Si el módulo es opcional para algunos clientes: `.env.example` + mención en `docs/architecture.md` o SETUP.
 
 ---

@@ -14,7 +14,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/lib/supabase';
 
-import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
+import { DataTable, type ColumnDef, type CsvImportMode } from '@/components/ui/DataTable';
 import { useProducts }  from '@/features/products/hooks/useProducts';
 import { slugify }      from '@/types/products/product';
 import type { Product } from '@/types/products/product';
@@ -84,6 +84,67 @@ const PUBLIC_CATALOG_ORIGIN = resolvePublicCatalogOrigin();
 
 function formatPrice(price: number, currency = 'MXN') {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency }).format(price);
+}
+
+/** Keys as CSV headers (DB field names). */
+const PRODUCT_CSV_FIELDS = [
+  'id',
+  'name',
+  'slug',
+  'description',
+  'category',
+  'price',
+  'compare_at_price',
+  'currency',
+  'image_url',
+  'in_stock',
+  'stock_qty',
+  'seo_title',
+  'seo_description',
+  'seo_image_url',
+] as const;
+
+function parseBoolCell(raw: string | undefined): boolean {
+  const s = raw?.trim().toLowerCase();
+  if (s === '' || s === undefined) return true;
+  if (['0', 'false', 'no', 'n', 'falso'].includes(s)) return false;
+  if (['1', 'true', 'yes', 'sí', 'si', 'verdadero'].includes(s)) return true;
+  return true;
+}
+
+function parseNum(raw: string | undefined, fallback = 0): number {
+  const t = String(raw ?? '').trim().replace(',', '.');
+  if (!t) return fallback;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function parseOptNum(raw: string | undefined): number | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  const n = Number(t.replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseProductCsvRow(row: Record<string, string>): Partial<Product> | null {
+  const name = row.name?.trim();
+  if (!name) return null;
+  const slug = row.slug?.trim() || slugify(name);
+  return {
+    name,
+    slug,
+    description: row.description?.trim() || null,
+    category: row.category?.trim() || null,
+    price: parseNum(row.price, 0),
+    compare_at_price: parseOptNum(row.compare_at_price),
+    currency: (row.currency?.trim() || 'MXN').toUpperCase(),
+    image_url: row.image_url?.trim() || null,
+    in_stock: parseBoolCell(row.in_stock),
+    stock_qty: parseOptNum(row.stock_qty),
+    seo_title: row.seo_title?.trim() || null,
+    seo_description: row.seo_description?.trim() || null,
+    seo_image_url: row.seo_image_url?.trim() || null,
+  };
 }
 
 // ─── Row action kebab menu ────────────────────────────────────────────────────
@@ -501,7 +562,7 @@ export default function ProductsPage() {
     );
   }
 
-  const { data: products, loading, error, upsert, softDelete } = useProducts();
+  const { data: products, loading, error, upsert, softDelete, refetch } = useProducts();
   const [formProduct, setFormProduct] = useState<Product | null | 'new'>('new' as unknown as null);
   const [showForm, setShowForm]       = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
@@ -524,6 +585,65 @@ export default function ProductsPage() {
     setDeleteTarget(null);
   }, [deleteTarget, softDelete]);
 
+  const handleCsvImport = useCallback(async (
+    rows: Record<string, string>[],
+    mode: CsvImportMode,
+  ): Promise<{ ok: number; skipped?: number; errors?: string[] }> => {
+    const errors: string[] = [];
+    let ok = 0;
+    let skipped = 0;
+
+    if (mode === 'replace_all') {
+      const results = await Promise.all(
+        products.map(p => softDelete(p.id, p.version)),
+      );
+      results.forEach((success, i) => {
+        if (!success) errors.push(`No se archivó «${products[i]?.name ?? products[i]?.id}» (¿versión desactualizada?).`);
+      });
+    }
+
+    const existingIds = new Set(products.map(p => p.id));
+
+    for (let i = 0; i < rows.length; i++) {
+      const raw = rows[i];
+      const parsed = parseProductCsvRow(raw);
+      if (!parsed) {
+        errors.push(`Fila ${i + 2}: falta nombre (campo name).`);
+        continue;
+      }
+
+      const rowId = raw.id?.trim();
+
+      if (mode === 'insert_only' && rowId && existingIds.has(rowId)) {
+        skipped++;
+        continue;
+      }
+
+      const id =
+        rowId || crypto.randomUUID();
+
+      const payload: Partial<Product> & Record<string, unknown> = {
+        ...parsed,
+        id,
+        images: [],
+        metadata: {},
+        status: 'active',
+        deleted_at: null,
+      };
+
+      const saved = await upsert(payload);
+      if (saved) {
+        ok++;
+        existingIds.add(saved.id);
+      } else {
+        errors.push(`Fila ${i + 2}: error al guardar «${parsed.name}».`);
+      }
+    }
+
+    await refetch();
+    return { ok, skipped: skipped > 0 ? skipped : undefined, errors: errors.length ? errors : undefined };
+  }, [products, softDelete, upsert, refetch]);
+
   // ── DataTable columns ──────────────────────────────────────────────────────
   // Rules:
   //   - Use `header` (not `label`) for the column title
@@ -533,6 +653,7 @@ export default function ProductsPage() {
     {
       key:      'image_url',
       header:   'Imagen',
+      omitFromCsv: true,
       sortable: false,
       filterable: false,
       width:    72,
@@ -556,6 +677,7 @@ export default function ProductsPage() {
     {
       key:      'seo_title',
       header:   'SEO',
+      omitFromCsv: true,
       width:    100,
       sortable: false,
       render: (_val, row) => {
@@ -661,19 +783,20 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Table */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#9ca3af' }}>Cargando productos...</div>
-      ) : (
-        <DataTable<Product>
-          data={products}
-          columns={columns}
-          rowKey="id"
-          actions={rowActions}
-          emptyMessage="No hay productos aún."
-          emptyDescription="Crea tu primer producto con el botón '+ Nuevo producto'."
-        />
-      )}
+      <DataTable<Product>
+        data={products}
+        columns={columns}
+        rowKey="id"
+        loading={loading}
+        actions={rowActions}
+        csv={{
+          filename: 'productos',
+          fields: [...PRODUCT_CSV_FIELDS],
+          onImport: handleCsvImport,
+        }}
+        emptyMessage="No hay productos aún."
+        emptyDescription="Crea tu primer producto con el botón '+ Nuevo producto', o importa un CSV."
+      />
 
       {/* Form modal */}
       {showForm && (

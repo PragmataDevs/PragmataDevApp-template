@@ -1,6 +1,6 @@
 /**
  * Sitemap dinámico (hybrid SSR) — sin @astrojs/sitemap.
- * Incluye `/`, `/productos` y cada `/productos/[slug]` activo cuando PUBLIC_ENABLE_ECOMMERCE=true.
+ * Incluye `/`, páginas CMS publicadas (`/slug`), `/productos` y fichas cuando PUBLIC_ENABLE_ECOMMERCE=true.
  */
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
@@ -76,6 +76,36 @@ export const GET: APIRoute = async ({ site }) => {
     } catch (err) {
       console.error('[sitemap.xml]', err);
     }
+  }
+
+  try {
+    const sb = createPublicSupabase();
+    if (sb) {
+      const { data: cmsRows, error: cmsErr } = await sb
+        .from('cms_pages')
+        .select('slug, updated_at')
+        .eq('status', 'active')
+        .eq('is_published', true)
+        .eq('page_kind', 'standard');
+
+      if (!cmsErr && cmsRows?.length) {
+        const seen = new Set(locs.map((l) => l.path));
+        for (const row of cmsRows) {
+          const s = row.slug as string | undefined;
+          if (!s || s === 'home') continue;
+          const path = `/${encodeURIComponent(s)}`;
+          if (seen.has(path)) continue;
+          seen.add(path);
+          locs.push({
+            path,
+            lastmod: row.updated_at as string | undefined,
+            priority: '0.65',
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[sitemap.xml cms]', err);
   }
 
   const body =

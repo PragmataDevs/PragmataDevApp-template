@@ -11,6 +11,7 @@ import {
   Package,
   ShoppingCart,
   BarChart3,
+  Globe,
 } from 'lucide-react';
 import type { AppRoute } from '@/app/navigation';
 
@@ -28,11 +29,15 @@ const ProfilePage           = lazy(() => import('@/pages/profile/ProfilePage'));
 const RolesPage             = lazy(() => import('@/pages/settings/RolesPage'));
 const UsuariosPage          = lazy(() => import('@/pages/settings/UsuariosPage'));
 const EntitiesPage          = lazy(() => import('@/pages/settings/EntitiesPage'));
+const UsuarioNewPage        = lazy(() => import('@/pages/settings/UsuarioNewPage'));
+const EntityNewPage         = lazy(() => import('@/pages/settings/EntityNewPage'));
 
 // Ecommerce Pages (feature-flagged by VITE_ENABLE_ECOMMERCE)
 const ProductsPage          = lazy(() => import('@/pages/ecommerce/ProductsPage'));
 const EcommerceDashboardPage = lazy(() => import('@/pages/ecommerce/EcommerceDashboardPage'));
 const EcommerceSalesPage     = lazy(() => import('@/pages/ecommerce/EcommerceSalesPage'));
+
+const SitePagesPage          = lazy(() => import('@/pages/seo/SitePagesPage'));
 
 // Workspace Pages
 const TasksPage                 = lazy(() => import('@/pages/workspace/TasksPage'));
@@ -40,6 +45,8 @@ const WorkspaceDashboardPage    = lazy(() => import('@/pages/workspace/Workspace
 const DocumentsPage             = lazy(() => import('@/pages/workspace/DocumentsPage'));
 
 const ECOMMERCE_ENABLED = import.meta.env.VITE_ENABLE_ECOMMERCE === 'true';
+/** CMS sitio público: activo por defecto; desactivar con `VITE_ENABLE_SITE_CMS=false`. */
+const SITE_CMS_ENABLED = import.meta.env.VITE_ENABLE_SITE_CMS !== 'false';
 
 // =============================================================================
 // APP ROUTES (Global Layout: Dashboard, Profile, Settings)
@@ -116,6 +123,16 @@ export const APP_ROUTES: AppRoute[] = [
     group: 'settings',
   },
   {
+    path: '/settings/usuarios/nuevo',
+    name: 'Nuevo usuario',
+    element: UsuarioNewPage,
+    layout: 'app',
+    resourceCode: 'page_settings_usuarios',
+    hideEntitySelector: true,
+    hideInMenu: true,
+    group: 'settings',
+  },
+  {
     path: '/settings/entities',
     name: 'Entidades',
     icon: Layers,
@@ -123,6 +140,16 @@ export const APP_ROUTES: AppRoute[] = [
     layout: 'app',
     resourceCode: 'page_settings_entities',
     hideEntitySelector: true,
+    group: 'settings',
+  },
+  {
+    path: '/settings/entities/nuevo',
+    name: 'Nueva entidad',
+    element: EntityNewPage,
+    layout: 'app',
+    resourceCode: 'page_settings_entities',
+    hideEntitySelector: true,
+    hideInMenu: true,
     group: 'settings',
   },
 
@@ -158,6 +185,22 @@ export const APP_ROUTES: AppRoute[] = [
           resourceCode: 'page_ecommerce_orders',
           hideInMenu: false,
           group: 'ecommerce',
+        },
+      ] as AppRoute[])
+    : []),
+
+  // --- SEO / CMS sitio público (group) ---
+  ...(SITE_CMS_ENABLED
+    ? ([
+        {
+          path: '/seo/pages',
+          name: 'Páginas del sitio',
+          icon: Globe,
+          element: SitePagesPage,
+          layout: 'app',
+          resourceCode: 'page_seo_site_pages',
+          hideInMenu: false,
+          group: 'seo',
         },
       ] as AppRoute[])
     : []),

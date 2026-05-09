@@ -1,0 +1,78 @@
+---
+/**
+ * Páginas Markdown públicas (`cms_pages.page_kind = standard`, publicadas).
+ * Rutas estáticas (`/productos`, `/checkout`, …) tienen prioridad sobre este segmento.
+ */
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { marked } from 'marked';
+import { supabase } from '../lib/supabase';
+
+const slug = Astro.params.slug ?? '';
+const RESERVED = new Set(['home']);
+
+if (!slug || RESERVED.has(slug)) {
+  return new Response(null, { status: 404, statusText: 'Not Found' });
+}
+
+const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? 'https://tucliente.com';
+const brandFallback = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
+
+marked.setOptions({ gfm: true, breaks: true });
+
+const { data: page, error } = await supabase
+  .from('cms_pages')
+  .select(
+    'slug, seo_title, seo_description, og_image_url, body_markdown, page_kind, updated_at',
+  )
+  .eq('slug', slug)
+  .eq('status', 'active')
+  .maybeSingle();
+
+const md = page?.body_markdown?.trim() ?? '';
+
+if (error || !page || page.page_kind !== 'standard' || !md) {
+  return new Response(null, { status: 404, statusText: 'Not Found' });
+}
+
+const html = marked.parse(md) as string;
+const title = typeof page.seo_title === 'string' && page.seo_title.trim()
+  ? page.seo_title.trim()
+  : slug;
+const description =
+  typeof page.seo_description === 'string' && page.seo_description.trim()
+    ? page.seo_description.trim()
+    : `${title} — ${brandFallback}`;
+
+const canonical = `${siteUrl.replace(/\/+$/, '')}/${encodeURIComponent(slug)}`;
+const og =
+  typeof page.og_image_url === 'string' && /^https?:\/\//i.test(page.og_image_url.trim())
+    ? page.og_image_url.trim()
+    : undefined;
+---
+
+<BaseLayout title={title} description={description} canonicalUrl={canonical} image={og}>
+  <article style="max-width:720px;margin:0 auto;padding:48px 24px 80px;">
+    <div class="cms-md" set:html={html} />
+  </article>
+</BaseLayout>
+
+<style is:global>
+  .cms-md :where(h1, h2, h3) {
+    color: var(--brand-fg);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin: 1.75rem 0 0.75rem;
+  }
+  .cms-md h1 { font-size: 2rem; margin-top: 0; }
+  .cms-md h2 { font-size: 1.375rem; }
+  .cms-md h3 { font-size: 1.125rem; font-weight: 700; }
+  .cms-md p { margin: 0 0 1rem; color: var(--brand-muted); line-height: 1.7; }
+  .cms-md ul, .cms-md ol { margin: 0 0 1rem 1.25rem; padding: 0; color: var(--brand-muted); line-height: 1.7; }
+  .cms-md a { color: var(--brand-accent); text-decoration: underline; text-underline-offset: 2px; }
+  .cms-md code { font-size: 0.9em; background: var(--brand-surface); padding: 0.15em 0.35em; border-radius: 6px; border: 1px solid var(--brand-border); }
+  .cms-md pre { background: var(--brand-primary); color: #e8eef8; padding: 1rem; border-radius: 12px; overflow-x: auto; margin: 0 0 1rem; font-size: 0.875rem; }
+  .cms-md pre code { background: transparent; border: none; padding: 0; color: inherit; }
+</style>

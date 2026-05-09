@@ -6,6 +6,24 @@ import type { Order } from '@/types/ecommerce/order';
 
 const ECOMMERCE_ENABLED = import.meta.env.VITE_ENABLE_ECOMMERCE === 'true';
 
+/** Exportación / plantilla (pedidos son solo lectura; no importar). */
+const ORDER_CSV_FIELDS = [
+  'id',
+  'created_at',
+  'updated_at',
+  'customer_email',
+  'customer_name',
+  'customer_phone',
+  'amount_total',
+  'currency',
+  'order_status',
+  'paid_at',
+  'stripe_session_id',
+  'stripe_payment_id',
+  'customer_user_id',
+  'version',
+] as const;
+
 function formatMoney(amount: number, currency: string) {
   try {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: currency.toUpperCase() }).format(amount);
@@ -128,6 +146,10 @@ export default function EcommerceSalesPage() {
         rowKey="id"
         loading={loading}
         stickyColumns={0}
+        csv={{
+          filename: 'ventas',
+          fields: [...ORDER_CSV_FIELDS],
+        }}
         emptyMessage="Sin ventas aún."
         emptyDescription="Cuando entren pedidos (Stripe webhook), aparecerán aquí."
       />

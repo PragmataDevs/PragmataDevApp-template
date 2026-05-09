@@ -183,38 +183,23 @@ function ImageCarousel({ images }: { images: { url: string; alt: string }[] }) {
 }
 ```
 
-## Tablas de Datos
+## Listas tabulares — DataTable obligatorio
 
-```tsx
-// Estructura base: header fijo, filas con hover, acciones en última columna
-<div className="border border-gray-200 rounded-pragmata overflow-hidden">
-  <table className="w-full text-sm">
-    <thead className="bg-gray-50 border-b border-gray-200">
-      <tr>
-        <th className="text-left px-4 py-3 font-medium text-brand-steel">Nombre</th>
-        <th className="text-left px-4 py-3 font-medium text-brand-steel">Estado</th>
-        <th className="w-12 px-4 py-3" />
-      </tr>
-    </thead>
-    <tbody className="divide-y divide-gray-100">
-      {rows.map(row => (
-        <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-          <td className="px-4 py-3 text-brand-dark font-medium">{row.nombre}</td>
-          <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
-          <td className="px-4 py-3">
-            <RowActionsMenu row={row} />
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
-```
+**Norma:** toda vista del ERP que muestre un **conjunto de filas columnar** (listados CRUD, reportes tabulares, configuración masiva) debe usar **`DataTable`** (`@/components/ui/DataTable`).  
+No usar `<table>`, `<thead>` / `<tbody>` ni grids CSS manualmente para ese propósito.
 
-## DataTable Genérico — API Obligatoria
+**Únicas excepciones** (y solo si el product owner lo pide **explícitamente** por escrito en la spec o el PR):
 
-Usar SIEMPRE `<DataTable>` de `@/components/ui/DataTable` para listas en el ERP.
-NUNCA construir tablas `<table>` manuales para datos tabulares.
+- Vistas no tabulares: Kanban, calendario, mapas, timelines, galerías.
+- Hojas o matrices tipo **spreadsheet** con edición celda a celda (otro componente dedicado).
+- **HTML embebido** solo para salidas de impresión/PDF/email (no es UI interactiva del ERP).
+- **Interior** de un componente primitivo compartido (el propio `DataTable` usa `<table>` por debajo).
+
+Si no caes en una excepción anterior → **`DataTable`**.
+
+## DataTable Genérico — API obligatoria
+
+Usar `<DataTable>` para todas las listas tabulares del ERP; **`csv`** opcional para export (plantilla / datos) e **`onImport`** cuando el módulo permita carga masiva.
 
 ### Contrato de API
 
@@ -262,15 +247,12 @@ const rowActions = useCallback((row: MiTipo) => (
 | `columns as any` | `columns={columns}` con tipo explícito |
 | `pageSize=`, `exportFilename=` | No existen — eliminar |
 
-### Filtros tipo Excel
+### Filtros tipo Excel y CSV
 
-Los filtros ya están integrados en el componente. Cada header tiene:
-- `↑↓` para ordenar A→Z / Z→A
-- `⌄` dropdown con: Ordenar A-Z, Ordenar Z-A, Filtrar por valor, Ocultar columna
-- Barra de búsqueda global arriba
-- Botón "Exportar" genera CSV automáticamente
+Integrados en el componente: búsqueda global, orden y filtro por columna desde el menú del header, paginación, columnas ocultas.
 
-No necesitas hacer nada adicional — funcionan out-of-the-box.
+- **Exportar CSV:** diálogo con «datos visibles» vs «plantilla vacía» (cabeceras = nombres de campo). Opción **`csv`** para `filename`, `fields` y **`onImport`** si aplica.
+- Sin prop **`csv`**, los campos exportables se infieren de las columnas (respetando `omitFromCsv`).
 
 Para desactivar sort o filter en una columna específica:
 ```tsx

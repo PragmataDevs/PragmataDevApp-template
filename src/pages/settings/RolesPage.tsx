@@ -1,9 +1,128 @@
-import { useState } from 'react';
-import { Plus, Search, MoreVertical, Edit2, Trash2, Users as UsersIcon, Shield, Loader2, AlertCircle } from 'lucide-react';
+import { useState, useMemo, useCallback, useRef, useEffect, type MouseEvent as ReactMouseEvent } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  Plus,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  Users as UsersIcon,
+  Shield,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { useRoles, type RoleWithCount } from '@/features/roles/hooks/useRoles';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import RoleFormModal from '@/features/roles/components/RoleFormModal';
+
+const ROLE_CSV_FIELDS = [
+  'id',
+  'name',
+  'description',
+  'is_system_role',
+  'users_count',
+  'created_at',
+] as const;
+
+function RoleRowMenu({
+  role,
+  canUpdate,
+  canDelete,
+  onEdit,
+  onDelete,
+}: {
+  role: RoleWithCount;
+  canUpdate: boolean;
+  canDelete: boolean;
+  onEdit: (r: RoleWithCount) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const toggle = (e: ReactMouseEvent<HTMLButtonElement>) => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuW = 192;
+    const leftCandidate = rect.right + 4;
+    const left =
+      leftCandidate + menuW > window.innerWidth ? rect.left - menuW - 4 : leftCandidate;
+    setPos({ top: rect.bottom + 4, left: Math.max(8, left) });
+    setOpen(true);
+  };
+
+  if (!canUpdate && !canDelete) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={toggle}
+        className={`p-1.5 rounded-md text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors ${open ? 'bg-[color:var(--pragmata-surface-2)] text-[color:var(--pragmata-fg)]' : ''}`}
+      >
+        <MoreVertical className="h-4 w-4" />
+      </button>
+
+      {open &&
+        pos &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, minWidth: 192 }}
+            className="bg-[color:var(--pragmata-surface)] rounded-xl shadow-xl border border-[color:var(--pragmata-border)] py-1 text-sm overflow-hidden"
+          >
+            {canUpdate && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setOpen(false);
+                  onEdit(role);
+                }}
+                disabled={role.is_system_role}
+                icon={<Edit2 className="h-4 w-4" />}
+                className={`w-full justify-start rounded-none px-4 py-2.5 ${role.is_system_role ? 'text-[color:var(--pragmata-muted-2)]' : 'text-[color:var(--pragmata-fg)]'}`}
+              >
+                Editar Rol
+              </Button>
+            )}
+            {canUpdate && canDelete && !role.is_system_role && (
+              <div className="h-px bg-[color:var(--pragmata-border)] mx-2 my-1" />
+            )}
+            {canDelete && !role.is_system_role && (
+              <Button
+                variant="danger-ghost"
+                size="sm"
+                onClick={() => {
+                  setOpen(false);
+                  onDelete(role.id);
+                }}
+                icon={<Trash2 className="h-4 w-4" />}
+                className="w-full justify-start rounded-none px-4 py-2.5"
+              >
+                Eliminar Rol
+              </Button>
+            )}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
 
 export default function RolesPage() {
   const { roles, loading, error, createRole, updateRole, deleteRole, fetchRoleDefinitions } = useRoles();
@@ -13,32 +132,23 @@ export default function RolesPage() {
   const canUpdate = hasPermission('page_settings_roles', 'update');
   const canDelete = hasPermission('page_settings_roles', 'delete');
 
-  const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleWithCount | null>(null);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const filteredRoles = roles.filter((role) =>
-    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    role.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleEdit = (role: RoleWithCount) => {
+  const handleEdit = useCallback((role: RoleWithCount) => {
     setEditingRole(role);
     setIsModalOpen(true);
-    setActiveDropdown(null);
-  };
+  }, []);
 
-  const handleDelete = async (roleId: string) => {
-    setActiveDropdown(null);
+  const handleDelete = useCallback(async (roleId: string) => {
     if (!confirm('¿Estás seguro de eliminar este rol? Esta acción no se puede deshacer.')) return;
     try {
       await deleteRole(roleId);
-    } catch (err: any) {
-      alert('Error al eliminar: ' + err.message);
+    } catch (err: unknown) {
+      alert('Error al eliminar: ' + (err instanceof Error ? err.message : String(err)));
     }
-  };
+  }, [deleteRole]);
 
   const handleCreateNew = () => {
     setEditingRole(null);
@@ -48,24 +158,100 @@ export default function RolesPage() {
   const handleSave = async (data: Parameters<typeof createRole>[0]) => {
     setSaving(true);
     try {
-      if (editingRole) {
-        await updateRole(editingRole.id, data);
-      } else {
-        await createRole(data);
-      }
+      if (editingRole) await updateRole(editingRole.id, data);
+      else await createRole(data);
       setIsModalOpen(false);
       setEditingRole(null);
-    } catch (err: any) {
-      alert('Error al guardar: ' + err.message);
+    } catch (err: unknown) {
+      alert('Error al guardar: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setSaving(false);
     }
   };
 
+  const columns = useMemo((): ColumnDef<RoleWithCount>[] => {
+    return [
+      {
+        key: 'name',
+        header: 'Nombre del Rol',
+        width: 240,
+        render: (_v, row) => (
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-lg ${row.is_system_role ? 'bg-[color:var(--pragmata-accent-soft)]' : 'bg-slate-100'}`}
+            >
+              <Shield
+                className={`h-4 w-4 ${row.is_system_role ? 'text-[color:var(--pragmata-accent)]' : 'text-slate-500'}`}
+              />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-medium text-[color:var(--pragmata-fg)] truncate">{row.name}</span>
+              {row.is_system_role && (
+                <span className="text-[10px] leading-tight font-medium text-[color:var(--pragmata-accent)]">
+                  SISTEMA
+                </span>
+              )}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'description',
+        header: 'Descripción',
+        width: 280,
+        render: (val, row) => (
+          <p
+            className="text-sm text-[color:var(--pragmata-muted)] line-clamp-2 max-w-md"
+            title={row.description ?? undefined}
+          >
+            {(val as string | null) ?? '—'}
+          </p>
+        ),
+      },
+      {
+        key: 'users_count',
+        header: 'Usuarios',
+        width: 110,
+        render: (val) => (
+          <div className="flex items-center justify-center">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[color:var(--pragmata-surface-2)] border border-[color:var(--pragmata-border)]">
+              <UsersIcon className="h-3.5 w-3.5 text-[color:var(--pragmata-muted)]" />
+              <span className="text-xs font-medium text-[color:var(--pragmata-fg)]">{Number(val ?? 0)}</span>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'created_at',
+        header: 'Creado el',
+        width: 140,
+        render: (val) =>
+          val
+            ? new Date(String(val)).toLocaleDateString('es-MX', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })
+            : '—',
+      },
+    ];
+  }, []);
+
+  const rowActions = useCallback(
+    (row: RoleWithCount) => (
+      <RoleRowMenu
+        role={row}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+    ),
+    [canUpdate, canDelete, handleEdit, handleDelete],
+  );
+
   return (
     <div className="max-w-7xl mx-auto p-8">
-      
-      {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -77,16 +263,12 @@ export default function RolesPage() {
           </p>
         </div>
         {canCreate && (
-          <Button
-            onClick={handleCreateNew}
-            icon={<Plus className="h-4 w-4" />}
-          >
+          <Button onClick={handleCreateNew} icon={<Plus className="h-4 w-4" />}>
             Crear Nuevo Rol
           </Button>
         )}
       </div>
 
-      {/* Content Card */}
       {loading ? (
         <div className="flex items-center justify-center py-24">
           <Loader2 className="h-8 w-8 animate-spin text-[color:var(--pragmata-accent)]" />
@@ -98,165 +280,17 @@ export default function RolesPage() {
           <p className="text-[color:var(--pragmata-muted)] mt-1 max-w-sm">{error}</p>
         </div>
       ) : (
-      <div className="bg-[color:var(--pragmata-surface)] rounded-xl border border-[color:var(--pragmata-border)] shadow-sm overflow-hidden">
-        
-        {/* Toolbar */}
-        <div className="p-4 border-b border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface-2)]/30">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--pragmata-muted)]" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre o descripción..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg text-sm text-[color:var(--pragmata-fg)] placeholder:text-[color:var(--pragmata-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pragmata-accent)] focus:border-transparent transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[color:var(--pragmata-surface-2)]">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-[color:var(--pragmata-muted)] uppercase tracking-wider">
-                  Nombre del Rol
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-[color:var(--pragmata-muted)] uppercase tracking-wider">
-                  Descripción
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-semibold text-[color:var(--pragmata-muted)] uppercase tracking-wider">
-                  Usuarios
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-[color:var(--pragmata-muted)] uppercase tracking-wider">
-                  Creado el
-                </th>
-                {(canUpdate || canDelete) && (
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-[color:var(--pragmata-muted)] uppercase tracking-wider">
-                    Acciones
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[color:var(--pragmata-border)]">
-              {filteredRoles.map((role) => (
-                <tr
-                  key={role.id}
-                  className="hover:bg-[color:var(--pragmata-row-hover)] transition-colors group"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${role.is_system_role ? 'bg-[color:var(--pragmata-accent-soft)]' : 'bg-slate-100'}`}>
-                        <Shield className={`h-4 w-4 ${role.is_system_role ? 'text-[color:var(--pragmata-accent)]' : 'text-slate-500'}`} />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-[color:var(--pragmata-fg)]">
-                          {role.name}
-                        </span>
-                        {role.is_system_role && (
-                          <span className="text-[10px] leading-tight font-medium text-[color:var(--pragmata-accent)]">
-                            SISTEMA
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm text-[color:var(--pragmata-muted)] line-clamp-1 max-w-xs" title={role.description ?? undefined}>
-                      {role.description}
-                    </p>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center justify-center">
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[color:var(--pragmata-surface-2)] border border-[color:var(--pragmata-border)]">
-                        <UsersIcon className="h-3.5 w-3.5 text-[color:var(--pragmata-muted)]" />
-                        <span className="text-xs font-medium text-[color:var(--pragmata-fg)]">{role.users_count}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[color:var(--pragmata-muted)]">
-                    {new Date(role.created_at).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </td>
-                  {(canUpdate || canDelete) && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="relative inline-block">
-                      <button
-                        onClick={() => setActiveDropdown(activeDropdown === role.id ? null : role.id)}
-                        className={`p-1.5 rounded-md text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors ${activeDropdown === role.id ? 'bg-[color:var(--pragmata-surface-2)] text-[color:var(--pragmata-fg)]' : ''}`}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-
-                      {/* Dropdown Menu */}
-                      {activeDropdown === role.id && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-10"
-                            onClick={() => setActiveDropdown(null)}
-                          />
-                          <div className="absolute right-0 mt-2 w-48 bg-[color:var(--pragmata-surface)] rounded-xl shadow-xl border border-[color:var(--pragmata-border)] z-20 py-1 animate-in fade-in zoom-in-95 duration-100">
-                            {canUpdate && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(role)}
-                                disabled={role.is_system_role}
-                                icon={<Edit2 className="h-4 w-4" />}
-                                className={`w-full justify-start rounded-none px-4 py-2.5 ${role.is_system_role ? 'text-[color:var(--pragmata-muted-2)]' : 'text-[color:var(--pragmata-fg)]'}`}
-                              >
-                                Editar Rol
-                              </Button>
-                            )}
-                            {canUpdate && canDelete && !role.is_system_role && (
-                                <div className="h-px bg-[color:var(--pragmata-border)] mx-2 my-1" />
-                            )}
-                            {canDelete && (
-                              <Button
-                                variant="danger-ghost"
-                                size="sm"
-                                onClick={() => handleDelete(role.id)}
-                                icon={<Trash2 className="h-4 w-4" />}
-                                className={`w-full justify-start rounded-none px-4 py-2.5 ${role.is_system_role ? 'hidden' : ''}`}
-                              >
-                                Eliminar Rol
-                              </Button>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Empty State */}
-        {filteredRoles.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-            <div className="w-12 h-12 rounded-full bg-[color:var(--pragmata-surface-2)] flex items-center justify-center mb-4">
-              <Search className="h-6 w-6 text-[color:var(--pragmata-muted)]" />
-            </div>
-            <h3 className="text-lg font-medium text-[color:var(--pragmata-fg)]">No se encontraron roles</h3>
-            <p className="text-[color:var(--pragmata-muted)] mt-1 max-w-sm">
-              No hay roles que coincidan con tu búsqueda "{searchTerm}". Intenta con otros términos.
-            </p>
-            <Button
-               variant="ghost"
-               size="sm"
-               onClick={() => setSearchTerm('')}
-               className="mt-4 text-[color:var(--pragmata-accent)] hover:text-[color:var(--pragmata-accent-dark)]"
-            >
-              Limpiar búsqueda
-            </Button>
-          </div>
-        )}
-      </div>
+        <DataTable<RoleWithCount>
+          data={roles}
+          columns={columns}
+          rowKey="id"
+          actions={canUpdate || canDelete ? rowActions : undefined}
+          csv={{ filename: 'roles', fields: [...ROLE_CSV_FIELDS] }}
+          emptyMessage="No hay roles."
+          emptyDescription="Crea el primero con «Crear Nuevo Rol»."
+        />
       )}
 
-      {/* Modal */}
       {isModalOpen && (
         <RoleFormModal
           role={editingRole}

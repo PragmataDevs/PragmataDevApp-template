@@ -118,6 +118,18 @@ export const APP_RESOURCES: ResourceDefinition[] = [
     },
 
     // =================================================================
+    // 4b. SEO / Sitio público (ocultar rutas con VITE_ENABLE_SITE_CMS=false)
+    // =================================================================
+    {
+        code: 'page_seo_site_pages',
+        name: 'Páginas del sitio (CMS)',
+        description: 'Editar landing y páginas públicas Markdown',
+        category: 'SEO',
+        type: 'page',
+        default_actions: ['read', 'create', 'update', 'delete']
+    },
+
+    // =================================================================
     // 5. ACCIONES SENSIBLES
     // =================================================================
     {

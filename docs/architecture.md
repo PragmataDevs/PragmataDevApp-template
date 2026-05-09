@@ -1349,13 +1349,19 @@ Link       → Navegación sin peso visual
 
 **Estado de carga:** siempre mostrar `<Loader2 className="animate-spin" />` + texto descriptivo. Nunca deshabilitar sin feedback visual.
 
-### 13.7 Estados de la UI
+### 13.7 Listas tabulares (DataTable)
+
+En el pilar operativo (`src/`), **toda vista de listado tabular** (filas y columnas con CRUD o solo lectura) debe usar el componente compartido **`DataTable`** (`@/components/ui/DataTable`): búsqueda global, filtros y orden por columna, paginación y export CSV (plantilla o datos); opcionalmente import CSV vía prop **`csv`**.
+
+**No implementar `<table>` manual en páginas** salvo que el product owner marque una **excepción explícita**: Kanban, calendario/timeline, mapas, grillas tipo spreadsheet, HTML generado solo para impresión/PDF. Detalle de API: `.cursor/rules/02-ui-components.mdc`.
+
+### 13.8 Estados de la UI
 
 Toda lista/tabla/sección debe manejar los 4 estados:
 
 | Estado | Componente | Descripción |
 | :--- | :--- | :--- |
-| `loading` | Skeleton (no spinner de página) | Placeholders del mismo shape que el contenido |
-| `empty` | EmptyState con icono + CTA | Mensaje específico del contexto, botón para crear el primero |
+| `loading` | Skeleton (no spinner de página) | Placeholders del mismo shape que el contenido; en listas tabulares el propio `DataTable` incluye skeleton de tabla |
+| `empty` | EmptyState con icono + CTA | Mensaje específico del contexto, botón para crear el primero (`emptyMessage` / `emptyDescription` en `DataTable`) |
 | `error` | ErrorState con retry | Mensaje de error + botón "Reintentar" |
-| `data` | El componente real | Siempre con paginación si >20 registros |
+| `data` | El componente real | En tablas compartidas, paginación integrada en `DataTable` |
