@@ -23,7 +23,27 @@ import type { Product } from '@/types/products/product';
 
 const ECOMMERCE_ENABLED = import.meta.env.VITE_ENABLE_ECOMMERCE === 'true';
 
-// ─── Zod schema ───────────────────────────────────────────────────────────────
+// ─── RHF: DOM → mismo shape que valida Zod (números reales, opcionales → null) ──
+
+function parseRequiredMoney(v: unknown): number {
+  if (v === '' || v === null || v === undefined) return Number.NaN;
+  const n = typeof v === 'number' ? v : Number(String(v).trim().replace(',', '.'));
+  return Number.isFinite(n) ? n : Number.NaN;
+}
+
+function parseOptionalMoney(v: unknown): number | null {
+  if (v === '' || v === null || v === undefined) return null;
+  const n = typeof v === 'number' ? v : Number(String(v).trim().replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseOptionalInt(v: unknown): number | null {
+  if (v === '' || v === null || v === undefined) return null;
+  const n = typeof v === 'number' ? v : Number(String(v).trim().replace(',', '.'));
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+// ─── Zod schema (alineado a columnas editables de Product; sin coerce → infer = valores finales) ──
 
 const productSchema = z
   .object({
@@ -31,11 +51,11 @@ const productSchema = z
     slug:             z.string().min(2, 'El slug es obligatorio'),
     description:      z.string().optional(),
     category:         z.string().optional(),
-    price:            z.coerce.number().min(0, 'El precio debe ser ≥ 0'),
-    compare_at_price: z.coerce.number().min(0).optional().nullable(),
-    currency:         z.string().default('MXN'),
-    in_stock:         z.boolean().default(true),
-    stock_qty:        z.coerce.number().int().min(0).optional().nullable(),
+    price:            z.number({ error: () => ({ message: 'Indica un precio válido' }) }).min(0, 'El precio debe ser ≥ 0'),
+    compare_at_price: z.number().min(0).nullable().optional(),
+    currency:         z.string().min(1, 'Moneda requerida'),
+    in_stock:         z.boolean(),
+    stock_qty:        z.number().int().min(0).nullable().optional(),
     seo_title:        z.string().max(120).optional(),
     seo_description:  z.string().max(320).optional(),
     seo_image_url:    z.string().max(2048).optional(),
@@ -61,7 +81,8 @@ async function uploadProductImage(file: File): Promise<string> {
   return data.publicUrl;
 }
 
-type ProductFormValues = z.infer<typeof productSchema>;
+/** Valores tras validar (coinciden con defaultValues + modelo editable). */
+type ProductFormValues = z.output<typeof productSchema>;
 
 /**
  * URL absoluta del sitio público (Astro), sin `/` final.
@@ -377,12 +398,12 @@ function ProductFormModal({ product, onSave, onClose, saving }: ProductFormModal
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', marginBottom: 4 }}>
                 Precio <span style={{ color: '#ef4444' }}>*</span>
               </label>
-              <input {...register('price')} type="number" step="0.01" placeholder="299.00" style={inputStyle} />
+              <input {...register('price', { setValueAs: parseRequiredMoney })} type="number" step="0.01" placeholder="299.00" style={inputStyle} />
               {errors.price && <p style={errorStyle}>{errors.price.message}</p>}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', marginBottom: 4 }}>Precio anterior</label>
-              <input {...register('compare_at_price')} type="number" step="0.01" placeholder="399.00" style={inputStyle} />
+              <input {...register('compare_at_price', { setValueAs: parseOptionalMoney })} type="number" step="0.01" placeholder="399.00" style={inputStyle} />
             </div>
           </div>
 
@@ -406,7 +427,7 @@ function ProductFormModal({ product, onSave, onClose, saving }: ProductFormModal
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', marginBottom: 4 }}>Cantidad en stock</label>
-              <input {...register('stock_qty')} type="number" placeholder="∞" style={inputStyle} />
+              <input {...register('stock_qty', { setValueAs: parseOptionalInt })} type="number" placeholder="∞" style={inputStyle} />
             </div>
           </div>
 

@@ -69,7 +69,7 @@ export interface DataTableCsvConfig {
   ) => Promise<{ ok: number; skipped?: number; errors?: string[] }>;
 }
 
-export interface DataTableProps<T> {
+export interface DataTableProps<T extends object> {
   columns: ColumnDef<T>[];
   data: T[];
   /** Unique row identifier (e.g. "id") */
@@ -137,7 +137,7 @@ function rowsToCsvRecords<T>(rows: T[], keys: string[]): Record<string, unknown>
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T extends object>({
   columns,
   data,
   rowKey,

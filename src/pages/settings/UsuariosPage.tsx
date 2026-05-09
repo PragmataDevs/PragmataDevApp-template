@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
-import { useUsers, type UserWithRole, type UserUpdateInput } from '@/features/users/hooks/useUsers';
+import { useUsers, type UserCreateInput, type UserWithRole, type UserUpdateInput } from '@/features/users/hooks/useUsers';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import { resolveSignedUrl } from '@/lib/storage';
 import UserFormModal from '@/features/users/components/UserFormModal';

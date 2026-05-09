@@ -410,6 +410,23 @@ Eso es todo. No hay `ContratoCreatePayload`, no hay `ContratoFormState`, no hay 
 - **PROHIBIDO** mantener "casi-copias" con campos sueltos para "lo que necesita esa pantalla".
 - Cuando hay desfase entre lo que devuelve la query y el modelo, **se ajusta la query**, no se inventa un tipo paralelo.
 
+#### Validación con Zod + react-hook-form
+
+Cuando el formulario usa **`react-hook-form`** y **`@hookform/resolvers/zod`**:
+
+- El schema valida **solo los campos editables** que existen en el modelo y en Postgres (mismos nombres; tipos finales coherentes con el tipo canónico: `number`, `boolean`, etc.). Campos de auditoría (`id`, `version`, `created_by`, …) y derivados (p. ej. `image_url` tras subir archivo) se **fusionan en el payload** al guardar; no hace falta duplicarlos en Zod si no hay input directo.
+- Los `<input type="number">` llegan como **string** al resolver: preferir **`register('campo', { setValueAs })`** para producir `number` o `number | null` antes de validar. Evitar **`z.coerce.number()`** cuando fuerce casts (`as Resolver<…>`) en el resolver; el objetivo es que **`zodResolver(schema)`** tipé solo contra **`z.output<typeof schema>`** y **`defaultValues`** de RHF.
+- Si el schema usa **`.default()`** en Zod, el tipo de *entrada* del resolver puede marcar campos como opcionales y chocar con `useForm<T>`; suele bastar con defaults solo en **`defaultValues`** y campos requeridos explícitos en Zod (p. ej. `currency`, `in_stock`).
+- Referencia canónica en esta plantilla: **`src/pages/ecommerce/ProductsPage.tsx`** (`productSchema`, helpers `parseRequiredMoney` / `parseOptionalMoney` / `parseOptionalInt`).
+
+#### Hook genérico `useCrudResource`
+
+Ubicación: **`src/lib/hooks/useCrudResource.ts`**. Lista + `upsert` + `softDelete` (OCC vía `version`) sobre una tabla Supabase.
+
+- **`AuditRecord`** (`id`, `version`, `status?`) es el mínimo que debe cumplir `T`. **No** lleva firma índice tipo `[key: string]: unknown`: si existiera, TypeScript exigiría que todo campo explícito del modelo fuera asignable a `unknown` en el mismo objeto, y rompe la compatibilidad con interfaces canónicas (`Product`, `Document`, …).
+- Opción **`filter`**: encadena condiciones sobre el builder PostgREST (`q.eq(...)`, etc.). Los genéricos de **`PostgrestFilterBuilder`** cambian entre versiones de `@supabase/postgrest-js`; encajar el hook a esa firma obligaría dependencia directa y churn en cada upgrade. Por eso el callback usa tipado laxo en la cadena (`any`) — es decisión de plantilla, no invitación a propagar `any` al resto del ERP.
+- **`upsert`**: tras `if (upsertErr) throw`, la fila devuelta por `.select().single()` se normaliza como **`result as unknown as T`** para no arrastrar tipos de error internos del cliente (`GenericStringError`, etc.).
+
 #### Función `createEmpty<Entidad>()`
 
 Para crear una instancia en blanco se usa un helper que vive junto al tipo:
@@ -1354,6 +1371,8 @@ Link       → Navegación sin peso visual
 En el pilar operativo (`src/`), **toda vista de listado tabular** (filas y columnas con CRUD o solo lectura) debe usar el componente compartido **`DataTable`** (`@/components/ui/DataTable`): búsqueda global, filtros y orden por columna, paginación y export CSV (plantilla o datos); opcionalmente import CSV vía prop **`csv`**.
 
 **No implementar `<table>` manual en páginas** salvo que el product owner marque una **excepción explícita**: Kanban, calendario/timeline, mapas, grillas tipo spreadsheet, HTML generado solo para impresión/PDF. Detalle de API: `.cursor/rules/02-ui-components.mdc`.
+
+**Tipado de filas:** el componente declara **`DataTable<T extends object>`** (no `Record<string, unknown>`). Muchas entidades del dominio son `interface` sin índice string explícito; exigir `Record<string, unknown>` las excluiría del genérico sin ganancia real. La exportación CSV sigue resolviendo claves y rutas anidadas (`campo.anidado`) sobre cada fila de forma segura en tiempo de ejecución.
 
 ### 13.8 Estados de la UI
 

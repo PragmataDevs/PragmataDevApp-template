@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
+import { RichMarkdownEditor } from '@/components/cms/RichMarkdownEditor';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { useCmsPages } from '@/features/cms/hooks/useCmsPages';
 import type { CmsLandingContent, CmsPage } from '@/types/cms/cms-page';
@@ -374,7 +375,22 @@ function CmsPageModal({ mode, page, onClose, onSave, saving }: ModalProps) {
                 </div>
                 <div>
                   <label style={labelStyle}>Hero — subtítulo</label>
-                  <textarea {...register('heroSubheadline')} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
+                  <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: '#9ca3af' }}>
+                    Editor visual (se guarda como Markdown en el sitio público).
+                  </p>
+                  <Controller
+                    name="heroSubheadline"
+                    control={control}
+                    render={({ field }) => (
+                      <RichMarkdownEditor
+                        key={`home-hero-${page?.id ?? 'new'}`}
+                        markdown={field.value ?? ''}
+                        onMarkdownChange={field.onChange}
+                        placeholder="Párrafo principal bajo el titular…"
+                        minHeightPx={200}
+                      />
+                    )}
+                  />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -424,12 +440,20 @@ function CmsPageModal({ mode, page, onClose, onSave, saving }: ModalProps) {
 
           {isStandard && (
             <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 16 }}>
-              <p style={sectionLabel}>Markdown</p>
-              <textarea
-                {...register('body_markdown')}
-                rows={16}
-                placeholder={'# Título\n\nPárrafo…'}
-                style={{ ...inputStyle, resize: 'vertical', fontFamily: 'ui-monospace, monospace', fontSize: '0.875rem', lineHeight: 1.5 }}
+              <p style={sectionLabel}>Contenido</p>
+              <p style={{ margin: '0 0 10px', fontSize: '0.75rem', color: '#9ca3af' }}>
+                Páginas como /privacidad o /terminos (tipo Markdown). La landing usa el bloque anterior.
+              </p>
+              <Controller
+                name="body_markdown"
+                control={control}
+                render={({ field }) => (
+                  <RichMarkdownEditor
+                    key={page?.id ?? (mode === 'new' ? 'new-standard-page' : 'standard')}
+                    markdown={field.value ?? ''}
+                    onMarkdownChange={field.onChange}
+                  />
+                )}
               />
             </div>
           )}
@@ -722,10 +746,10 @@ export default function SitePagesPage() {
       )}
 
       {modal === 'new' && (
-        <CmsPageModal mode="new" page={null} onClose={closeModal} onSave={handleSave} saving={saving} />
+        <CmsPageModal key="cms-modal-new" mode="new" page={null} onClose={closeModal} onSave={handleSave} saving={saving} />
       )}
       {modal === 'edit' && editTarget && (
-        <CmsPageModal mode="edit" page={editTarget} onClose={closeModal} onSave={handleSave} saving={saving} />
+        <CmsPageModal key={editTarget.id} mode="edit" page={editTarget} onClose={closeModal} onSave={handleSave} saving={saving} />
       )}
 
       {deleteTarget && (

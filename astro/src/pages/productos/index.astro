@@ -32,15 +32,17 @@ if (sort === 'precio_asc')  query = query.order('price', { ascending: true });
 else if (sort === 'precio_desc') query = query.order('price', { ascending: false });
 else                             query = query.order('name',  { ascending: true });
 
-const { data: products = [] } = await query;
+const { data: productsRaw } = await query;
+const products = productsRaw ?? [];
 
 // ── Get all categories for the filter dropdown ───────────────────────────────
-const { data: catRows = [] } = await supabase
+const { data: catRowsRaw } = await supabase
   .from('products')
   .select('category')
   .eq('status', 'active')
   .not('category', 'is', null);
 
+const catRows = catRowsRaw ?? [];
 const categories = [...new Set(catRows.map((r: { category: string | null }) => r.category).filter(Boolean))] as string[];
 
 const brand   = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';

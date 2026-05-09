@@ -23,7 +23,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
-import type { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -33,22 +32,22 @@ export interface AuditRecord {
   id: string;
   version: number;
   status?: string;
-  [key: string]: unknown;
 }
 
-type FilterFn<T> = (
+/** PostgREST chain types drift across package minors; keep filter ergonomic without pinning generics. */
+type FilterFn = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  query: PostgrestFilterBuilder<any, any, T[]>
+  query: any,
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-) => PostgrestFilterBuilder<any, any, any>;
+) => any;
 
-export interface UseCrudResourceOptions<T> {
+export interface UseCrudResourceOptions {
   /** Supabase table name */
   table: string;
   /** PostgREST select string (default: '*') */
   select?: string;
   /** Additional filter chain applied to every fetch */
-  filter?: FilterFn<T>;
+  filter?: FilterFn;
   /** Default ordering */
   orderBy?: { column: string; ascending?: boolean };
   /**
@@ -94,7 +93,7 @@ export function useCrudResource<T extends AuditRecord>({
   orderBy,
   realtime = false,
   enabled = true,
-}: UseCrudResourceOptions<T>): UseCrudResourceReturn<T> {
+}: UseCrudResourceOptions): UseCrudResourceReturn<T> {
   const { user, isAuthenticated, loading: authLoading, sessionEpoch } = useAuth();
 
   const [data, setData]       = useState<T[]>([]);
@@ -208,7 +207,7 @@ export function useCrudResource<T extends AuditRecord>({
 
       if (upsertErr) throw upsertErr;
 
-      const row = result as T;
+      const row = result as unknown as T;
 
       // Optimistic update: replace if exists, append if new
       setData(prev => {

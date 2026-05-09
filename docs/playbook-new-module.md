@@ -32,6 +32,7 @@ Antecedentes: reglas en `.cursor/rules/`, detalle en `docs/architecture.md` y se
 ## 3. Hook de datos
 
 - Preferir **`useCrudResource`** (`src/lib/hooks/useCrudResource.ts`) con `table`, `filter` por `entity_id` si aplica, `realtime` opcional.
+- Detalle de plantilla (por qué **`AuditRecord`** sin índice string, **`filter`** con cadena PostgREST laxamente tipada, **`upsert`** y `as unknown as T`): **`docs/architecture.md`** → *Hook genérico `useCrudResource`*.
 - Si hay varias tablas o lógica no CRUD (ej. Kanban), hook dedicado en `src/features/<modulo>/hooks/` usando **`withSessionRetry`** + **`sessionEpoch`** (`docs` rule `05-secure-hooks.mdc`).
 
 ---
@@ -52,8 +53,9 @@ Mantén la lógica de negocio aquí; las páginas solo componen.
 
 - `src/pages/...` — suele ser `workspace/` si depende de `:entityId`, o `settings/` / `ecommerce/` según el caso.
 - UI: `Button`, tokens `--pragmata-*`, bordes `rounded-pragmata`.
-- **Listados tabulares:** obligatorio **`DataTable`** (`@/components/ui/DataTable`). No montar `<table>` manual en páginas. Solo puedes usar otro patrón si el product owner lo indica **explícitamente** (Kanban, calendario, grid tipo spreadsheet, HTML solo para impresión/PDF). Ver `.cursor/rules/02-ui-components.mdc`.
+- **Listados tabulares:** obligatorio **`DataTable`** (`@/components/ui/DataTable`). No montar `<table>` manual en páginas. Solo puedes usar otro patrón si el product owner lo indica **explícitamente** (Kanban, calendario, grid tipo spreadsheet, HTML solo para impresión/PDF). Ver `.cursor/rules/02-ui-components.mdc`. Genérico **`T extends object`** y CSV: **`docs/architecture.md`** §13.7 (*Listas tabulares*).
 - CSV masivo: prop opcional **`csv`**. Mínimo **`filename`** + **`fields`** para export / plantilla; **`onImport`** solo donde el dominio lo permita (ej. catálogo). *Por defecto en esta plantilla, usuarios / roles / entidades son solo export — sin carga CSV hasta que se defina.*
+- **Formularios + Zod:** schema alineado al modelo (campos editables = mismos nombres que en `src/types` y columnas expuestas); números desde el DOM con **`setValueAs`**, no **`z.coerce`** si rompe el tipado del resolver; tipo del formulario validado → **`z.output<typeof schema>`** cuando aplique. Detalle y ejemplo: **`docs/architecture.md`** (§ modelo canónico → *Validación con Zod + react-hook-form*) y **`src/pages/ecommerce/ProductsPage.tsx`**.
 
 ---
 
@@ -102,6 +104,9 @@ Mantén la lógica de negocio aquí; las páginas solo componen.
 | Navegación / Workspace | `.cursor/rules/06-navigation-layout.mdc` |
 | Hooks + sesión | `.cursor/rules/05-secure-hooks.mdc` |
 | UI tabla | `.cursor/rules/02-ui-components.mdc` |
+| Formulario + Zod + RHF | `docs/architecture.md` (validación Zod), `src/pages/ecommerce/ProductsPage.tsx` |
+| `useCrudResource` (AuditRecord, filter, upsert) | `docs/architecture.md` → *Hook genérico useCrudResource* |
+| `DataTable` genérico + CSV | `docs/architecture.md` §13.7 |
 | Publicación PowerSync | `docs/database/03_powersync_publication.sql`, `docs/powersync/sync-rules.yaml` |
 
 **Sitemap / robots (sitio público):** ya generados en runtime (`/sitemap.xml`, `/robots.txt` en Astro). Al añadir páginas indexables, extiende `astro/src/pages/sitemap.xml.ts` si deben aparecer en el índice.
