@@ -56,8 +56,8 @@ export default defineConfig({
   integrations: [
     react(),
 
-    // @astrojs/sitemap puede fallar en build hybrid (hooks `_routes` undefined).
-    // Rehabilitar tras upgrade o generar sitemap aparte (Vercel plugin, script CI).
+    // Sitemap / robots: endpoints SSR `src/pages/sitemap.xml.ts` y `robots.txt.ts`
+    // (evita @astrojs/sitemap en hybrid — ver docs/SETUP.md §8.8).
 
     tailwind({ applyBaseStyles: false }),
   ],

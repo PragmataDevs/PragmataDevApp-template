@@ -32,6 +32,11 @@ CREATE TABLE IF NOT EXISTS public.products (
   image_url   TEXT,
   images      JSONB       NOT NULL DEFAULT '[]'::jsonb,
 
+  -- SEO (sitio público / Astro — opcionales; ver 08c_products_seo.sql en instalaciones ya existentes)
+  seo_title       TEXT,
+  seo_description TEXT,
+  seo_image_url   TEXT,
+
   -- Inventory
   in_stock    BOOLEAN     NOT NULL DEFAULT true,
   stock_qty   INTEGER,

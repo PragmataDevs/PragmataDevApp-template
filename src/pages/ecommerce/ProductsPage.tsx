@@ -25,17 +25,28 @@ const ECOMMERCE_ENABLED = import.meta.env.VITE_ENABLE_ECOMMERCE === 'true';
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
 
-const productSchema = z.object({
-  name:             z.string().min(2, 'El nombre es obligatorio'),
-  slug:             z.string().min(2, 'El slug es obligatorio'),
-  description:      z.string().optional(),
-  category:         z.string().optional(),
-  price:            z.coerce.number().min(0, 'El precio debe ser ≥ 0'),
-  compare_at_price: z.coerce.number().min(0).optional().nullable(),
-  currency:         z.string().default('MXN'),
-  in_stock:         z.boolean().default(true),
-  stock_qty:        z.coerce.number().int().min(0).optional().nullable(),
-});
+const productSchema = z
+  .object({
+    name:             z.string().min(2, 'El nombre es obligatorio'),
+    slug:             z.string().min(2, 'El slug es obligatorio'),
+    description:      z.string().optional(),
+    category:         z.string().optional(),
+    price:            z.coerce.number().min(0, 'El precio debe ser ≥ 0'),
+    compare_at_price: z.coerce.number().min(0).optional().nullable(),
+    currency:         z.string().default('MXN'),
+    in_stock:         z.boolean().default(true),
+    stock_qty:        z.coerce.number().int().min(0).optional().nullable(),
+    seo_title:        z.string().max(120).optional(),
+    seo_description:  z.string().max(320).optional(),
+    seo_image_url:    z.string().max(2048).optional(),
+  })
+  .refine(
+    (data) => {
+      const u = data.seo_image_url?.trim();
+      return !u || /^https?:\/\/.+/i.test(u);
+    },
+    { message: 'La imagen OG debe ser una URL http(s) válida', path: ['seo_image_url'] },
+  );
 
 const IMAGE_BUCKET = 'product-images';
 
@@ -191,15 +202,18 @@ function ProductFormModal({ product, onSave, onClose, saving }: ProductFormModal
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      name:             product?.name             ?? '',
-      slug:             product?.slug             ?? '',
-      description:      product?.description      ?? '',
-      category:         product?.category         ?? '',
-      price:            product?.price            ?? 0,
-      compare_at_price: product?.compare_at_price ?? null,
-      currency:         product?.currency         ?? 'MXN',
-      in_stock:         product?.in_stock         ?? true,
-      stock_qty:        product?.stock_qty        ?? null,
+      name:             product?.name               ?? '',
+      slug:             product?.slug               ?? '',
+      description:      product?.description        ?? '',
+      category:         product?.category           ?? '',
+      price:            product?.price              ?? 0,
+      compare_at_price: product?.compare_at_price   ?? null,
+      currency:         product?.currency           ?? 'MXN',
+      in_stock:         product?.in_stock           ?? true,
+      stock_qty:        product?.stock_qty          ?? null,
+      seo_title:        product?.seo_title          ?? '',
+      seo_description:  product?.seo_description    ?? '',
+      seo_image_url:    product?.seo_image_url      ?? '',
     },
   });
 
@@ -243,6 +257,9 @@ function ProductFormModal({ product, onSave, onClose, saving }: ProductFormModal
       image_url,
       compare_at_price: values.compare_at_price ?? null,
       stock_qty:        values.stock_qty ?? null,
+      seo_title:        values.seo_title?.trim() || null,
+      seo_description:  values.seo_description?.trim() || null,
+      seo_image_url:    values.seo_image_url?.trim() || null,
     };
     await onSave(payload);
   });
@@ -252,7 +269,7 @@ function ProductFormModal({ product, onSave, onClose, saving }: ProductFormModal
       style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{ background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div style={{ background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
@@ -395,6 +412,48 @@ function ProductFormModal({ product, onSave, onClose, saving }: ProductFormModal
             />
           </div>
 
+          {/* SEO — sitio público (Astro) */}
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 16, marginTop: 4 }}>
+            <p style={{ margin: '0 0 12px', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              SEO (Google / redes)
+            </p>
+            <p style={{ margin: '0 0 14px', fontSize: '0.75rem', color: '#9ca3af', lineHeight: 1.45 }}>
+              Opcional. Si los dejas vacíos, la ficha usa nombre y descripción del producto. El título en la pestaña añade automáticamente el nombre de marca del sitio.
+            </p>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', marginBottom: 4 }}>
+                Meta título
+              </label>
+              <input {...register('seo_title')} placeholder="Ej: Consultoría estratégica para PyMEs" style={inputStyle} maxLength={120} />
+              <p style={{ margin: '4px 0 0', fontSize: '0.6875rem', color: '#9ca3af' }}>Recomendado ~50–60 caracteres · máx. 120</p>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', marginBottom: 4 }}>
+                Meta descripción
+              </label>
+              <textarea
+                {...register('seo_description')}
+                rows={2}
+                placeholder="Resumen para resultados de búsqueda y redes sociales..."
+                style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
+                maxLength={320}
+              />
+              <p style={{ margin: '4px 0 0', fontSize: '0.6875rem', color: '#9ca3af' }}>Recomendado ~150–160 caracteres · máx. 320</p>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: '#374151', marginBottom: 4 }}>
+                Imagen para compartir (URL https)
+              </label>
+              <input
+                {...register('seo_image_url')}
+                type="url"
+                placeholder="https://… (opcional; si vacío se usa la imagen principal)"
+                style={inputStyle}
+              />
+              {errors.seo_image_url && <p style={errorStyle}>{errors.seo_image_url.message}</p>}
+            </div>
+          </div>
+
           {/* Actions */}
           <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
             <button type="button" onClick={onClose} style={cancelBtnStyle}>Cancelar</button>
@@ -493,6 +552,36 @@ export default function ProductsPage() {
           <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{row.slug}</span>
         </div>
       ),
+    },
+    {
+      key:      'seo_title',
+      header:   'SEO',
+      width:    100,
+      sortable: false,
+      render: (_val, row) => {
+        const hasT = !!(row.seo_title?.trim());
+        const hasD = !!(row.seo_description?.trim());
+        const hasOg = !!(row.seo_image_url?.trim());
+        if (hasT && hasD) {
+          return (
+            <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: '#d1fae5', color: '#065f46' }}>
+              Completo
+            </span>
+          );
+        }
+        if (hasT || hasD || hasOg) {
+          return (
+            <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: '#fef3c7', color: '#92400e' }}>
+              Parcial
+            </span>
+          );
+        }
+        return (
+          <span style={{ fontSize: '0.6875rem', color: '#9ca3af' }} title="Usa nombre y descripción por defecto">
+            Auto
+          </span>
+        );
+      },
     },
     { key: 'category', header: 'Categoría', width: 140 },
     {

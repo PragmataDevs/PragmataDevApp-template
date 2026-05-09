@@ -56,6 +56,9 @@ const absImage  = image.startsWith('http') ? image : `${siteUrl}${image}`;
   <title>{pageTitle}</title>
   <meta name="description" content={description} />
   <link rel="canonical" href={canonicalUrl} />
+  {Astro.site && (
+    <link rel="sitemap" type="application/xml" title="Sitemap" href={new URL('/sitemap.xml', Astro.site).href} />
+  )}
   {noindex && <meta name="robots" content="noindex, nofollow" />}
   {!noindex && <meta name="robots" content="index, follow" />}
 

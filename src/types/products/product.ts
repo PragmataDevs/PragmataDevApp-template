@@ -15,6 +15,13 @@ export interface Product extends AuditBase {
   in_stock:          boolean;
   stock_qty:         number | null;
   metadata:          Record<string, unknown>;
+
+  /** Meta title en ficha pública (BaseLayout añade sufijo de marca). Vacío → `name`. */
+  seo_title:         string | null;
+  /** Meta / OG description. Vacío → `description` o fallback. */
+  seo_description:   string | null;
+  /** Imagen OG absoluta (https). Vacío → `image_url`. */
+  seo_image_url:     string | null;
 }
 
 export type ProductInput = Omit<Product,

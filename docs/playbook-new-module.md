@@ -101,4 +101,6 @@ Mantén la lógica de negocio aquí; las páginas solo componen.
 | UI tabla | `.cursor/rules/02-ui-components.mdc` |
 | Publicación PowerSync | `docs/database/03_powersync_publication.sql`, `docs/powersync/sync-rules.yaml` |
 
-Cuando retomes **sitemap / robots** en producción, revisa `astro/public/robots.txt`, URL canónica del sitio (`PUBLIC_SITE_URL`) y el mecanismo de generación (CI u hosting).
+**Sitemap / robots (sitio público):** ya generados en runtime (`/sitemap.xml`, `/robots.txt` en Astro). Al añadir páginas indexables, extiende `astro/src/pages/sitemap.xml.ts` si deben aparecer en el índice.
+
+**SEO en catálogo:** tras aplicar `docs/database/08c_products_seo.sql`, los productos tienen `seo_title`, `seo_description` y `seo_image_url` editables en **ERP → Ecommerce → Productos**; Astro `/productos/[slug]` los usa con fallback al nombre/descripción/imagen principal.

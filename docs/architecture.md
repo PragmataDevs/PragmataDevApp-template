@@ -1115,7 +1115,7 @@ const { title, description, ogImage, canonical } = Astro.props;
 - Toda página exporta `title` único y `description` entre 120–160 caracteres.
 - Rutas dinámicas usan `getStaticPaths()` para generar URLs en build time (SSG).
 - Imágenes siempre con `<Image>` de Astro (convierte a WebP + `width`/`height` obligatorios para evitar CLS).
-- Sitemap: **`@astrojs/sitemap` retirado del build hybrid** hasta compatibilidad estable con `_routes`; usar generación externa (hosting, script CI) o rehabilitar tras upgrade de Astro/sitemap.
+- Sitemap / robots en Astro: endpoints SSR **`/sitemap.xml`** y **`/robots.txt`** (`astro/src/pages/*.ts`), sin `@astrojs/sitemap`. Detalle en **`docs/SETUP.md` §8.8**.
 - Structured Data (JSON-LD) en páginas de producto y landing.
 
 ### 11.3 Arquitectura Ecommerce

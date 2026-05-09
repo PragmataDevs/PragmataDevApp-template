@@ -140,6 +140,7 @@ Orden recomendado para una instalación **nueva** (equivalente a los scripts de 
 | 5 | `supabase migration new documents` | `docs/database/07_documents.sql` |
 | 6 | `supabase migration new ecommerce` | `docs/database/08_ecommerce.sql` |
 | 7 | `supabase migration new products_audit_patch` | `docs/database/08b_products_patch.sql` (columna `updated_by` en `products`; incluir si el ERP/Astro esperan modelo completo) |
+| 8 | `supabase migration new products_seo` | `docs/database/08c_products_seo.sql` (`seo_title`, `seo_description`, `seo_image_url`) |
 
 #### 3.0.3 Scripts que no van en instalaciones nuevas
 
@@ -187,6 +188,7 @@ Cada script es idempotente (se puede volver a correr sin romper nada).
 | **7** | **`docs/database/07_documents.sql`** | **Tabla documents + Storage + RLS** | **Nuevo** |
 | **8** | **`docs/database/08_ecommerce.sql`** | **Tablas products, orders, order_items + RLS** | **Nuevo** |
 | **8b** | **`docs/database/08b_products_patch.sql`** | **`products.updated_by` + coherencia con AuditBase / PostgREST** | **Si usas ecommerce / ERP productos** |
+| **8c** | **`docs/database/08c_products_seo.sql`** | **Campos SEO editables en ERP para fichas `/productos/[slug]`** | **Recomendado con catálogo público** |
 
 > **Importante después de cada migración:**  
 > Si ves el error `Could not find the table in the schema cache`, ejecuta en SQL Editor:  
@@ -227,8 +229,8 @@ Cada script es idempotente (se puede volver a correr sin romper nada).
 
 ### 5.1 Ejecutar migración SQL
 
-- **Modo industrial:** crea migraciones para `08_ecommerce.sql` y, si aplica, **`08b_products_patch.sql`** (véase tabla en **§3.0.2**), luego `supabase db push`.
-- **Modo rápido:** ejecuta en orden `docs/database/08_ecommerce.sql` y `docs/database/08b_products_patch.sql` en el SQL Editor.
+- **Modo industrial:** crea migraciones para `08_ecommerce.sql` y, si aplica, **`08b`** / **`08c`** (véase tabla en **§3.0.2**), luego `supabase db push`.
+- **Modo rápido:** ejecuta en orden `08_ecommerce.sql`, `08b_products_patch.sql` y **`08c_products_seo.sql`** en el SQL Editor cuando uses SEO de producto en el ERP.
 
 ### 5.2 Agregar productos de ejemplo
 
@@ -489,13 +491,18 @@ HOST=0.0.0.0 PORT=4321 pnpm start
 | **VPS / Docker / Node** | Copiar `astro/dist/` + `node_modules` de producción (o imagen multi-stage), ejecutar `node dist/server/entry.mjs`, proxy reverso (nginx/Caddy) con TLS. |
 | **Vercel / Netlify** | Suelen tener integración Astro con SSR; sigue la doc del proveedor (pueden no usar el mismo layout `standalone`). |
 
-### 8.8 Sitemap
+### 8.8 Sitemap y `robots.txt` (Astro)
 
-**`@astrojs/sitemap` no está activo** en esta plantilla: en builds hybrid recientes puede fallar (`_routes` undefined). Opciones:
+No usamos **`@astrojs/sitemap`** en hybrid (evita errores `_routes` en integraciones antiguas). En su lugar:
 
-- Generar sitemap con el plugin del hosting o un script en CI.
-- Actualizar `@astrojs/sitemap` / Astro y rehabilitar la integración cuando sea estable.
-- Ajustar la línea `Sitemap:` en `astro/public/robots.txt` cuando tengas URL real del XML.
+| Ruta | Archivo | Comportamiento |
+|------|---------|----------------|
+| `/sitemap.xml` | `astro/src/pages/sitemap.xml.ts` | SSR: incluye `/`, y si `PUBLIC_ENABLE_ECOMMERCE=true` también `/productos` y cada `/productos/[slug]` activo (consulta pública a `products`). |
+| `/robots.txt` | `astro/src/pages/robots.txt.ts` | SSR: `Allow: /`, bloquea `/checkout` y `/gracias`; si ecommerce está off, `Disallow: /productos`. La línea **`Sitemap:`** usa el origen canónico (`astro.config` `site` = `PUBLIC_SITE_URL` / fallback dev). |
+
+**Producción:** define **`PUBLIC_SITE_URL=https://www.tucliente.com`** en el entorno del **build** para que canonical, OG, sitemap y robots apunten al dominio real.
+
+**ERP:** el archivo raíz `public/robots.txt` del SPA sigue en **`Disallow: /`** (no indexar la app).
 
 ---
 
@@ -540,6 +547,7 @@ Marca cada ítem antes de considerar el setup completo:
 ### E-Commerce
 - [ ] SQL `08_ecommerce.sql` aplicado
 - [ ] SQL `08b_products_patch.sql` aplicado si usas catálogo admin / columnas de auditoría en `products`
+- [ ] SQL `08c_products_seo.sql` aplicado si editas SEO desde **Productos** (meta título / descripción / imagen OG)
 - [ ] Al menos 1 producto de ejemplo insertado
 - [ ] Catálogo en `localhost:4321/productos` muestra los productos
 

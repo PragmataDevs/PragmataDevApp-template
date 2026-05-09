@@ -33,8 +33,10 @@ astro/
       index.astro       # Landing (prerender = true)
       productos/
         index.astro     # Catálogo SSR (prerender = false)
-        [slug].astro    # Producto SSG (prerender = true)
+        [slug].astro    # Producto SSR (prerender = false)
       checkout.astro    # Carrito + pago (prerender = false)
+      sitemap.xml.ts    # Sitemap dinámico (hybrid)
+      robots.txt.ts     # robots + línea Sitemap canónica
     components/
       islands/          # React islands (client:load/idle/visible)
         CartButton.tsx
@@ -43,9 +45,9 @@ astro/
       BaseLayout.astro  # SEO head canónico
     lib/
       supabase.ts       # createClient con claves públicas (mapeadas desde .env raíz)
-  public/
-    robots.txt          # Allows all (public site)
-  astro.config.mjs      # output:'hybrid', @astrojs/node, @astrojs/react (sitemap: pendiente / externo)
+      site-origin.ts    # helper origen canónico (PUBLIC_SITE_URL / astro.site)
+  public/               # estáticos (favicon, etc.) — no robots.txt plano
+  astro.config.mjs      # output:'hybrid', @astrojs/node, @astrojs/react
   package.json          # Dependencias Astro (independiente de React app)
   .env.example
 ```
