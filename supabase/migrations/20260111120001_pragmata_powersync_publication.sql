@@ -1,8 +1,8 @@
--- PowerSync Replication Setup
--- Fuente canónica para nuevos proyectos: supabase/migrations/20260111120001_pragmata_powersync_publication.sql
--- (este archivo es copia de referencia para pegar en SQL Editor si no usas CLI).
---
--- ADVERTENCIA (producción): DROP PUBLICATION puede afectar réplicas activas; coordinar con ventana de mantenimiento.
+-- ==============================================================================
+-- PowerSync — publicación de replicación lógica
+-- Ejecutar después de 20260111120000_pragmata_schema.sql.
+-- Idempotente: recrea la publicación `powersync` si ya existía.
+-- ==============================================================================
 
 DROP PUBLICATION IF EXISTS powersync;
 
@@ -30,6 +30,3 @@ CREATE PUBLICATION powersync FOR TABLE
   public.orders,
   public.order_items,
   public.cms_pages;
-
-SELECT * FROM pg_publication WHERE pubname = 'powersync';
-SELECT * FROM pg_publication_tables WHERE pubname = 'powersync';

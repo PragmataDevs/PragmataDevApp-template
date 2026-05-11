@@ -119,35 +119,22 @@ supabase link --project-ref <tu_project_ref>
 
 Opcional: `supabase projects list` confirma el ref si tienes varios proyectos.
 
-#### 3.0.2 Crear migraciones desde los scripts de `docs/database/`
+#### 3.0.2 Migraciones en el repo (`supabase/migrations/`)
 
-El comando `supabase migration new <nombre_descriptivo>` crea un archivo con **prefijo de timestamp** automático (ej. `20260509120000_security_engine.sql`). El orden lo define el nombre del archivo (cronológico), así que **genera y rellena en el mismo orden** que la tabla de abajo.
+La plantilla ya incluye el baseline en **dos archivos** (orden cronológico por nombre):
 
-Para cada paso:
+| Archivo | Contenido |
+|---------|-----------|
+| `20260111120000_pragmata_schema.sql` | Copia de `docs/database/01_security_engine.sql`: motor de seguridad + chat + notificaciones + tasks + documents + ecommerce + CMS + bucket `product-images` |
+| `20260111120001_pragmata_powersync_publication.sql` | Publicación lógica `powersync` (equivalente a `docs/database/03_powersync_publication.sql`) |
 
-1. `supabase migration new <nombre>`
-2. Abre el `.sql` recién creado en `supabase/migrations/` y **pega** el contenido del archivo correspondiente en `docs/database/`.
-3. Ajusta datos sensibles (por ejemplo en `02_seed_god_user.sql`: emails/UUID) antes del primer push.
+Flujo habitual: **`supabase db push`** tras `supabase link`. El seed del usuario god **no** va en migraciones versionadas: sigue siendo `docs/database/02_seed_god_user.sql` (ajusta UUID/email antes de ejecutarlo).
 
-Orden recomendado para una instalación **nueva** (equivalente a los scripts de docs):
+Si mantienes `docs/database/01_security_engine.sql` y la migración `…20000…` al mismo tiempo, **mantén el contenido sincronizado** (o edita solo uno y copia al otro).
 
-| Orden | Comando sugerido | Pegar contenido de |
-|-------|------------------|-------------------|
-| 1 | `supabase migration new security_engine` | `docs/database/01_security_engine.sql` |
-| 2 | `supabase migration new seed_god_user` | `docs/database/02_seed_god_user.sql` |
-| 3 | `supabase migration new powersync_publication` | `docs/database/03_powersync_publication.sql` (solo si usas PowerSync) |
-| 4 | `supabase migration new tasks` | `docs/database/04_tasks.sql` |
-| 5 | `supabase migration new documents` | `docs/database/07_documents.sql` |
-| 6 | `supabase migration new ecommerce` | `docs/database/08_ecommerce.sql` |
-| 7 | `supabase migration new products_audit_patch` | `docs/database/08b_products_patch.sql` (columna `updated_by` en `products`; incluir si el ERP/Astro esperan modelo completo) |
-| 8 | `supabase migration new products_seo` | `docs/database/08c_products_seo.sql` (`seo_title`, `seo_description`, `seo_image_url`) |
+#### 3.0.3 Bases legacy (fuera de esta plantilla)
 
-#### 3.0.3 Scripts que no van en instalaciones nuevas
-
-- **`docs/database/05_rename_projects_to_entities.sql`** — solo bases que aún tienen tabla `projects` legacy.
-- **`docs/database/06_god_bypass.sql`** — parche de emergencia si políticas RLS bloquean al god user.
-
-Si aplica a tu base, crea migraciones dedicadas (`supabase migration new rename_projects_to_entities`, etc.) y pega solo tras revisar en staging.
+Si heredas una base con tabla `projects` o políticas RLS antiguas, no hay scripts sueltos en `docs/database/` para eso: conviene `supabase db diff` / migración incremental a medida tras revisar en staging.
 
 #### 3.0.4 Aplicar migraciones al remoto
 
@@ -174,37 +161,23 @@ supabase migration list
 
 ### 3.1 Modo rápido (Dashboard → SQL Editor)
 
-Si estás arrancando una base sin pipeline aún, puedes correr los scripts en orden en **Supabase Dashboard → SQL Editor**.  
-Cada script es idempotente (se puede volver a correr sin romper nada).
+Si arrancas una base sin CLI, ejecuta en **Supabase Dashboard → SQL Editor**, en este orden:
 
-| # | Archivo | Qué hace | ¿Ya lo corriste? |
-|---|---------|----------|-----------------|
-| 1 | `docs/database/01_security_engine.sql` | Auth, RBAC, perfiles, equipos, entidades, is_god() | — |
-| 2 | `docs/database/02_seed_god_user.sql` | Crea el usuario god en tu equipo | — |
-| 3 | `docs/database/03_powersync_publication.sql` | Solo si usas PowerSync offline | — |
-| 4 | `docs/database/04_tasks.sql` | Tabla tasks + RLS | — |
-| 5 | `docs/database/05_rename_projects_to_entities.sql` | Migración si tenías tabla `projects` antigua | Solo si aplica |
-| 6 | `docs/database/06_god_bypass.sql` | Parche de emergencia si el god user no puede ver nada | Solo si aplica |
-| **7** | **`docs/database/07_documents.sql`** | **Tabla documents + Storage + RLS** | **Nuevo** |
-| **8** | **`docs/database/08_ecommerce.sql`** | **Tablas products, orders, order_items + RLS** | **Nuevo** |
-| **8b** | **`docs/database/08b_products_patch.sql`** | **`products.updated_by` + coherencia con AuditBase / PostgREST** | **Si usas ecommerce / ERP productos** |
-| **8c** | **`docs/database/08c_products_seo.sql`** | **Campos SEO editables en ERP para fichas `/productos/[slug]`** | **Recomendado con catálogo público** |
+| # | Archivo | Qué hace |
+|---|---------|----------|
+| 1 | `docs/database/01_security_engine.sql` | Esquema completo (incluye tasks, documents, ecommerce, CMS, bucket product-images, `NOTIFY pgrst` al final) |
+| 2 | `docs/database/02_seed_god_user.sql` | Usuario god (edita UUID/email antes) |
+| 3 | `docs/database/03_powersync_publication.sql` | Solo si usas PowerSync |
 
-> **Importante después de cada migración:**  
-> Si ves el error `Could not find the table in the schema cache`, ejecuta en SQL Editor:  
-> ```sql
-> NOTIFY pgrst, 'reload schema';
-> ```
-> Los scripts 7 y 8 ya lo incluyen al final.
+El script `01` está pensado para **base vacía** (instalación nueva). Si ya tienes tablas creadas, usa migraciones incrementales o `supabase db diff` en lugar de pegar el baseline entero.
 
 ---
 
 ## 4. Módulo Documentos
 
-### 4.1 Ejecutar migración SQL
+### 4.1 Esquema SQL
 
-- **Modo industrial:** incluye `07_documents.sql` en una migración CLI como en **§3.0** y ejecuta `supabase db push`.
-- **Modo rápido:** corre `docs/database/07_documents.sql` en el SQL Editor de Supabase.
+La tabla `documents` y sus políticas RLS ya vienen en **`docs/database/01_security_engine.sql`** (y en la migración `…20000_pragmata_schema.sql`). Solo asegúrate de haber aplicado el baseline (**§3.0** o **§3.1**).
 
 ### 4.2 Crear el bucket de Storage
 
@@ -227,10 +200,9 @@ Cada script es idempotente (se puede volver a correr sin romper nada).
 
 ## 5. Módulo E-Commerce
 
-### 5.1 Ejecutar migración SQL
+### 5.1 Esquema SQL
 
-- **Modo industrial:** crea migraciones para `08_ecommerce.sql` y, si aplica, **`08b`** / **`08c`** (véase tabla en **§3.0.2**), luego `supabase db push`.
-- **Modo rápido:** ejecuta en orden `08_ecommerce.sql`, `08b_products_patch.sql` y **`08c_products_seo.sql`** en el SQL Editor cuando uses SEO de producto en el ERP.
+Las tablas `products`, `orders`, `order_items`, campos SEO en `products`, bucket Storage `product-images` y RLS ya están en **`01_security_engine.sql`**. Activa el feature flag de ecommerce en `.env` cuando toque; no hace falta aplicar scripts SQL extra para ese módulo.
 
 ### 5.2 Agregar productos de ejemplo
 
@@ -547,21 +519,18 @@ Marca cada ítem antes de considerar el setup completo:
 - [ ] `pnpm install` ejecutado en la **raíz** del repo
 - [ ] `.env` creado con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
 - [ ] Schema aplicado: **modo industrial** (`supabase link` + migraciones en `supabase/migrations/` + `supabase db push`, véase **§3.0**) **o** modo rápido pegando scripts en SQL Editor (**§3.1**)
-- [ ] SQL `01_security_engine.sql` aplicado (remoto)
+- [ ] SQL baseline aplicado (`01_security_engine.sql` o migración `…20000_pragmata_schema.sql`; incluye tasks, documents, ecommerce, CMS)
 - [ ] SQL `02_seed_god_user.sql` aplicado (usuario god creado)
-- [ ] SQL `04_tasks.sql` aplicado (remoto)
 - [ ] `pnpm dev` arranca sin errores en `localhost:7070` (o el puerto de tu `vite.config.ts`)
 - [ ] Login funciona con el usuario god
 
 ### Módulo Documentos
-- [ ] SQL `07_documents.sql` ejecutado
+- [ ] Baseline (`01`) aplicado (tabla `documents` incluida)
 - [ ] Bucket `documents` creado en Storage (privado, 50MB)
 - [ ] Upload de un PDF de prueba funciona en la app
 
 ### E-Commerce
-- [ ] SQL `08_ecommerce.sql` aplicado
-- [ ] SQL `08b_products_patch.sql` aplicado si usas catálogo admin / columnas de auditoría en `products`
-- [ ] SQL `08c_products_seo.sql` aplicado si editas SEO desde **Productos** (meta título / descripción / imagen OG)
+- [ ] Baseline (`01`) aplicado (tablas de tienda + SEO en `products`)
 - [ ] Al menos 1 producto de ejemplo insertado
 - [ ] Catálogo en `localhost:4321/productos` muestra los productos
 
@@ -601,7 +570,7 @@ NOTIFY pgrst, 'reload schema';
 ```
 
 ### El god user no puede ver datos
-Corre `docs/database/06_god_bypass.sql` en el SQL Editor.
+El baseline ya incluye `is_god()` en políticas RLS. Verifica que el perfil tenga `access_level = 'god'` y que el equipo tenga `is_platform_owner = true` (véase `docs/database/02_seed_god_user.sql`). Si la base es muy antigua, revisa el schema con `supabase db diff` o migra a una instancia nueva con las migraciones del repo.
 
 ### La Edge Function retorna 401
 - Verifica que el usuario está logueado en la app

@@ -722,7 +722,7 @@ CREATE POLICY "nombre" ON public.tabla
 3. Toda tabla nueva con RLS debe incluir `is_god()` de entrada.
 4. El seed del god user vive en `02_seed_god_user.sql` — es la única vía oficial.
 
-**Parche para DBs existentes:** ejecutar `06_god_bypass.sql`.
+**Parche para DBs existentes:** comparar con `01_security_engine.sql` / migración baseline y aplicar solo el SQL que falte (`supabase db diff`).
 
 ---
 
@@ -982,10 +982,12 @@ Las reglas se definen en **buckets**:
 
 ### 7.5 Scripts de Base de Datos
 
-Orden de ejecución en cada branch:
-1. `01_security_engine.sql` - Schema completo: tablas, AuditBase, funciones, triggers y RLS (incluye chat + notifications)
-2. `02_seed_god_user.sql` - Crear primer usuario administrador
-3. `03_powersync_publication.sql` - Habilitar replicación lógica (PowerSync)
+Orden de ejecución en cada branch (solo tres scripts en `docs/database/`):
+1. `01_security_engine.sql` — Esquema completo: auth/RBAC, entidades, chat, notificaciones, **tasks**, **documents**, **ecommerce**, **cms**, bucket `product-images`, RLS con `is_god()`
+2. `02_seed_god_user.sql` — Bootstrap del primer usuario god (manual, datos sensibles)
+3. `03_powersync_publication.sql` — Publicación lógica para PowerSync (equivalente a `supabase/migrations/20260111120001_pragmata_powersync_publication.sql`)
+
+Para CLI, la fuente canónica aplicada con `supabase db push` está en `supabase/migrations/` (`…20000_pragmata_schema.sql` + `…20001_pragmata_powersync_publication.sql`).
 
 ---
 
@@ -1004,9 +1006,8 @@ No existe actualmente un archivo `src/app/app.config.ts` en esta plantilla.
 ## 9. Checklist de Deployments
 
 ### Primer Deploy a Production
-- [ ] Ejecutar `01_security_engine.sql` en branch `main` de Supabase
+- [ ] Aplicar migraciones del repo (`supabase db push`: schema + publicación PowerSync) o pegar en SQL Editor `01_security_engine.sql` y luego `03_powersync_publication.sql` si usas PowerSync
 - [ ] Ejecutar `02_seed_god_user.sql` en branch `main` (solo bootstrap inicial)
-- [ ] Ejecutar `03_powersync_publication.sql` en branch(es) que usen PowerSync
 - [ ] Deployar Sync Rules en PowerSync Instance (main)
 - [ ] Configurar variables en Vercel (Production: VITE_ENABLE_POWERSYNC=true)
 - [ ] Probar login y sincronización en staging antes de mergear
@@ -1088,7 +1089,7 @@ Hay **dos** superficies de portada en el monorepo; no son mutuamente excluyentes
 | :--- | :--- |
 | **ERP** | `VITE_ENABLE_ECOMMERCE=false` u omitir en `.env` → **no** se registra la ruta workspace `products` ni el menú "Productos" (`routes.config.ts`). |
 | **Astro** | `PUBLIC_ENABLE_ECOMMERCE=false` → sin enlaces a catálogo ni carrito flotante en el layout. |
-| **SQL (opcional)** | En instancias sin tienda, puedes **no** aplicar `docs/database/08_ecommerce.sql` / `08b_*`; si ya existen tablas, no se usan con flags apagados. |
+| **SQL (opcional)** | Sin tienda puedes dejar `VITE_ENABLE_ECOMMERCE=false`; las tablas pueden existir sin usarse. |
 | **RBAC** | Recursos `page_ecommerce_*` pueden quedar definidos; sin ruta activa no impactan la UX. |
 
 El código del módulo (`ProductsPage`, `useProducts`, tipos `product`) permanece en el repo como **referencia de plantilla**; el bundle no incluye la página si la ruta no está en el router (lazy import sin referencia).

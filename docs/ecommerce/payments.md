@@ -116,7 +116,7 @@ supabase secrets set MP_ACCESS_TOKEN=APP_USR-xxx
 
 ---
 
-## Tabla `orders` (SQL: `docs/database/08_ecommerce.sql`)
+## Tabla `orders` (schema: `docs/database/01_security_engine.sql` / migración `…20000_pragmata_schema.sql`)
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|

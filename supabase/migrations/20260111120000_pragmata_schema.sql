@@ -22,7 +22,7 @@
 -- 10. Indexes
 -- 11. RLS Policies (the locks)
 --
--- Baseline único para nuevos proyectos — misma lógica que supabase/migrations/20260111120000_pragmata_schema.sql (mantener sincronizados).
+-- Supabase migration: copia de docs/database/01_security_engine.sql — mantener ambos en sync.
 -- Incluye tareas, documentos, ecommerce, CMS y bucket product-images; no hay scripts SQL adicionales en docs/database para eso.
 --
 -- DESIGN RULES (see docs/architecture.md §4.1):
