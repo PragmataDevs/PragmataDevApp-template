@@ -12,6 +12,7 @@
  */
 export const prerender = false; // SSR — always fresh prices & stock
 
+import type { Product } from '@pragmata/core';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CartButton from '../../components/islands/CartButton';
 import { supabase } from '../../lib/supabase';
@@ -26,12 +27,14 @@ function truncateMeta(text: string, max = 160): string {
 // ── Fetch single product by slug ──────────────────────────────────────────────
 const { slug } = Astro.params;
 
-const { data: product, error } = await supabase
+const { data: row, error } = await supabase
   .from('products')
   .select('*')
   .eq('slug', slug)
   .eq('status', 'active')
   .single();
+
+const product = row as Product | null;
 
 if (error || !product) {
   return Astro.redirect('/productos?notfound=1', 302);

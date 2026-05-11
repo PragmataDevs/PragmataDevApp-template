@@ -78,13 +78,18 @@ supabase/
   config.toml             # Referencia del proyecto Supabase
   functions/
     _shared/
-      cors.ts             # corsHeaders + handleCors()
-      auth.ts             # requireAuth(), createSupabaseClient(), jsonResponse()
-    ai-task-summary/      # Resumen de tareas via OpenAI
+      cors.ts               # corsHeaders + handleCors()
+      auth.ts               # requireAuth(), createSupabaseClient(), jsonResponse()
+      ai-gateway/           # Prompts + helpers (JSON sincronizados desde ai/prompts/)
+        prompts/
+        registry.ts
+    ai-task-summary/        # Resumen de tareas via OpenAI
       index.ts
-    stripe-checkout/      # Crear sesión de pago Stripe
+    ai-gateway/             # Catálogo GET + ejecución POST de prompts genéricos
       index.ts
-    stripe-webhook/       # Confirmar pago y crear orden
+    stripe-checkout/        # Crear sesión de pago Stripe
+      index.ts
+    stripe-webhook/         # Confirmar pago y crear orden
       index.ts
 ```
 
@@ -95,6 +100,8 @@ supabase/
 
 **Deploy:**
 ```bash
+pnpm ai:sync-prompts
+supabase functions deploy ai-gateway
 supabase functions deploy ai-task-summary
 supabase functions deploy stripe-checkout
 supabase functions deploy stripe-webhook
@@ -113,8 +120,15 @@ const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-task-summary`, {
   body: JSON.stringify({ entity_id }),
 });
 
+// Gateway genérico (prompts en ai/prompts/)
+const gwRes = await fetch(`${SUPABASE_URL}/functions/v1/ai-gateway`, {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ prompt_id: 'invoice_text', variables: { text: extractedInvoiceText } }),
+});
+
 // ❌ PROHIBIDO — directa a OpenAI desde el cliente
-const res = await fetch('https://api.openai.com/v1/...', { headers: { Authorization: `Bearer ${apiKey}` } });
+await fetch('https://api.openai.com/v1/...', { headers: { Authorization: `Bearer ${apiKey}` } });
 ```
 
 ## Feature Flags — Variables de Entorno

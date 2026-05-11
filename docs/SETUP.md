@@ -12,7 +12,7 @@ Sigue el orden de esta guía la primera vez; después solo activa lo que necesit
 3. [Base de datos — Migraciones SQL](#3-base-de-datos--migraciones-sql)
 4. [Módulo Documentos](#4-módulo-documentos)
 5. [Módulo E-Commerce](#5-módulo-e-commerce)
-6. [Módulo IA (ai-task-summary)](#6-módulo-ia-ai-task-summary)
+6. [Módulo IA (ai-task-summary + ai-gateway)](#6-módulo-ia-ai-task-summary--ai-gateway)
 7. [Edge Functions — Deploy](#7-edge-functions--deploy)
 8. [Pilar Público — Astro](#8-pilar-público--astro)
 9. [RBAC — Sincronizar recursos](#9-rbac--sincronizar-recursos)
@@ -258,7 +258,7 @@ Ver guía completa en `docs/ecommerce/payments.md`.
 
 ---
 
-## 6. Módulo IA (ai-task-summary)
+## 6. Módulo IA (ai-task-summary + ai-gateway)
 
 ### 6.1 Obtener API Key de OpenAI
 
@@ -266,7 +266,8 @@ Ver guía completa en `docs/ecommerce/payments.md`.
 2. API Keys → Create new secret key
 3. Copia la clave (empieza con `sk-proj-`)
 
-> Para más detalles y el roadmap de IA: `docs/ai/setup.md`
+> Para más detalles y el roadmap de IA: `docs/ai/setup.md`  
+> Gateway de prompts (factura / estado de cuenta en texto): `ai/README.md`
 
 ### 6.2 Configurar el secret en Supabase
 
@@ -291,6 +292,17 @@ Reinicia el servidor de desarrollo (`pnpm dev`).
 Ve a Workspace → Tareas de cualquier entidad que tenga tareas creadas.  
 Debería aparecer el botón **"Resumen IA"** junto al botón de refrescar.  
 Al hacer click, genera un análisis del estado actual del proyecto.
+
+### 6.5 AI Gateway (opcional pero recomendado para “IA genérica”)
+
+Los prompts versionados viven en `ai/prompts/`. Antes de desplegar la función `ai-gateway`, sincronízalos al bundle que usa Deno:
+
+```bash
+pnpm ai:sync-prompts
+supabase functions deploy ai-gateway
+```
+
+La misma `OPENAI_API_KEY` sirve para `ai-task-summary` y `ai-gateway`. Prueba rápida con `curl`: ver `docs/ai/setup.md` (sección **Probar**).
 
 ---
 
@@ -327,8 +339,8 @@ También se pueden configurar desde el dashboard:
 
 | Variable | Dónde obtenerla | Para qué función |
 |----------|----------------|-----------------|
-| `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com) → API Keys | `ai-task-summary` |
-| `OPENAI_MODEL` | Escribir `gpt-4o-mini` (default) | `ai-task-summary` |
+| `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com) → API Keys | `ai-task-summary`, `ai-gateway` |
+| `OPENAI_MODEL` | Escribir `gpt-4o-mini` (default) | `ai-task-summary`, `ai-gateway` |
 | `STRIPE_SECRET_KEY` | [Stripe Dashboard](https://dashboard.stripe.com) → Developers → API Keys | `stripe-checkout`, `stripe-webhook` |
 | `STRIPE_WEBHOOK_SECRET` | Stripe Dashboard → Webhooks → tu endpoint → Signing secret | `stripe-webhook` |
 | `PUBLIC_SITE_URL` | Tu dominio de Astro, ej. `https://tucliente.com` | `stripe-checkout` |
@@ -336,6 +348,8 @@ También se pueden configurar desde el dashboard:
 ### 7.3 Desplegar funciones
 
 ```bash
+pnpm ai:sync-prompts
+supabase functions deploy ai-gateway
 supabase functions deploy ai-task-summary
 supabase functions deploy stripe-checkout
 supabase functions deploy stripe-webhook
@@ -553,7 +567,8 @@ Marca cada ítem antes de considerar el setup completo:
 
 ### IA
 - [ ] `OPENAI_API_KEY` configurado en Supabase Secrets
-- [ ] `ai-task-summary` desplegada con `supabase functions deploy`
+- [ ] `pnpm ai:sync-prompts` ejecutado cuando cambies `ai/prompts/*.json`
+- [ ] `ai-gateway` y `ai-task-summary` desplegadas (`supabase functions deploy`)
 - [ ] `VITE_ENABLE_AI=true` en `.env`
 - [ ] Botón "Resumen IA" aparece en TasksPage y funciona
 

@@ -1,0 +1,16 @@
+{
+  "id": "invoice_text",
+  "label": "Analizar factura (texto extraído)",
+  "description": "Extrae campos clave y validaciones básicas a partir del texto de una factura (OCR o copy-paste). No envía binarios PDF; solo texto.",
+  "system": "Eres un analista contable y fiscal. Respondes siempre en español, con datos estructurados cuando se pide JSON. Si falta información, indícalo explícitamente. No inventes montos ni RFCs que no aparezcan en el texto.",
+  "userTemplate": "Analiza el siguiente texto de factura o comprobante fiscal y devuelve un JSON con estas claves: emisor_nombre, emisor_rfc, receptor_rfc, folio_fiscal_uuid (o null), fecha_emision, subtotal, iva, total, moneda, advertencias (array de strings con incoherencias o datos dudosos), resumen_ejecutivo (2 oraciones).\n\nTEXTO:\n---\n{{text}}\n---",
+  "variables": [
+    {
+      "name": "text",
+      "required": true,
+      "description": "Texto plano extraído del PDF o capturado manualmente."
+    }
+  ],
+  "max_tokens": 1200,
+  "temperature": 0.15
+}

@@ -12,9 +12,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "db:seed": "tsx scripts/seed-resources.ts",
-    "db:sync": "tsx scripts/sync-resources.ts"
+    "db:sync": "tsx scripts/sync-resources.ts",
+    "ai:sync-prompts": "node scripts/sync-ai-prompts.mjs"
   },
   "dependencies": {
+    "@pragmata/core": "workspace:*",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@journeyapps/wa-sqlite": "^1.4.1",

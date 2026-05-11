@@ -52,7 +52,7 @@ enable_confirmations = false
 # o via CLI: supabase secrets set OPENAI_API_KEY=sk-...
 #
 # Secrets requeridos por las funciones de esta template:
-#   OPENAI_API_KEY            → ai-task-summary
+#   OPENAI_API_KEY            → ai-task-summary, ai-gateway
 #   STRIPE_SECRET_KEY         → stripe-checkout, stripe-webhook
 #   STRIPE_WEBHOOK_SECRET     → stripe-webhook
 #   PUBLIC_SITE_URL           → stripe-checkout (redirect URLs)

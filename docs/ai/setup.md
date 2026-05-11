@@ -38,6 +38,38 @@ Botón "Resumen IA" en `TasksPage` → panel con el resumen → se descarta con 
 
 ---
 
+### `ai-gateway`
+
+Un solo endpoint para **catálogo de prompts** y **ejecución** con plantillas versionadas en `ai/prompts/`. Sirve para casos tipo “analizar factura” o “resumir estado de cuenta” enviando **texto** (p. ej. OCR o copy-paste), sin exponer la API key en el cliente.
+
+| Método | Descripción |
+|--------|-------------|
+| `GET` | `{ "prompts": [ { id, label, description, variables } ] }` — metadatos para armar formularios en UI. |
+| `POST` | `{ "prompt_id": string, "variables": { ... } }` → `{ "prompt_id", "text" }` — respuesta del modelo. |
+
+**Prompts incluidos en la template:**
+
+| `prompt_id` | Uso |
+|-------------|-----|
+| `invoice_text` | Análisis estructurado de factura a partir de **texto extraído** (no envía PDF binario). |
+| `account_statement` | Resumen de extracto / estado de cuenta en texto. |
+
+**Sincronización:** los JSON editables están en `ai/prompts/`. Antes de desplegar, copia al bundle que consume Deno:
+
+```bash
+pnpm ai:sync-prompts
+```
+
+Luego:
+
+```bash
+supabase functions deploy ai-gateway
+```
+
+Guía orientada a producto y límites: **`ai/README.md`**.
+
+---
+
 ## Setup Inicial
 
 ### 1. Obtener API Key de OpenAI
@@ -56,6 +88,8 @@ supabase secrets set OPENAI_MODEL=gpt-4o-mini   # opcional, default es gpt-4o-mi
 # Desde la raíz del proyecto
 supabase login
 supabase link --project-ref <tu_project_ref>
+pnpm ai:sync-prompts
+supabase functions deploy ai-gateway
 supabase functions deploy ai-task-summary
 ```
 
@@ -68,11 +102,21 @@ VITE_ENABLE_AI=true
 ### 4. Probar
 
 ```bash
-# Test manual con curl
+# Resumen de tareas
 curl -X POST https://<project>.supabase.co/functions/v1/ai-task-summary \
   -H "Authorization: Bearer <user_jwt>" \
   -H "Content-Type: application/json" \
   -d '{"entity_id": "uuid-de-entidad-con-tareas"}'
+
+# Catálogo del gateway
+curl -s https://<project>.supabase.co/functions/v1/ai-gateway \
+  -H "Authorization: Bearer <user_jwt>"
+
+# Ejecutar prompt de factura (texto plano)
+curl -X POST https://<project>.supabase.co/functions/v1/ai-gateway \
+  -H "Authorization: Bearer <user_jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt_id":"invoice_text","variables":{"text":"RFC ABC...\nTotal 1234.56"}}'
 ```
 
 ---
@@ -116,6 +160,7 @@ Deno.serve(async (req) => {
 | Feature | Descripción | Dependencia |
 |---------|-------------|-------------|
 | `ai-task-summary` | Resumen de tareas por entidad | ✅ Implementado |
+| `ai-gateway` | Prompts genéricos (factura / estado de cuenta en texto) | ✅ Implementado |
 | `ai-document-extract` | Extrae datos de PDFs (facturas, contratos) | `pgvector` + Storage |
 | `ai-search` | Búsqueda semántica sobre documentos | `pgvector` en Supabase |
 | `ai-chat` | Chat contextual sobre la entidad activa | `pgvector` + historial |

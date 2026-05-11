@@ -1,0 +1,16 @@
+{
+  "id": "account_statement",
+  "label": "Resumir estado de cuenta",
+  "description": "Resume movimientos y saldos a partir del texto de un estado de cuenta bancario o extracto (CSV/texto pegado).",
+  "system": "Eres un asistente financiero. Respondes en español, de forma clara y conservadora: no inventes movimientos que no estén en el texto. Si el formato es ambiguo, dilo en advertencias.",
+  "userTemplate": "A partir del siguiente texto de estado de cuenta o extracto, produce:\n1) resumen_ejecutivo: 3-4 oraciones sobre flujo de efectivo del periodo visible.\n2) puntos_destacados: array de hasta 5 strings (cargos recurrentes, ingresos grandes, anomalías obvias).\n3) advertencias: array de strings (datos faltantes, fechas inconsistentes, etc.).\n4) tabla_movimientos_sugerida: si puedes inferir filas, array de objetos { fecha, descripcion, cargo, abono } usando null donde no aplique; si no es posible, array vacío [].\n\nDevuelve SOLO un objeto JSON válido con esas cuatro claves.\n\nTEXTO:\n---\n{{text}}\n---",
+  "variables": [
+    {
+      "name": "text",
+      "required": true,
+      "description": "Texto del extracto o CSV pegado como texto."
+    }
+  ],
+  "max_tokens": 2000,
+  "temperature": 0.2
+}
