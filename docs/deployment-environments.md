@@ -2,7 +2,7 @@
 
 Guía reutilizable para cada proyecto: qué URL va dónde, cómo separar datos de clientes de las pruebas, y cómo ordenar Vercel sin duplicar mentalmente las variables.
 
-**Relacionado:** pilar público y variables de build en [SETUP.md](./SETUP.md) (sección 8, Pilar Público — Astro). PowerSync y flags por preview/producción: [deployment.md](./deployment.md).
+**Relacionado:** flujo operativo completo (Studio :54323, usuario god, sesión nube/local) en [SETUP.md](./SETUP.md) sección **1.2**. Pilar público y variables de build en [SETUP.md](./SETUP.md) (sección 8). PowerSync: [deployment.md](./deployment.md).
 
 ---
 
@@ -12,6 +12,7 @@ Guía reutilizable para cada proyecto: qué URL va dónde, cómo separar datos d
 - **Rama de Git** = qué código construye CI (p. ej. Vercel).
 - **Supabase “branches”** (Database Branching en el dashboard: `main` PRODUCTION, *Create branch*, etc.) son **entornos de datos** dentro del mismo proyecto Supabase, no ramas de Git. Sigues necesitando que cada despliegue use la **URL y anon key** del entorno correcto (local, rama staging, producción).
 - **`supabase start`** levanta Postgres + API + Auth + etc. **en tu máquina** (Docker). Mientras el ERP y Astro apunten a esa API local, **no se escribe nada** en la base en la nube de tus clientes. Ver [Supabase CLI local development](https://supabase.com/docs/guides/cli/getting-started).
+- **ERP:** con `VITE_ENABLE_POWERSYNC=false` el operativo va **directo a Supabase** (online); con `true`, **PowerSync + SQLite** (offline-first de **datos**). Eso **no** incluye service worker para el bundle; ver [architecture.md](./architecture.md) **0.3**. Con PowerSync apagado, estado puntual en navegador puede ir a **`localStorage`** donde tenga sentido (no sustituye al modelo en Postgres). Ver también **0.1** y **0.2**.
 
 ---
 
@@ -103,7 +104,9 @@ Si falta una URL, el login o el redirect fallan solo en ese entorno.
 
 ## 6. Desarrollo local sin tocar la nube
 
-1. Instala Docker y Supabase CLI (véase [SETUP.md](./SETUP.md) sección 1).
+Requisitos de **Docker**, **Supabase CLI** y flujo **Studio / god user**: [SETUP.md](./SETUP.md) (secciones 1.1 y 1.2).
+
+1. Instala Docker y la CLI como en SETUP.
 2. En la raíz del repo: `supabase start`.
 3. Copia `API URL` y `anon key` del output de `supabase status` a tu `.env` como `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 4. Aplica migraciones al local (`supabase db reset` o `migration up`, según tu flujo en SETUP sección 3).
@@ -129,5 +132,9 @@ Así las pruebas destructivas (borrar usuarios, datos de prueba, migraciones) no
 | Tema | Documento |
 |------|-----------|
 | URLs locales `7070` / `4321`, build Astro, sitemap | [SETUP.md](./SETUP.md) sección 8 |
+| Supabase local (`supabase start`), Studio :54323, usuario god, `.env` | [SETUP.md](./SETUP.md) secciones 1.1 y 1.2 |
 | PowerSync, `VITE_ENABLE_POWERSYNC` por Preview/Production | [deployment.md](./deployment.md) |
 | Esta matriz (dominios, env, Vercel, local vs nube) | Este archivo |
+| Lectura corta “qué hago después de clonar” | [PARA-INICIAR.md](./PARA-INICIAR.md) |
+| Naturaleza del producto (web vs “descargable”), datos: Supabase / PowerSync / `localStorage`, service worker vs flag | [architecture.md](./architecture.md) secciones **0.1**–**0.3** |
+| Propuesta PWA / service worker (fases, ERP vs Astro, checklist) | [pwa-service-worker-proposal.md](./pwa-service-worker-proposal.md) |

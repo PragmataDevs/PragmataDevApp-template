@@ -5,6 +5,8 @@ alwaysApply: true
 
 # Arquitectura de Tres Pilares
 
+**Entrega:** webs en navegador (URL tras deploy), no app nativa “descargable” de serie; PWA opcional por proyecto. **Datos ERP:** `VITE_ENABLE_POWERSYNC=false` → cliente **online** directo a Supabase; `true` → **PowerSync + SQLite**; `localStorage` solo para estado no canónico (p. ej. carrito público). **Service worker:** no viene con la template ni se activa con el flag de PowerSync (SW = caché del shell / PWA; PowerSync = datos). Detalle: **`docs/architecture.md`** **0.1**–**0.3**; propuesta de implementación por fases: **`docs/pwa-service-worker-proposal.md`**.
+
 ## Pilar Operativo — ERP/Admin (React + Vite)
 
 Ruta: `src/` (este repositorio). El chasis principal.

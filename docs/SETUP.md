@@ -3,11 +3,13 @@
 Guía completa para activar cada módulo de la template desde cero.  
 Sigue el orden de esta guía la primera vez; después solo activa lo que necesites.
 
+> **¿Primera vez con el repo?** Si quieres una lectura corta y en castellano antes de entrar al detalle, empieza por [**PARA-INICIAR.md**](./PARA-INICIAR.md).
+
 ---
 
 ## Índice
 
-1. [Requisitos previos](#1-requisitos-previos)
+1. [Requisitos previos](#1-requisitos-previos) (Docker: [1.1](#11-docker-y-supabase-local); flujo **Supabase local** completo: [1.2](#12-supabase-local-studio-env-y-usuario-god))
 2. [Setup base (obligatorio)](#2-setup-base-obligatorio)
 3. [Base de datos — Migraciones SQL](#3-base-de-datos--migraciones-sql)
 4. [Módulo Documentos](#4-módulo-documentos)
@@ -19,6 +21,8 @@ Sigue el orden de esta guía la primera vez; después solo activa lo que necesit
 9. [RBAC — Sincronizar recursos](#9-rbac--sincronizar-recursos)
 10. [Checklist final](#10-checklist-final)
 
+- **Lectura corta** después de clonar (orden de pasos + Vercel resumido): [**PARA-INICIAR.md**](./PARA-INICIAR.md)
+
 **Nuevo módulo ERP:** checklist corto en [`docs/playbook-new-module.md`](./playbook-new-module.md).
 
 ---
@@ -29,11 +33,71 @@ Sigue el orden de esta guía la primera vez; después solo activa lo que necesit
 |-------------|---------------|---------|
 | Node.js | 18+ | [nodejs.org](https://nodejs.org) |
 | pnpm | 8+ | `npm i -g pnpm` |
+| Docker Desktop (macOS/Windows) o motor Docker compatible | actual | [Docker Desktop](https://docs.docker.com/desktop/) (macOS: elige imagen **Apple Chip** o **Intel** según tu Mac) |
 | Supabase CLI | latest | `brew install supabase/tap/supabase` |
-| Cuenta Supabase | — | [supabase.com](https://supabase.com) |
+| Cuenta Supabase | — | [supabase.com](https://supabase.com) — solo si usas proyecto **en la nube**; para solo local hace falta la CLI |
 
 > Nota: la Supabase CLI **no** se instala como dependencia del proyecto.  
 > Es una herramienta de sistema (Homebrew / instalación global). El SDK cliente que usa la app es `@supabase/supabase-js`.
+
+### 1.1 Docker y Supabase local
+
+Para levantar Postgres, Auth, API, etc. **en tu máquina** con `supabase start` (sin tocar la nube), la CLI usa contenedores Docker.
+
+1. **Instala y abre Docker Desktop** (o arranca tu motor Docker). Sin demonio Docker activo, `supabase start` falla con error de conexión al socket.
+2. **Instala la Supabase CLI** (si no lo hiciste): `brew install supabase/tap/supabase`.
+3. Desde la **raíz del repo** (donde está la carpeta `supabase/`):
+
+   ```bash
+   supabase start
+   ```
+
+4. Cuando termine, ejecuta `supabase status` y copia **API URL** y **`anon` key** a tu `.env` como `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` cuando quieras que ERP y Astro usen el stack local.
+
+Para parar los contenedores: `supabase stop`. Más contexto (URLs, Vercel, no mezclar con prod): **`docs/deployment-environments.md`**.
+
+**Linux sin Docker Desktop:** instala Docker Engine + Compose según tu distro; la CLI solo necesita el daemon accesible.
+
+**Alternativa ligera (avanzado):** Colima u otro runtime compatible con la API de Docker; debe exponer el mismo socket que espera `docker`.
+
+**Si `supabase start` falla** con `storage ... unhealthy`: suele ser arranque lento o poca RAM para Docker; `supabase stop` y vuelve a intentar, sube memoria en Docker Desktop, o `brew upgrade supabase`. Ver también [Supabase CLI troubleshooting](https://github.com/supabase/cli/issues).
+
+### 1.2 Supabase local: Studio, `.env` y usuario god
+
+Objetivo: misma **API** (PostgREST, Auth, Storage…) que en la nube, pero **solo en tu máquina** — ideal para migraciones y pruebas sin tocar datos de clientes. Detalle de variables y Vercel: [**deployment-environments.md**](./deployment-environments.md).
+
+| Comando | Uso |
+|---------|-----|
+| `supabase start` | Levanta el stack (primera vez descarga imágenes; puede tardar). Aplica migraciones en `supabase/migrations/` sobre la Postgres local. |
+| `supabase stop` | Apaga contenedores (conserva datos en volúmenes Docker salvo que uses flags destructivos). |
+| `supabase status` | Muestra URLs y claves; copia **Project URL** y la clave **Publishable** (`sb_publishable_…`) al `.env`. |
+
+**Puertos habituales (no confundir):**
+
+| Puerto | Servicio |
+|--------|----------|
+| **54321** | **API** (Kong): es la `VITE_SUPABASE_URL` del ERP y Astro (`http://127.0.0.1:54321`). |
+| **54322** | Postgres directo (`psql`, backups). |
+| **54323** | **Studio** (UI). No uses `54323` como `VITE_SUPABASE_URL`. |
+
+**`.env`:** el archivo **`.env.example`** del repo sigue el patrón “**activo = local** + bloque comentado para copiar a **Vercel / nube**”. En local:
+
+- `VITE_SUPABASE_URL=http://127.0.0.1:54321`
+- `VITE_SUPABASE_ANON_KEY=<Publishable de `supabase status`>` (en CLIs recientes; si cambias de volumen Docker, vuelve a copiar la clave).
+
+**Cambiar de nube ↔ local en el navegador:** si dejas una **sesión JWT** guardada (localStorage) de un proyecto y apuntas el `.env` al otro, PostgREST responde **401** en `profiles`. Cierra sesión en `http://localhost:7070` y borra el almacenamiento del sitio para esa origen, o usa una ventana privada.
+
+**Alta de usuarios (sin registro público en la app):** mismo flujo que en el Dashboard de la nube, pero en **Supabase Studio local**:
+
+1. Abre **http://127.0.0.1:54323**
+2. **Authentication** → **Users** → **Add user** (email/contraseña).
+3. Copia el **UUID** del usuario.
+
+**Usuario god (`is_god()`):** en Studio local → **SQL Editor**, ejecuta `docs/database/02_seed_god_user.sql` sustituyendo el UUID en el `INSERT` por el del paso anterior (mismo script que en la nube; solo cambia **dónde** lo ejecutas). Luego entra al ERP en **http://localhost:7070/login** con ese usuario.
+
+**Edge Functions:** el stack local expone `http://127.0.0.1:54321/functions/v1`; las funciones hay que **servirlas o desplegarlas** según tu flujo (`supabase functions serve` / deploy a nube). No se asume que todo el Intelligence esté disponible offline sin pasos extra.
+
+**Opcional:** `supabase/seed.sql` — si no existe, `supabase start` mostrará un aviso; puedes añadir seeds cuando quieras datos de prueba repetibles.
 
 ---
 
@@ -59,27 +123,28 @@ cd astro && pnpm install && cd ..
 
 ### 2.2 Crear archivo `.env`
 
-Copia el ejemplo y rellena tus valores de Supabase:
+Copia el ejemplo:
 
 ```bash
 cp .env.example .env
 ```
 
-Edita `.env`:
+El **`.env.example`** documenta en bloque:
+
+- **Activo:** valores típicos para **Supabase local** (`supabase start`) y localhost ERP/Astro.
+- **Comentado:** el mismo par **URL + anon** y las URLs públicas para **copiar a Vercel** (proyecto en la nube).
+
+**Nube (sin Docker local):** Dashboard → Settings → API → `URL` y `anon public` en las variables activas (o intercambia bloques comentados según prefieras).
+
+**Local:** tras `supabase start`, `supabase status` → **Project URL** (`http://127.0.0.1:54321`) y clave **Publishable**. Flujo completo (Studio, god user, sesión): [**sección 1.2**](#12-supabase-local-studio-env-y-usuario-god).
 
 ```env
-VITE_SUPABASE_URL=https://xxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGci...
-
-# Opcional — deja los defaults por ahora
+# … ver .env.example para el resto de flags (PowerSync, ecommerce, IA, etc.)
 VITE_ENABLE_POWERSYNC=false
 VITE_ENABLE_AI=false
 VITE_ENTITY_LABEL=Proyecto
 VITE_ENABLE_MULTI_ENTITY=true
 ```
-
-> **Dónde encontrar estos valores:**  
-> Supabase Dashboard → tu proyecto → Settings → API → `URL` y `anon public`
 
 ### 2.3 Arrancar la app (ERP)
 
@@ -88,7 +153,7 @@ pnpm dev
 # http://localhost:7070 (puerto en vite.config.ts)
 ```
 
-Si también trabajas con el sitio público, suele convenir levantar **ERP + Astro** a la vez → **`pnpm dev:all`** (véase **§8.0** más abajo).
+Si también trabajas con el sitio público, suele convenir levantar **ERP + Astro** a la vez → **`pnpm dev:all`** (véase la [sección 8](#8-pilar-público--astro) más abajo).
 
 ---
 
@@ -97,6 +162,8 @@ Si también trabajas con el sitio público, suele convenir levantar **ERP + Astr
 Los scripts canónicos de schema viven en **`docs/database/*.sql`** (legibles, comentados, útiles como referencia y para el modo rápido).
 
 El flujo **industrial** copia ese contenido a **`supabase/migrations/`** y aplica cambios con la **Supabase CLI** contra el proyecto remoto (`db push`). Así el historial queda en Git y cada entorno recibe el mismo orden de cambios.
+
+> **Supabase local:** al ejecutar `supabase start` en la raíz, las migraciones en `supabase/migrations/` se aplican a la Postgres **local** (Docker). No sustituye a `supabase db push` contra la nube; son dos destinos. Flujo operativo: [**sección 1.2**](#12-supabase-local-studio-env-y-usuario-god).
 
 ### 3.0 Modo industrial: migraciones versionadas con Supabase CLI
 
@@ -108,7 +175,7 @@ Qué implica:
 | `supabase/migrations/*.sql` | Migraciones **versionadas**: la CLI registra qué archivos ya corrieron; **cada archivo debe ejecutarse una sola vez** en cada base (no edites migraciones ya aplicadas en prod — crea una nueva). |
 | `supabase db push` | Aplica al proyecto **linkeado** todas las migraciones pendientes. |
 
-**Requisitos:** CLI instalada (véase **§1**), `supabase login`, y saber el **`project ref`**: Dashboard → **Project Settings → General → Reference ID** (ej. `abcd efgh ijkl mnop` sin espacios).
+**Requisitos:** CLI instalada (véase **sección 1**), `supabase login`, y saber el **`project ref`**: Dashboard → **Project Settings → General → Reference ID** (ej. `abcd efgh ijkl mnop` sin espacios).
 
 #### 3.0.1 Primera vez: enlazar el proyecto remoto
 
@@ -522,10 +589,11 @@ Marca cada ítem antes de considerar el setup completo:
 
 ### Base (obligatorio para que funcione la app)
 - [ ] `pnpm install` ejecutado en la **raíz** del repo
-- [ ] `.env` creado con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
-- [ ] Schema aplicado: **modo industrial** (`supabase link` + migraciones en `supabase/migrations/` + `supabase db push`, véase **§3.0**) **o** modo rápido pegando scripts en SQL Editor (**§3.1**)
+- [ ] `.env` creado (partir de `.env.example`): `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` alineados al entorno (**local** `127.0.0.1:54321` + Publishable, o **nube** desde Dashboard)
+- [ ] Si usas **Supabase local**: Docker + `supabase start`; usuario creado en Studio **http://127.0.0.1:54323** → Auth; seed god en SQL Editor local (véase [**sección 1.2**](#12-supabase-local-studio-env-y-usuario-god))
+- [ ] Schema aplicado: **modo industrial** (`supabase link` + migraciones en `supabase/migrations/` + `supabase db push`, véase **sección 3.0**) **o** modo rápido pegando scripts en SQL Editor (**sección 3.1**)
 - [ ] SQL baseline aplicado (`01_security_engine.sql` o migración `…20000_pragmata_schema.sql`; incluye tasks, documents, ecommerce, CMS)
-- [ ] SQL `02_seed_god_user.sql` aplicado (usuario god creado)
+- [ ] SQL `02_seed_god_user.sql` aplicado (usuario god creado) — en nube: SQL Editor del proyecto; en local: SQL Editor de Studio **:54323**
 - [ ] `pnpm dev` arranca sin errores en `localhost:7070` (o el puerto de tu `vite.config.ts`)
 - [ ] Login funciona con el usuario god
 

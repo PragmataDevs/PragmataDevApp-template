@@ -2,19 +2,12 @@
 -- SCRIPT: CREACIÓN USUARIO DIOS (Manual Seed)
 -- ==============================================================================
 
--- INSTRUCCIONES (elige UNA vía para tener un usuario en auth.users y su UUID):
---
--- A) Sin registro público en la app (recomendado en plantilla):
---    1. Supabase Dashboard (nube) O Studio local (http://127.0.0.1:54323 con `supabase start`)
---       → Authentication → Users → Add user.
---    2. Copia el "User UID" del usuario.
---
--- B) Con signup en la app: regístrate en /login y luego copia el UID desde el mismo listado de Users.
---
--- 3. Sustituye el UUID en el INSERT de "C. Crear tu Perfil de Dios" más abajo.
--- 4. Ejecuta este script en el SQL Editor (misma instancia: nube = Dashboard del proyecto; local = Studio :54323).
-
--- Ver también: docs/SETUP.md sección 1.2 (Supabase local).
+-- INSTRUCCIONES:
+-- 1. Ve a tu App (Localhost) y regístrate en el Login Page (Sign Up).
+-- 2. Ve a Supabase Dashboard -> Authentication -> Users.
+-- 3. Copia el "User UID" de tu usuario recién creado.
+-- 4. Reemplaza 'TU_UUID_AQUI' en el script de abajo.
+-- 5. Ejecuta este script en el SQL Editor de Supabase.
 
 -- A. Crear el Equipo "Pragmata Devs"
 WITH new_team AS (

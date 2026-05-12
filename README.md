@@ -7,18 +7,21 @@ Plantilla base para apps web **offline-first** con arquitectura feature-based.
 - React + Vite + TypeScript
 - Tailwind CSS
 - Supabase (Auth, DB, Storage)
-- PowerSync (sincronización offline, con feature flag)
+- PowerSync (sincronización offline en el ERP, con feature flag; si está apagado, lectura/escritura **online** directa a Supabase)
+- **Entrega:** aplicaciones **web** en navegador (despliegue en hosting); no es una app nativa “descargable” de serie — ver **`docs/architecture.md`** secciones **0.1**–**0.3** (PWA / service worker opcional por proyecto; no ligado al flag de PowerSync).
 
-Arquitectura completa: `docs/architecture.md`
+Arquitectura completa: `docs/architecture.md` · PWA / service worker (propuesta, no código aún): `docs/pwa-service-worker-proposal.md`
 
-Base de datos (schema): scripts en `docs/database/`; flujo industrial con Supabase CLI en **`docs/SETUP.md` §3** (`supabase/migrations`, `db push`).  
+**¿Acabas de crear el repo?** Lee primero **`docs/PARA-INICIAR.md`** (pasos en orden + Vercel resumido). Luego profundiza en `docs/SETUP.md` cuando necesites cada módulo.
+
+Base de datos (schema): scripts en `docs/database/`; flujo industrial con Supabase CLI en **`docs/SETUP.md`** sección 3 (`supabase/migrations`, `db push`).  
 Nuevo feature ERP paso a paso: **`docs/playbook-new-module.md`**.
 
 ## Requisitos
 
 - Node.js 20+
 - pnpm 9+
-- Supabase CLI (sistema) si vas a aplicar migraciones o desplegar Edge Functions — **`docs/SETUP.md` §1**
+- Supabase CLI (sistema) si vas a aplicar migraciones, desplegar Edge Functions o usar **`supabase start`** (stack local en Docker) — **`docs/SETUP.md`** secciones 1.1 y **1.2** (Studio, usuario god, `.env`)
 
 ## Inicio rápido
 

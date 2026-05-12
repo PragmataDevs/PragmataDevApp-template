@@ -22,7 +22,28 @@ PragmataDevs opera como una **fábrica de software modular**. No construimos apl
 - **Offline-First / Online-Fit:** PowerSync + SQLite activable por `.env`. Si el cliente no requiere offline → `VITE_ENABLE_POWERSYNC=false`.
 - **Módulos Prendibles/Apagables:** Ecommerce, IA y Sync se activan/desactivan via `.env`. No son decisiones arquitectónicas irreversibles.
 
----
+### 0.1 Naturaleza del producto: ¿“webapp descargable”?
+
+- **Para el usuario final:** no es un programa que se **descarga** de una tienda (como un `.exe` o un APK) a partir de esta template. Son **sitios web** (ERP en el navegador + sitio público Astro) a los que se accede por **URL** (`https://app…`, `https://www…`) una vez **desplegados** en un hosting (Vercel, VPS, etc.).
+- **Para el equipo técnico:** lo “descargable” es el **repositorio Git** (`git clone`), que generáis **artefactos de build** (`pnpm build`) y subís al servidor. Eso es el flujo industrial habitual.
+- **PWA / “Añadir a pantalla de inicio”:** la plantilla **no** incluye de serie un manifest + service worker unificado para empaquetar el ERP como app instalable; es una **extensión posible por proyecto** si el cliente lo requiere.
+
+### 0.2 Datos en el cliente: Supabase directo, PowerSync y `localStorage`
+
+| Estrategia | Cuándo | Notas |
+|------------|--------|--------|
+| **Solo online vía Supabase** | `VITE_ENABLE_POWERSYNC=false` (modo habitual si no necesitáis offline en el ERP) | El cliente lee y escribe contra **PostgREST / Auth** de Supabase (nube o `supabase start` local). Sin red no hay datos nuevos del servidor. |
+| **Offline-first con PowerSync** | `VITE_ENABLE_POWERSYNC=true` + instancia PowerSync configurada | Tablas y reglas definidas en **sync rules** se mantienen en **SQLite en el navegador** y se **sincronizan** con Supabase al recuperar conectividad. Implementación: `PowerSyncProvider`, `docs/deployment.md`. |
+| **`localStorage` / `sessionStorage`** | Estado **no** canónico o tolerante a pérdida (UX, carrito público, borradores) | Ejemplo en el pilar público: carrito de ecommerce en el navegador + evento `cart:updated`. **No** reemplaza al modelo de negocio en Postgres ni al merge multi-dispositivo de PowerSync; sirve para “resolver con lo mínimo” cuando el offline-first del ERP está apagado. |
+
+**Decisión por cliente:** en el `.env` del despliegue se fija si el operativo va **directo a Supabase**, **PowerSync + Supabase**, o se combina con **almacenamiento en navegador** solo donde tenga sentido de producto.
+
+### 0.3 Service worker y `VITE_ENABLE_POWERSYNC=true`
+
+- **Hoy:** la plantilla **no** registra un service worker (no hay `vite-plugin-pwa`, Workbox ni SW manual en el ERP).
+- **PowerSync activo** cubre **datos** (SQLite en el navegador + sincronización con la nube). Eso **no sustituye** un SW: el SW sirve sobre todo para **precache / runtime cache del bundle** (HTML, JS, CSS) y, si se diseña así, para que la **shell** de la SPA siga cargando sin red tras una visita previa.
+- **No hay roadmap automático** del tipo “si `true` → activar SW”: son capas distintas. Si un cliente necesita **PWA instalable** o **arranque del ERP sin red** después de la primera carga, se evalúa **por proyecto** (p. ej. Workbox + reglas de caché acordes a despliegues y a no cachear APIs de auth de forma naive).
+- **Propuesta canónica de la template** (fases, riesgos, checklist): [`docs/pwa-service-worker-proposal.md`](./pwa-service-worker-proposal.md).
 
 ---
 
@@ -39,7 +60,13 @@ PragmataDevs opera como una **fábrica de software modular**. No construimos apl
 | **Sincronización** | PowerSync | Sincroniza Supabase ↔ SQLite automáticamente (Feature Flag). |
 | **Navegación** | React Router DOM | Manejo de rutas anidadas y protección de acceso. |
 | **Deployment** | Vercel | Hosting con flujo de ramas (Main, Develop, Preview). |
-| **Auth** | Supabase Auth | Sistema de autenticación con JWT. |
+| **Auth** | Supabase Auth | JWT por instancia (nube vs `supabase start` local); el ERP usa el cliente en `src/lib/supabase/`. |
+
+#### Supabase local (CLI + Docker)
+
+Para desarrollo **sin tocar la nube**, el mismo contrato de API (`/rest/v1`, `/auth/v1`, Storage…) corre en Docker (`supabase start`). **Studio local** (`http://127.0.0.1:54323`) sustituye al Dashboard web para crear usuarios y ejecutar SQL (p. ej. `docs/database/02_seed_god_user.sql`). **No** mezcles sesión del navegador entre instancias: al cambiar `VITE_SUPABASE_URL` entre nube y `127.0.0.1:54321`, limpia `localStorage` del origen del ERP o cierra sesión.
+
+Procedimiento canónico (puertos, `.env`, god user, troubleshooting Storage): **`docs/SETUP.md`** secciones **1.1** y **1.2**. Matriz de dominios y Vercel: **`docs/deployment-environments.md`**.
 
 ### 1.2 Pilar Público (SEO/Ecommerce)
 
