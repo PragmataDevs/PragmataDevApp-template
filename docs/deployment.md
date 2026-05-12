@@ -1,5 +1,7 @@
 # Guía de Deployment - PragmataDevApp
 
+**Entornos, dominios, `.env` y dos apps en Vercel (ERP + Astro), y pruebas locales con `supabase start`:** [deployment-environments.md](./deployment-environments.md).
+
 ## Estrategia de Entornos
 
 ### Supabase Branches

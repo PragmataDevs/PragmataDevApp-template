@@ -1081,7 +1081,9 @@ Hay **dos** superficies de portada en el monorepo; no son mutuamente excluyentes
 
 **Producción típica:** `www.cliente.com` → build Astro · `app.cliente.com` → build React. El operativo **no** sustituye la landing SEO en el dominio público; Astro es la cabecera de marca y conversión; el ERP es la consola autenticada.
 
-**Deploy Astro (hybrid + `@astrojs/node`):** después de `pnpm build` en `astro/`, el servidor es `node ./dist/server/entry.mjs` (en plantilla: `pnpm start`). Para **desarrollo local**, `pnpm dev:all` en la raíz levanta ERP (`:7070`) y Astro (`:4321`) — detalle en **`docs/SETUP.md` §8.0 y §8.3**. Variables de build, VPS/hosting y sitemap: **§8.4–8.8**.
+**Deploy Astro (hybrid + `@astrojs/node`):** después de `pnpm build` en `astro/`, el servidor es `node ./dist/server/entry.mjs` (en plantilla: `pnpm start`). Para **desarrollo local**, `pnpm dev:all` en la raíz levanta ERP (`:7070`) y Astro (`:4321`) — detalle en **`docs/SETUP.md`** (secciones 8.0 y 8.3). Variables de build, VPS/hosting y sitemap: secciones 8.4–8.8 del mismo documento.
+
+**Dominios, Vercel y Supabase por entorno:** en producción suele haber dos hosts (`www` → Astro, `app` → ERP) y variables cruzadas (`PUBLIC_APP_URL`, `VITE_PUBLIC_SITE_URL`, claves Supabase alineadas al mismo entorno). Para una matriz reutilizable (local con `supabase start`, staging, dos proyectos en Vercel, scopes de variables y URLs de Auth en el dashboard), ver **`docs/deployment-environments.md`**.
 
 ### 11.0.1 Desactivar ecommerce (cliente sin tienda)
 
@@ -1133,7 +1135,7 @@ const { title, description, ogImage, canonical } = Astro.props;
 - Toda página exporta `title` único y `description` entre 120–160 caracteres.
 - Rutas dinámicas usan `getStaticPaths()` para generar URLs en build time (SSG).
 - Imágenes siempre con `<Image>` de Astro (convierte a WebP + `width`/`height` obligatorios para evitar CLS).
-- Sitemap / robots en Astro: endpoints SSR **`/sitemap.xml`** y **`/robots.txt`** (`astro/src/pages/*.ts`), sin `@astrojs/sitemap`. Detalle en **`docs/SETUP.md` §8.8**.
+- Sitemap / robots en Astro: endpoints SSR **`/sitemap.xml`** y **`/robots.txt`** (`astro/src/pages/*.ts`), sin `@astrojs/sitemap`. Detalle en **`docs/SETUP.md`** (sección 8.8).
 - Structured Data (JSON-LD) en páginas de producto y landing.
 
 ### 11.3 Arquitectura Ecommerce

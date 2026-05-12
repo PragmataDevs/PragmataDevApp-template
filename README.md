@@ -58,7 +58,7 @@ pnpm dev:all
 
 Si estás dentro de `astro/`, puedes usar `pnpm dev:all` igualmente (reenvía al `package.json` raíz).
 
-Detalle de URLs en `.env` (local vs producción): **`docs/SETUP.md`** §8.
+URLs y variables (local vs producción vs staging): **`docs/deployment-environments.md`**. Detalle del pilar Astro en **`docs/SETUP.md`** (sección 8, Pilar público).
 
 ## Variables de entorno
 

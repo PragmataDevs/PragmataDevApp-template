@@ -56,11 +56,11 @@ astro/
 ```bash
 cd astro && pnpm install              # una vez — dependencias del pilar público
 # desde la raíz del monorepo (ERP + Astro en paralelo para pruebas locales):
-pnpm dev:all                          # :7070 ERP + :4321 Astro — ver docs/SETUP.md §8.0
+pnpm dev:all                          # :7070 ERP + :4321 Astro — ver docs/SETUP.md (sección 8)
 # Solo público:  cd astro && pnpm dev
 pnpm build && pnpm start              # prod local Astro (cwd astro/)
 ```
-Ver **`docs/SETUP.md` §8** para URLs `.env` (LOCAL vs prod), hybrid + `@astrojs/node` y sitemap.
+Ver **`docs/SETUP.md`** sección 8 para URLs `.env` (LOCAL vs prod), hybrid + `@astrojs/node` y sitemap. Despliegue (dominios, Vercel, `supabase start`): **`docs/deployment-environments.md`**.
 
 **Restricciones:**
 - Prohibido server-side mutations desde Astro. Toda escritura va a Edge Functions.

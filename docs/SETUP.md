@@ -15,6 +15,7 @@ Sigue el orden de esta guía la primera vez; después solo activa lo que necesit
 6. [Módulo IA (ai-task-summary + ai-gateway)](#6-módulo-ia-ai-task-summary--ai-gateway)
 7. [Edge Functions — Deploy](#7-edge-functions--deploy)
 8. [Pilar Público — Astro](#8-pilar-público--astro)
+   - Matriz de dominios, variables y Vercel (ERP + público + Supabase local/nube): [**deployment-environments.md**](./deployment-environments.md)
 9. [RBAC — Sincronizar recursos](#9-rbac--sincronizar-recursos)
 10. [Checklist final](#10-checklist-final)
 
@@ -470,12 +471,16 @@ HOST=0.0.0.0 PORT=4321 pnpm start
 - **`PUBLIC_APP_URL`:** URL base del ERP para botones “Iniciar sesión” desde Astro (`…/login`).
 - **`VITE_SUPABASE_*` / `PUBLIC_SUPABASE_*`:** ya cargadas desde el `.env` raíz vía `vite.envDir` en `astro.config.mjs`.
 
+Para la matriz completa por entorno (local con `supabase start`, producción, staging, dos proyectos en Vercel y redirects de Auth), usa **[docs/deployment-environments.md](./deployment-environments.md)**.
+
 ### 8.7 Deploy (orientación)
 
 | Destino | Idea general |
 |--------|----------------|
 | **VPS / Docker / Node** | Copiar `astro/dist/` + `node_modules` de producción (o imagen multi-stage), ejecutar `node dist/server/entry.mjs`, proxy reverso (nginx/Caddy) con TLS. |
 | **Vercel / Netlify** | Suelen tener integración Astro con SSR; sigue la doc del proveedor (pueden no usar el mismo layout `standalone`). |
+
+Dominios, scopes de variables y separación ERP / sitio público en Vercel: **[deployment-environments.md](./deployment-environments.md)**.
 
 ### 8.8 Sitemap y `robots.txt` (Astro)
 
