@@ -1,0 +1,102 @@
+---
+export interface Props {
+  brand: string;
+  appUrl: string;
+  ecommerceEnabled: boolean;
+  /** Ruta activa para resaltar enlaces (ej. Astro.url.pathname) */
+  pathname?: string;
+}
+
+import ThemeToggle from '../islands/ThemeToggle';
+
+const { brand, appUrl, ecommerceEnabled, pathname = '/' } = Astro.props;
+const loginHref = `${appUrl.replace(/\/+$/, '')}/login`;
+---
+
+<nav
+  class="ps-glass sticky top-0 z-50 border-b border-brand-border/80 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset] dark:border-slate-700/80 dark:shadow-[0_1px_0_rgba(255,255,255,0.06)_inset]"
+  aria-label="Principal"
+>
+  <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+    <a
+      href="/"
+      class="font-extrabold tracking-tight text-brand-dark transition-opacity hover:opacity-90"
+    >
+      {brand}
+    </a>
+
+    <div class="flex items-center gap-2">
+      <ThemeToggle client:load />
+
+      <details class="ps-nav-mobile relative md:hidden">
+        <summary
+          class="flex items-center rounded-pragmata border border-brand-border bg-white/90 px-3 py-2 text-sm font-semibold text-brand-dark shadow-sm dark:border-slate-600 dark:bg-slate-900/95 dark:text-slate-100"
+        >
+          Menú
+        </summary>
+        <div
+          class="absolute right-0 z-50 mt-2 w-52 rounded-pragmata border border-brand-border bg-white/95 p-2 shadow-psy-soft backdrop-blur-md dark:border-slate-600 dark:bg-slate-900/98"
+        >
+          <a
+            href="/#features"
+            class="block rounded-pragmata px-3 py-2 text-sm text-brand-steel hover:bg-brand-surface hover:text-brand-dark dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          >
+            Características
+          </a>
+          {
+            ecommerceEnabled && (
+              <a
+                href="/productos"
+                class="block rounded-pragmata px-3 py-2 text-sm text-brand-steel hover:bg-brand-surface hover:text-brand-dark dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              >
+                Productos
+              </a>
+            )
+          }
+          <a
+            href="/#pricing"
+            class="block rounded-pragmata px-3 py-2 text-sm text-brand-steel hover:bg-brand-surface hover:text-brand-dark dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          >
+            Precios
+          </a>
+          <hr class="my-2 border-brand-border dark:border-slate-600" />
+          <a
+            href={loginHref}
+            class="block rounded-pragmata bg-brand-accent px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-brand-accent-dark"
+          >
+            Iniciar sesión
+          </a>
+        </div>
+      </details>
+
+      <div class="hidden items-center gap-1 md:flex">
+        <a
+          href="/#features"
+          class="ps-nav-link rounded-pragmata px-3 py-2 text-sm font-medium text-brand-steel"
+        >
+          Características
+        </a>
+        {
+          ecommerceEnabled && (
+            <a
+              href="/productos"
+              class="ps-nav-link rounded-pragmata px-3 py-2 text-sm font-medium text-brand-steel"
+              data-active={pathname.startsWith('/productos') ? 'true' : undefined}
+            >
+              Productos
+            </a>
+          )
+        }
+        <a href="/#pricing" class="ps-nav-link rounded-pragmata px-3 py-2 text-sm font-medium text-brand-steel">
+          Precios
+        </a>
+        <a
+          href={loginHref}
+          class="ml-2 inline-flex items-center rounded-pragmata bg-brand-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-accent-dark hover:shadow-psy-glow"
+        >
+          Iniciar sesión
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>

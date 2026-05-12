@@ -1,15 +1,9 @@
 /**
  * CartButton — React island for the product detail page.
- *
- * This component runs entirely in the browser (client:load).
- * It communicates with the CartDrawer via localStorage + custom events.
- *
- * Cart state lives in localStorage under 'pragmata_cart'.
- * A custom event 'cart:updated' is dispatched after every change
- * so the CartDrawer can react without a shared React context.
  */
 
 import { useState, useEffect } from 'react';
+import { PublicIcon } from '../icons/PublicIcon';
 
 export interface CartItem {
   id: string;
@@ -28,7 +22,6 @@ export interface CartButtonProps {
     slug: string;
     image?: string;
   };
-  /** Disable the button when the product is out of stock */
   disabled?: boolean;
 }
 
@@ -49,11 +42,10 @@ function saveCart(cart: CartItem[]) {
 }
 
 export default function CartButton({ product, disabled = false }: CartButtonProps) {
-  const [inCart, setInCart]   = useState(false);
-  const [quantity, setQty]    = useState(1);
-  const [added, setAdded]     = useState(false);
+  const [inCart, setInCart] = useState(false);
+  const [quantity, setQty] = useState(1);
+  const [added, setAdded] = useState(false);
 
-  // Check if already in cart on mount
   useEffect(() => {
     const cart = getCart();
     const existing = cart.find(i => i.id === product.id);
@@ -85,65 +77,77 @@ export default function CartButton({ product, disabled = false }: CartButtonProp
     setQty(1);
   };
 
+  const qtyBtn =
+    'flex h-10 w-10 items-center justify-center border-0 bg-transparent text-lg text-brand-dark transition hover:bg-slate-100';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {/* Quantity selector */}
+    <div className="flex flex-col gap-3">
       {!inCart && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.875rem', color: 'var(--brand-muted)' }}>Cantidad:</span>
-          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--brand-border)', borderRadius: '8px', overflow: 'hidden' }}>
-            <button
-              onClick={() => setQty(q => Math.max(1, q - 1))}
-              style={{ padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.125rem', color: 'var(--brand-fg)' }}
-            >−</button>
-            <span style={{ padding: '0 12px', fontWeight: 600, minWidth: '2rem', textAlign: 'center' }}>{quantity}</span>
-            <button
-              onClick={() => setQty(q => q + 1)}
-              style={{ padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.125rem', color: 'var(--brand-fg)' }}
-            >+</button>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-brand-steel">Cantidad</span>
+          <div className="inline-flex items-stretch overflow-hidden rounded-pragmata border border-brand-border bg-white shadow-sm dark:border-slate-600 dark:bg-slate-900">
+            <button type="button" className={qtyBtn} onClick={() => setQty(q => Math.max(1, q - 1))}>
+              −
+            </button>
+            <span className="flex min-w-[2.25rem] items-center justify-center border-x border-brand-border px-2 text-sm font-semibold tabular-nums">
+              {quantity}
+            </span>
+            <button type="button" className={qtyBtn} onClick={() => setQty(q => q + 1)}>
+              +
+            </button>
           </div>
         </div>
       )}
 
-      {/* Add / Remove button */}
-      <div style={{ display: 'flex', gap: '12px' }}>
+      <div className="flex flex-col gap-2 sm:flex-row">
         {inCart ? (
           <>
             <button
-              onClick={() => (window.location.href = '/checkout')}
-              style={{
-                flex: 1, padding: '14px 24px', fontSize: '0.9375rem', fontWeight: 600,
-                color: '#fff', background: 'var(--brand-accent)',
-                border: 'none', borderRadius: '10px', cursor: 'pointer',
+              type="button"
+              onClick={() => {
+                window.location.href = '/checkout';
               }}
+              className="flex-1 rounded-pragmata bg-brand-accent px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-accent-dark hover:shadow-psy-glow"
             >
-              {added ? '¡Agregado! →' : 'Ir al carrito →'}
+              {added ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <PublicIcon name="check" className="h-4 w-4 shrink-0" />
+                  Agregado
+                  <span aria-hidden>→</span>
+                </span>
+              ) : (
+                'Ir al carrito →'
+              )}
             </button>
             <button
+              type="button"
               onClick={handleRemoveFromCart}
-              style={{
-                padding: '14px 16px', fontSize: '0.875rem',
-                color: '#dc2626', background: '#fff',
-                border: '1px solid #fecaca', borderRadius: '10px', cursor: 'pointer',
-              }}
+              className="rounded-pragmata border border-red-200 bg-white px-4 py-3.5 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:border-red-900/50 dark:bg-slate-900 dark:hover:bg-red-950/40"
             >
               Quitar
             </button>
           </>
         ) : (
           <button
+            type="button"
             onClick={handleAddToCart}
             disabled={disabled}
-            style={{
-              flex: 1, padding: '14px 24px', fontSize: '0.9375rem', fontWeight: 600,
-              color: '#fff',
-              background: disabled ? '#d1d5db' : added ? '#10b981' : 'var(--brand-accent)',
-              border: 'none', borderRadius: '10px',
-              cursor: disabled ? 'not-allowed' : 'pointer',
-              transition: 'background 0.2s',
-            }}
+            className={`flex-1 rounded-pragmata px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:bg-slate-300 disabled:hover:shadow-none ${
+              disabled
+                ? ''
+                : added
+                  ? 'bg-emerald-500 hover:bg-emerald-600 hover:shadow-psy-glow'
+                  : 'bg-brand-accent hover:bg-brand-accent-dark hover:shadow-psy-glow'
+            }`}
           >
-            {disabled ? 'Sin stock' : added ? '✓ Agregado al carrito' : 'Agregar al carrito'}
+            {disabled ? 'Sin stock' : added ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <PublicIcon name="check" className="h-4 w-4 shrink-0" />
+                Agregado al carrito
+              </span>
+            ) : (
+              'Agregar al carrito'
+            )}
           </button>
         )}
       </div>

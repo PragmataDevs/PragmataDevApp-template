@@ -1,19 +1,14 @@
 ---
 /**
  * /productos/[slug] — Product detail page.
- *
- * SSR (prerender = false) so prices, stock and inventory are always fresh.
- * Use prerender = true (SSG) only if your catalog is truly static.
- *
- * Each product page has:
- *   - Full SEO (title, description, OG image, canonical)
- *   - Schema.org Product (name, price, description, image)
- *   - Add to Cart React island (only loads React for CartButton)
  */
-export const prerender = false; // SSR — always fresh prices & stock
+export const prerender = false;
 
 import type { Product } from '@pragmata/core';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PublicNav from '../../components/public/PublicNav.astro';
+import PublicFooter from '../../components/public/PublicFooter.astro';
+import { PublicIcon } from '../../components/icons/PublicIcon';
 import CartButton from '../../components/islands/CartButton';
 import { supabase } from '../../lib/supabase';
 import { resolveSiteOrigin } from '../../lib/site-origin';
@@ -24,7 +19,6 @@ function truncateMeta(text: string, max = 160): string {
   return `${t.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
 }
 
-// ── Fetch single product by slug ──────────────────────────────────────────────
 const { slug } = Astro.params;
 
 const { data: row, error } = await supabase
@@ -42,6 +36,7 @@ if (error || !product) {
 
 const origin = resolveSiteOrigin(Astro.site);
 const currency = product.currency ?? 'MXN';
+const pathname = Astro.url.pathname;
 
 const metaTitle =
   typeof product.seo_title === 'string' && product.seo_title.trim()
@@ -63,34 +58,47 @@ const ogImage =
 
 const canonicalUrl = `${origin}/productos/${encodeURIComponent(product.slug)}`;
 
-const priceFormatted = new Intl.NumberFormat('es-MX', { style: 'currency', currency }).format(product.price);
+const priceFormatted = new Intl.NumberFormat('es-MX', { style: 'currency', currency }).format(
+  product.price,
+);
 const compareFormatted = product.compare_at_price
   ? new Intl.NumberFormat('es-MX', { style: 'currency', currency }).format(product.compare_at_price)
   : null;
 
-// discount percentage
-const discount = product.compare_at_price && product.compare_at_price > product.price
-  ? Math.round((1 - product.price / product.compare_at_price) * 100)
-  : null;
+const discount =
+  product.compare_at_price && product.compare_at_price > product.price
+    ? Math.round((1 - product.price / product.compare_at_price) * 100)
+    : null;
 
-// ── Schema.org Product ────────────────────────────────────────────────────────
 const schema = {
   '@context': 'https://schema.org',
   '@type': 'Product',
-  name:        product.name,
+  name: product.name,
   description: schemaDesc,
-  image:       ogImage ?? `${origin}/og-default.png`,
-  url:         canonicalUrl,
+  image: ogImage ?? `${origin}/og-default.png`,
+  url: canonicalUrl,
   offers: {
-    '@type':        'Offer',
-    price:          product.price,
-    priceCurrency:  currency,
-    availability:   product.in_stock
+    '@type': 'Offer',
+    price: product.price,
+    priceCurrency: currency,
+    availability: product.in_stock
       ? 'https://schema.org/InStock'
       : 'https://schema.org/OutOfStock',
-    url:            canonicalUrl,
+    url: canonicalUrl,
   },
 };
+
+const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
+const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';
+const tagline = import.meta.env.PUBLIC_BRAND_TAGLINE ?? '';
+const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
+
+const lowStockQty =
+  product.in_stock &&
+  product.stock_qty != null &&
+  product.stock_qty < 6
+    ? product.stock_qty
+    : null;
 ---
 
 <BaseLayout
@@ -101,130 +109,166 @@ const schema = {
   type="product"
   schema={schema}
 >
-  <div style="max-width:1100px;margin:0 auto;padding:40px 24px;">
+  <div class="ps-mesh flex min-h-screen flex-col">
+    <PublicNav brand={brand} appUrl={appUrl} ecommerceEnabled={ecommerceEnabled} pathname={pathname} />
 
-    <!-- Breadcrumb -->
-    <nav style="font-size:0.8125rem;color:var(--brand-muted);margin-bottom:32px;">
-      <a href="/"          style="color:var(--brand-muted);text-decoration:none;">Inicio</a>
-      <span style="margin:0 8px;">›</span>
-      <a href="/productos" style="color:var(--brand-muted);text-decoration:none;">Productos</a>
-      {product.category && (
-        <>
-          <span style="margin:0 8px;">›</span>
-          <a href={`/productos?categoria=${encodeURIComponent(product.category)}`} style="color:var(--brand-muted);text-decoration:none;">{product.category}</a>
-        </>
-      )}
-      <span style="margin:0 8px;">›</span>
-      <span style="color:var(--brand-fg);">{product.name}</span>
-    </nav>
-
-    <!-- Product layout -->
-    <div class="product-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;">
-
-      <!-- Image gallery (simplified: shows main image + extra images from metadata.images) -->
-      <div>
-        <div style="border:1px solid var(--brand-border);border-radius:16px;overflow:hidden;background:var(--brand-bg);aspect-ratio:1;display:flex;align-items:center;justify-content:center;">
-          {product.image_url
-            ? <img
-                src={product.image_url}
-                alt={product.name}
-                style="width:100%;height:100%;object-fit:cover;"
-                loading="eager"
-              />
-            : <span style="font-size:5rem;">🛍️</span>
+    <main class="flex-1">
+      <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+        <nav class="mb-8 flex flex-wrap items-center gap-1 text-xs font-medium text-brand-steel sm:text-sm">
+          <a href="/" class="transition hover:text-brand-dark">Inicio</a>
+          <span class="text-slate-400">/</span>
+          <a href="/productos" class="transition hover:text-brand-dark">Productos</a>
+          {
+            product.category && (
+              <span class="text-slate-400">/</span>
+            )
           }
-        </div>
+          {
+            product.category && (
+              <a
+                href={`/productos?categoria=${encodeURIComponent(product.category)}`}
+                class="transition hover:text-brand-dark"
+              >
+                {product.category}
+              </a>
+            )
+          }
+          <span class="text-slate-400">/</span>
+          <span class="text-brand-dark">{product.name}</span>
+        </nav>
 
-        <!-- Extra images from metadata.images array (optional) -->
-        {Array.isArray(product.images) && product.images.length > 1 && (
-          <div style="display:flex;gap:8px;margin-top:12px;overflow-x:auto;padding-bottom:4px;">
-            {product.images.slice(0, 6).map((img: string) => (
-              <img
-                src={img}
-                alt={product.name}
-                style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:2px solid var(--brand-border);flex-shrink:0;cursor:pointer;"
-                loading="lazy"
-              />
-            ))}
+        <div class="grid gap-10 lg:grid-cols-2 lg:gap-14">
+          <div class="space-y-3">
+            <div
+              class="overflow-hidden rounded-pragmata border border-brand-border bg-brand-surface shadow-sm"
+            >
+              <div class="aspect-square product-detail-media-fallback">
+                {
+                  product.image_url ? (
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      class="h-full w-full object-cover"
+                      loading="eager"
+                    />
+                  ) : (
+                    <div class="flex h-full w-full items-center justify-center text-slate-300">
+                      <PublicIcon name="package" className="h-16 w-16" />
+                    </div>
+                  )
+                }
+              </div>
+            </div>
+
+            {
+              Array.isArray(product.images) && product.images.length > 1 && (
+                <div class="flex gap-2 overflow-x-auto pb-1">
+                  {product.images.slice(0, 6).map((img: string) => (
+                    <img
+                      src={img}
+                      alt={product.name}
+                      class="h-16 w-16 shrink-0 rounded-pragmata border border-brand-border object-cover"
+                      loading="lazy"
+                    />
+                  ))}
+                </div>
+              )
+            }
           </div>
-        )}
-      </div>
 
-      <!-- Info + Cart -->
-      <div>
-        {product.category && (
-          <p style="font-size:0.8125rem;color:var(--brand-muted);margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;">
-            {product.category}
-          </p>
-        )}
+          <div>
+            {
+              product.category && (
+                <p class="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-accent-dark">
+                  {product.category}
+                </p>
+              )
+            }
+            <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-brand-dark sm:text-4xl">
+              {product.name}
+            </h1>
 
-        <h1 style="font-size:clamp(1.5rem,3vw,2rem);font-weight:700;color:var(--brand-fg);margin:0 0 16px;line-height:1.2;">
-          {product.name}
-        </h1>
-
-        <!-- Price -->
-        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:24px;">
-          <span style="font-size:2rem;font-weight:800;color:var(--brand-fg);">
-            {priceFormatted}
-            <span style="font-size:1rem;font-weight:400;color:var(--brand-muted);margin-left:4px;">{currency}</span>
-          </span>
-          {compareFormatted && (
-            <span style="font-size:1.125rem;color:var(--brand-muted);text-decoration:line-through;">{compareFormatted}</span>
-          )}
-          {discount && (
-            <span style="font-size:0.8125rem;font-weight:700;background:#d1fae5;color:#065f46;padding:3px 8px;border-radius:999px;">
-              -{discount}%
-            </span>
-          )}
-        </div>
-
-        <!-- Description -->
-        {product.description && (
-          <p style="font-size:0.9375rem;color:var(--brand-muted);margin:0 0 32px;line-height:1.7;">
-            {product.description}
-          </p>
-        )}
-
-        <!-- Stock badge -->
-        <div style="margin-bottom:20px;">
-          {product.in_stock
-            ? <span style="font-size:0.8125rem;color:#065f46;font-weight:500;">✓ En stock
-                {product.stock_qty != null && product.stock_qty <= 5 && (
-                  <span style="color:#d97706;"> · Solo quedan {product.stock_qty}</span>
-                )}
+            <div class="mt-6 flex flex-wrap items-baseline gap-3">
+              <span class="text-3xl font-extrabold tabular-nums text-brand-dark sm:text-4xl">
+                {priceFormatted}
               </span>
-            : <span style="font-size:0.8125rem;color:#dc2626;font-weight:500;">✗ Sin stock — agotado temporalmente</span>
-          }
-        </div>
+              <span class="text-sm font-medium text-brand-steel">{currency}</span>
+              {
+                compareFormatted && (
+                  <span class="text-lg text-brand-steel line-through">{compareFormatted}</span>
+                )
+              }
+              {
+                discount && (
+                  <span class="rounded-pragmata bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                    −{discount}%
+                  </span>
+                )
+              }
+            </div>
 
-        <!-- Cart button React island -->
-        <CartButton
-          client:load
-          product={{
-            id:    product.id,
-            name:  product.name,
-            price: product.price,
-            slug:  product.slug,
-            image: product.image_url ?? undefined,
-          }}
-          disabled={!product.in_stock}
-        />
+            {
+              product.description && (
+                <p class="mt-6 text-base leading-relaxed text-brand-steel">{product.description}</p>
+              )
+            }
 
-        <!-- Trust badges -->
-        <div style="margin-top:24px;padding:16px;background:var(--brand-surface);border:1px solid var(--brand-border);border-radius:10px;font-size:0.8125rem;color:var(--brand-muted);display:flex;flex-wrap:wrap;gap:12px;">
-          <span>🔒 Pago seguro</span>
-          <span>🚚 Envío gratis</span>
-          <span>↩️ Garantía 30 días</span>
+            <div class="mt-6">
+              {
+                product.in_stock ? (
+                  <p class="flex flex-wrap items-center gap-2 text-sm font-medium text-emerald-700">
+                    <PublicIcon name="check" className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <span>
+                      En stock
+                      {lowStockQty != null && ` · Solo quedan ${lowStockQty}`}
+                    </span>
+                  </p>
+                ) : (
+                  <p class="text-sm font-medium text-red-600">Sin stock — agotado temporalmente</p>
+                )
+              }
+            </div>
+
+            <div class="mt-8 max-w-md">
+              <CartButton
+                client:load
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  price: product.price,
+                  slug: product.slug,
+                  image: product.image_url ?? undefined,
+                }}
+                disabled={!product.in_stock}
+              />
+            </div>
+
+            <div
+              class="catalog-filter-panel mt-8 grid gap-3 p-4 text-sm text-brand-steel sm:grid-cols-3"
+            >
+              <span class="inline-flex items-center gap-2">
+                <PublicIcon name="lock" className="h-4 w-4 shrink-0 text-brand-accent" />
+                Pago seguro
+              </span>
+              <span class="inline-flex items-center gap-2">
+                <PublicIcon name="truck" className="h-4 w-4 shrink-0 text-brand-accent" />
+                Envío acordado
+              </span>
+              <span class="inline-flex items-center gap-2">
+                <PublicIcon name="message-circle" className="h-4 w-4 shrink-0 text-brand-accent" />
+                Soporte
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
+
+    <PublicFooter
+      brand={brand}
+      note={tagline || `${brand} · Tienda pública`}
+      appUrl={appUrl}
+      ecommerceEnabled={ecommerceEnabled}
+    />
   </div>
 </BaseLayout>
-
-<style>
-  @media (max-width: 640px) {
-    .product-grid {
-      grid-template-columns: 1fr !important;
-    }
-  }
-</style>

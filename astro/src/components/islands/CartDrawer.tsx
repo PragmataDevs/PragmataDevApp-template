@@ -1,15 +1,10 @@
 /**
  * CartDrawer — Floating cart icon + slide-in drawer.
- *
- * Mounts once in BaseLayout (client:load).
- * Listens to the 'cart:updated' custom event dispatched by CartButton.
- * Cart state lives in localStorage under 'pragmata_cart'.
- *
- * No shared context needed — event-based communication across React islands.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import type { CartItem } from './CartButton';
+import { PublicIcon } from '../icons/PublicIcon';
 
 const CART_KEY = 'pragmata_cart';
 
@@ -28,11 +23,10 @@ function saveCart(items: CartItem[]) {
 }
 
 export default function CartDrawer() {
-  const [cart, setCart]         = useState<CartItem[]>([]);
-  const [open, setOpen]         = useState(false);
-  const [mounted, setMounted]   = useState(false);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // ── Init cart from localStorage ──────────────────────────────────────────
   useEffect(() => {
     setCart(getCart());
     setMounted(true);
@@ -45,17 +39,18 @@ export default function CartDrawer() {
     return () => window.removeEventListener('cart:updated', handler);
   }, []);
 
-  // ── Close on Escape ───────────────────────────────────────────────────────
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  // ── Mutation helpers ──────────────────────────────────────────────────────
   const updateQty = useCallback((id: string, delta: number) => {
-    const updated = getCart()
-      .map(item => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item);
+    const updated = getCart().map(item =>
+      item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item,
+    );
     saveCart(updated);
   }, []);
 
@@ -65,162 +60,132 @@ export default function CartDrawer() {
 
   const clearCart = useCallback(() => saveCart([]), []);
 
-  // ── Derived ────────────────────────────────────────────────────────────────
   const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
   const totalPrice = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-  const formatted  = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalPrice);
+  const formatted = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
+    totalPrice,
+  );
 
   if (!mounted) return null;
 
   return (
     <>
-      {/* ── Floating trigger button ──────────────────────────────────────── */}
       <button
+        type="button"
         onClick={() => setOpen(true)}
         aria-label={`Carrito — ${totalItems} producto${totalItems !== 1 ? 's' : ''}`}
-        style={{
-          position: 'fixed',
-          bottom: '28px',
-          right: '28px',
-          zIndex: 40,
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          background: 'var(--brand-accent, #7c3aed)',
-          color: '#fff',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-          transition: 'transform 0.15s',
-          fontSize: '1.5rem',
-        }}
-        onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'; }}
-        onMouseOut={(e)  => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-brand-accent text-white shadow-psy-glow-lg transition hover:scale-[1.04] hover:shadow-psy-glow active:scale-[0.98]"
       >
-        🛒
+        <PublicIcon name="cart" className="h-6 w-6" />
         {totalItems > 0 && (
-          <span style={{
-            position: 'absolute',
-            top: '-4px',
-            right: '-4px',
-            background: '#ef4444',
-            color: '#fff',
-            fontSize: '0.6875rem',
-            fontWeight: 700,
-            minWidth: '20px',
-            height: '20px',
-            borderRadius: '999px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 5px',
-            border: '2px solid #fff',
-          }}>
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[10px] font-bold text-white">
             {totalItems > 99 ? '99+' : totalItems}
           </span>
         )}
       </button>
 
-      {/* ── Backdrop ─────────────────────────────────────────────────────── */}
       {open && (
-        <div
+        <button
+          type="button"
+          aria-label="Cerrar overlay"
+          className="fixed inset-0 z-[49] animate-[fadeIn_0.2s_ease] bg-slate-900/45 backdrop-blur-[2px]"
           onClick={() => setOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.4)',
-            zIndex: 49,
-            animation: 'fadeIn 0.2s ease',
-          }}
         />
       )}
 
-      {/* ── Drawer panel ─────────────────────────────────────────────────── */}
       <div
         role="dialog"
         aria-label="Carrito de compras"
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: 'min(400px, 100vw)',
-          background: '#fff',
-          zIndex: 50,
-          boxShadow: '-4px 0 40px rgba(0,0,0,0.15)',
-          display: 'flex',
-          flexDirection: 'column',
-          transform: open ? 'translateX(0)' : 'translateX(110%)',
-          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
+        className={`fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-[400px] flex-col border-l border-brand-border bg-white/95 shadow-[-12px_0_40px_rgba(15,23,42,0.12)] backdrop-blur-md transition-transform duration-300 ease-out dark:border-slate-700 dark:bg-slate-950/98 dark:shadow-[-12px_0_40px_rgba(0,0,0,0.45)] ${
+          open ? 'translate-x-0' : 'pointer-events-none translate-x-full'
+        }`}
       >
-        {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+        <div className="flex shrink-0 items-center justify-between border-b border-brand-border px-5 py-4">
+          <h2 className="m-0 text-base font-bold text-brand-dark">
             Tu carrito
-            {totalItems > 0 && <span style={{ marginLeft: 8, fontSize: '0.8125rem', fontWeight: 400, color: '#6b7280' }}>({totalItems} artículo{totalItems !== 1 ? 's' : ''})</span>}
+            {totalItems > 0 && (
+              <span className="ml-2 text-sm font-normal text-brand-steel">
+                ({totalItems} artículo{totalItems !== 1 ? 's' : ''})
+              </span>
+            )}
           </h2>
           <button
+            type="button"
             onClick={() => setOpen(false)}
             aria-label="Cerrar carrito"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '1.5rem', lineHeight: 1, padding: 4 }}
-          >×</button>
+            className="rounded-pragmata p-1 text-brand-steel transition hover:bg-slate-100 hover:text-brand-dark dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          >
+            <PublicIcon name="x" className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Items */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4">
           {cart.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
-              <div style={{ fontSize: '3rem', marginBottom: 12 }}>🛒</div>
-              <p style={{ margin: '0 0 4px', fontWeight: 500, color: '#374151' }}>Tu carrito está vacío</p>
-              <p style={{ margin: 0, fontSize: '0.875rem' }}>Agrega productos desde el catálogo</p>
+            <div className="px-2 py-16 text-center text-brand-steel">
+              <PublicIcon name="cart" className="mx-auto h-10 w-10 text-slate-300" />
+              <p className="mt-3 font-medium text-brand-dark">Tu carrito está vacío</p>
+              <p className="mt-1 text-sm">Agrega productos desde el catálogo</p>
               <a
                 href="/productos"
                 onClick={() => setOpen(false)}
-                style={{ display: 'inline-block', marginTop: 16, padding: '8px 20px', background: 'var(--brand-accent, #7c3aed)', color: '#fff', borderRadius: '8px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}
+                className="mt-5 inline-flex rounded-pragmata bg-brand-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-accent-dark"
               >
                 Ver catálogo →
               </a>
             </div>
           ) : (
-            <ul style={{ listStyle: 'none', margin: '8px 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <ul className="m-0 flex list-none flex-col gap-1 p-0 py-2">
               {cart.map(item => (
-                <li key={item.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 8px', borderBottom: '1px solid #f3f4f6' }}>
-                  {/* Thumbnail */}
-                  <div style={{ width: 52, height: 52, borderRadius: 8, overflow: 'hidden', background: '#f3f4f6', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {item.image
-                      ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-                      : <span style={{ fontSize: '1.5rem' }}>🛍️</span>
-                    }
+                <li
+                  key={item.id}
+                  className="flex items-center gap-3 rounded-pragmata border border-transparent px-2 py-3 transition hover:border-brand-border hover:bg-slate-50/80 dark:hover:border-slate-600 dark:hover:bg-slate-800/50"
+                >
+                  <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-pragmata border border-brand-border bg-brand-surface">
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <PublicIcon name="package" className="h-7 w-7 text-slate-400" />
+                    )}
                   </div>
-
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: '0 0 4px', fontWeight: 500, fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</p>
-                    <p style={{ margin: 0, fontSize: '0.8125rem', color: '#6b7280' }}>
-                      {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(item.price)}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-brand-dark">{item.name}</p>
+                    <p className="m-0 text-xs text-brand-steel">
+                      {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
+                        item.price,
+                      )}
                     </p>
                   </div>
-
-                  {/* Qty controls */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                  <div className="flex shrink-0 items-center gap-1">
                     <button
+                      type="button"
                       onClick={() => updateQty(item.id, -1)}
-                      style={{ width: 28, height: 28, border: '1px solid #e5e7eb', borderRadius: 6, background: '#f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: '#374151' }}
-                    >−</button>
-                    <span style={{ width: 24, textAlign: 'center', fontSize: '0.875rem', fontWeight: 600 }}>{item.quantity}</span>
+                      className="flex h-8 w-8 items-center justify-center rounded-pragmata border border-brand-border bg-white text-sm text-brand-dark transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
+                    >
+                      −
+                    </button>
+                    <span className="w-7 text-center text-sm font-semibold tabular-nums">
+                      {item.quantity}
+                    </span>
                     <button
+                      type="button"
                       onClick={() => updateQty(item.id, 1)}
-                      style={{ width: 28, height: 28, border: '1px solid #e5e7eb', borderRadius: 6, background: '#f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', color: '#374151' }}
-                    >+</button>
+                      className="flex h-8 w-8 items-center justify-center rounded-pragmata border border-brand-border bg-white text-sm text-brand-dark transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
+                    >
+                      +
+                    </button>
                     <button
+                      type="button"
                       onClick={() => removeItem(item.id)}
                       aria-label="Eliminar"
-                      style={{ width: 28, height: 28, border: 'none', background: 'none', cursor: 'pointer', color: '#d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}
-                    >✕</button>
+                      className="ml-1 flex h-8 w-8 items-center justify-center rounded-pragmata text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                    >
+                      <PublicIcon name="x" className="h-4 w-4" />
+                    </button>
                   </div>
                 </li>
               ))}
@@ -228,36 +193,22 @@ export default function CartDrawer() {
           )}
         </div>
 
-        {/* Footer */}
         {cart.length > 0 && (
-          <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Total estimado</span>
-              <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{formatted}</span>
+          <div className="shrink-0 border-t border-brand-border bg-white/90 px-5 py-4 dark:border-slate-700 dark:bg-slate-950/95">
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-sm text-brand-steel">Total estimado</span>
+              <span className="text-xl font-bold tabular-nums text-brand-dark">{formatted}</span>
             </div>
-
             <a
               href="/checkout"
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '14px',
-                background: 'var(--brand-accent, #7c3aed)',
-                color: '#fff',
-                textAlign: 'center',
-                borderRadius: '10px',
-                textDecoration: 'none',
-                fontWeight: 700,
-                fontSize: '0.9375rem',
-                marginBottom: 10,
-              }}
+              className="mb-3 block w-full rounded-pragmata bg-brand-accent py-3.5 text-center text-sm font-bold text-white shadow-sm transition hover:bg-brand-accent-dark hover:shadow-psy-glow"
             >
               Ir a pagar →
             </a>
-
             <button
+              type="button"
               onClick={clearCart}
-              style={{ width: '100%', padding: '10px', background: 'none', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8125rem', color: '#6b7280' }}
+              className="w-full rounded-pragmata border border-brand-border py-2.5 text-xs font-semibold text-brand-steel transition hover:bg-slate-50 hover:text-brand-dark"
             >
               Vaciar carrito
             </button>

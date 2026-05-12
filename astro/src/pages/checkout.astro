@@ -1,14 +1,16 @@
 ---
-/**
- * /checkout — Cart + payment page.
- *
- * The cart summary is rendered by a React island (CartDrawer).
- * Payment is submitted via Edge Function → Stripe / MercadoPago.
- */
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PublicNav from '../components/public/PublicNav.astro';
+import PublicFooter from '../components/public/PublicFooter.astro';
 import CartCheckout from '../components/islands/CartCheckout';
+
+const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
+const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';
+const tagline = import.meta.env.PUBLIC_BRAND_TAGLINE ?? 'Checkout seguro.';
+const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
+const pathname = Astro.url.pathname;
 ---
 
 <BaseLayout
@@ -17,11 +19,24 @@ import CartCheckout from '../components/islands/CartCheckout';
   noindex={true}
   hideCart={true}
 >
-  <div style="max-width:700px;margin:0 auto;padding:40px 24px;">
-    <h1 style="font-size:1.75rem;font-weight:700;color:var(--brand-fg);margin:0 0 32px;">
-      Tu carrito
-    </h1>
-    <!-- Full cart + checkout form React island -->
-    <CartCheckout client:load />
+  <div class="ps-mesh flex min-h-screen flex-col">
+    <PublicNav brand={brand} appUrl={appUrl} ecommerceEnabled={ecommerceEnabled} pathname={pathname} />
+
+    <main class="flex-1">
+      <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
+        <p class="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-accent-dark">
+          Carrito
+        </p>
+        <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-brand-dark">Tu pedido</h1>
+        <p class="mt-2 text-sm text-brand-steel">
+          Revisa los artículos y completa tus datos para continuar al pago.
+        </p>
+        <div class="mt-10 rounded-pragmata border border-brand-border bg-white/90 p-5 shadow-sm backdrop-blur-sm sm:p-8 dark:bg-slate-900/88">
+          <CartCheckout client:load />
+        </div>
+      </div>
+    </main>
+
+    <PublicFooter brand={brand} note={tagline} appUrl={appUrl} ecommerceEnabled={ecommerceEnabled} />
   </div>
 </BaseLayout>

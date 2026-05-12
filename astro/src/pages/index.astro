@@ -6,6 +6,9 @@
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PublicNav from '../components/public/PublicNav.astro';
+import PublicFooter from '../components/public/PublicFooter.astro';
+import { PublicIcon } from '../components/icons/PublicIcon';
 import { supabase } from '../lib/supabase';
 import { mergeLandingFromCms } from '../lib/cms-defaults';
 import { marked } from 'marked';
@@ -17,11 +20,12 @@ function landingMdToHtml(md: string): string {
   return typeof out === 'string' ? out : '';
 }
 
-const brandEnv    = import.meta.env.PUBLIC_BRAND_NAME    ?? 'Mi Empresa';
+const brandEnv = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
 const taglineEnv = import.meta.env.PUBLIC_BRAND_TAGLINE ?? 'Tu solución de negocio';
-const appUrl     = import.meta.env.PUBLIC_APP_URL       ?? 'https://app.tucliente.com';
-const siteUrl    = import.meta.env.PUBLIC_SITE_URL      ?? 'https://tucliente.com';
+const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';
+const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? 'https://tucliente.com';
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
+const pathname = Astro.url.pathname;
 
 let cmsHome: {
   is_published: boolean;
@@ -69,23 +73,23 @@ const schema = {
   '@graph': [
     {
       '@type': 'WebSite',
-      '@id':   `${siteUrl}/#website`,
-      url:     siteUrl,
-      name:    merged.brand,
+      '@id': `${siteUrl}/#website`,
+      url: siteUrl,
+      name: merged.brand,
       description,
       potentialAction: {
-        '@type':       'SearchAction',
-        target:        `${siteUrl}/productos?q={search_term_string}`,
+        '@type': 'SearchAction',
+        target: `${siteUrl}/productos?q={search_term_string}`,
         'query-input': 'required name=search_term_string',
       },
     },
     {
       '@type': 'Organization',
-      '@id':   `${siteUrl}/#organization`,
-      name:    merged.brand,
-      url:     siteUrl,
-      logo:    `${siteUrl}/logo.png`,
-      sameAs:  [],
+      '@id': `${siteUrl}/#organization`,
+      name: merged.brand,
+      url: siteUrl,
+      logo: `${siteUrl}/logo.png`,
+      sameAs: [],
     },
   ],
 };
@@ -93,6 +97,7 @@ const schema = {
 const canonicalRoot = siteUrl.replace(/\/+$/, '') + '/';
 const features = merged.features;
 const heroSubHtml = landingMdToHtml(merged.heroSubheadline);
+const featTotal = features.length;
 ---
 
 <BaseLayout
@@ -102,131 +107,149 @@ const heroSubHtml = landingMdToHtml(merged.heroSubheadline);
   schema={schema}
   image={merged.ogImage}
 >
-  <style is:global>
-    .landing-hero-sub p { margin: 0 0 0.65em; }
-    .landing-hero-sub p:last-child { margin-bottom: 0; }
-    .landing-hero-sub a { color: var(--brand-accent); text-decoration: underline; text-underline-offset: 2px; }
-    .landing-hero-sub strong { color: var(--brand-fg); }
-  </style>
-  <nav style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--brand-border);">
-    <div style="max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;">
-      <a href="/" style="font-size:1.125rem;font-weight:700;color:var(--brand-primary);text-decoration:none;">
-        {merged.brand}
-      </a>
-      <div style="display:flex;align-items:center;gap:24px;">
-        <a href="#features" style="font-size:0.875rem;color:var(--brand-muted);text-decoration:none;">Características</a>
-        {ecommerceEnabled && (
-          <a href="/productos" style="font-size:0.875rem;color:var(--brand-muted);text-decoration:none;">Productos</a>
-        )}
-        <a href="#pricing" style="font-size:0.875rem;color:var(--brand-muted);text-decoration:none;">Precios</a>
-        <a
-          href={`${appUrl}/login`}
-          style="display:inline-flex;align-items:center;padding:8px 18px;font-size:0.875rem;font-weight:600;color:#fff;background:var(--brand-accent);border-radius:8px;text-decoration:none;"
-        >
-          Iniciar sesión
-        </a>
-      </div>
-    </div>
-  </nav>
-
-  <section style="padding:80px 24px 60px;text-align:center;max-width:800px;margin:0 auto;">
-    <div style="display:inline-block;margin-bottom:20px;padding:6px 16px;background:var(--brand-accent);color:#fff;font-size:0.75rem;font-weight:600;border-radius:100px;letter-spacing:0.05em;text-transform:uppercase;">
-      {merged.heroBadge}
-    </div>
-    <h1 style="font-size:clamp(2rem,5vw,3.5rem);font-weight:800;line-height:1.15;color:var(--brand-fg);margin:0 0 24px;letter-spacing:-0.02em;">
-      {merged.heroHeadline}
-    </h1>
-    <div
-      class="landing-hero-sub"
-      set:html={heroSubHtml}
-      style="font-size:1.125rem;color:var(--brand-muted);max-width:600px;margin:0 auto 40px;line-height:1.7;"
+  <div class="ps-mesh flex min-h-screen flex-col">
+    <PublicNav
+      brand={merged.brand}
+      appUrl={appUrl}
+      ecommerceEnabled={ecommerceEnabled}
+      pathname={pathname}
     />
-    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">
-      <a
-        href={`${appUrl}/login`}
-        style="display:inline-flex;align-items:center;gap:8px;padding:14px 28px;font-size:1rem;font-weight:600;color:#fff;background:var(--brand-accent);border-radius:10px;text-decoration:none;box-shadow:0 4px 14px rgba(26,127,240,0.35);"
-      >
-        {merged.primaryCtaLabel}
-      </a>
-      <a
-        href={merged.secondaryCtaHref}
-        style="display:inline-flex;align-items:center;gap:8px;padding:14px 28px;font-size:1rem;font-weight:500;color:var(--brand-fg);background:var(--brand-surface);border:1px solid var(--brand-border);border-radius:10px;text-decoration:none;"
-      >
-        {merged.secondaryCtaLabel}
-      </a>
-    </div>
-  </section>
 
-  <div style="border-top:1px solid var(--brand-border);border-bottom:1px solid var(--brand-border);padding:16px 24px;text-align:center;background:var(--brand-surface);">
-    <p style="font-size:0.875rem;color:var(--brand-muted);margin:0;">
-      {merged.socialProofBar}
-    </p>
-  </div>
-
-  <section id="features" style="padding:80px 24px;max-width:1100px;margin:0 auto;">
-    <div style="text-align:center;margin-bottom:56px;">
-      <h2 style="font-size:clamp(1.5rem,3vw,2.25rem);font-weight:700;color:var(--brand-fg);margin:0 0 12px;">
-        {merged.featuresIntroTitle}
-      </h2>
-      <p style="font-size:1rem;color:var(--brand-muted);max-width:500px;margin:0 auto;">
-        {merged.featuresIntroSubtitle}
-      </p>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
-      {features.map((f) => (
-        f.href ? (
-          <a
-            href={f.href}
-            style="padding:28px;border:1px solid var(--brand-border);border-radius:12px;background:var(--brand-surface);transition:box-shadow 0.2s,transform 0.15s;text-decoration:none;display:block;"
-            onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,0.08)';this.style.transform='translateY(-2px)'"
-            onmouseout="this.style.boxShadow='none';this.style.transform='none'"
+    <main class="flex-1">
+      <!-- Hero -->
+      <section class="mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20">
+        <div class="animate-ps-fade-up mx-auto max-w-3xl text-center">
+          <p
+            class="mb-5 inline-flex items-center rounded-pragmata border border-brand-accent/25 bg-brand-accent/10 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent-dark"
           >
-            <div style="font-size:2rem;margin-bottom:12px;">{f.icon}</div>
-            <h3 style="font-size:1rem;font-weight:600;color:var(--brand-fg);margin:0 0 8px;">{f.title}</h3>
-            <p style="font-size:0.875rem;color:var(--brand-muted);margin:0 0 12px;line-height:1.6;">{f.description}</p>
-            <span style="font-size:0.8125rem;font-weight:600;color:var(--brand-accent);">
-              {f.href === '/productos' ? 'Ver productos →' : 'Ver más →'}
-            </span>
-          </a>
-        ) : (
-          <div style="padding:28px;border:1px solid var(--brand-border);border-radius:12px;background:var(--brand-surface);">
-            <div style="font-size:2rem;margin-bottom:12px;">{f.icon}</div>
-            <h3 style="font-size:1rem;font-weight:600;color:var(--brand-fg);margin:0 0 8px;">{f.title}</h3>
-            <p style="font-size:0.875rem;color:var(--brand-muted);margin:0;line-height:1.6;">{f.description}</p>
+            {merged.heroBadge}
+          </p>
+          <h1
+            class="text-balance bg-gradient-to-b from-brand-dark to-brand-dark/80 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl lg:text-6xl"
+          >
+            {merged.heroHeadline}
+          </h1>
+          <div
+            class="landing-hero-sub mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-brand-steel"
+            set:html={heroSubHtml}
+          />
+          <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href={`${appUrl.replace(/\/+$/, '')}/login`}
+              class="inline-flex items-center justify-center rounded-pragmata bg-brand-accent px-7 py-3.5 text-base font-semibold text-white shadow-psy-glow transition hover:bg-brand-accent-dark hover:shadow-psy-glow-lg"
+            >
+              {merged.primaryCtaLabel}
+            </a>
+            <a
+              href={merged.secondaryCtaHref}
+              class="inline-flex items-center justify-center rounded-pragmata border border-brand-border bg-white/80 px-7 py-3.5 text-base font-medium text-brand-dark shadow-sm backdrop-blur-sm transition hover:border-brand-accent/30 hover:bg-white dark:border-slate-600 dark:bg-slate-900/85 dark:hover:bg-slate-800"
+            >
+              {merged.secondaryCtaLabel}
+            </a>
           </div>
-        )
-      ))}
-    </div>
-  </section>
+        </div>
+      </section>
 
-  <section id="pricing" style="padding:80px 24px;background:var(--brand-primary);text-align:center;">
-    <h2 style="font-size:clamp(1.5rem,3vw,2.25rem);font-weight:700;color:#fff;margin:0 0 16px;">
-      {merged.pricingTitle}
-    </h2>
-    <p style="font-size:1rem;color:rgba(255,255,255,0.7);max-width:500px;margin:0 auto 36px;">
-      {merged.pricingSubtitle}
-    </p>
-    <a
-      href={`${appUrl}/login`}
-      style="display:inline-flex;align-items:center;gap:8px;padding:16px 36px;font-size:1rem;font-weight:700;color:var(--brand-primary);background:#fff;border-radius:10px;text-decoration:none;box-shadow:0 4px 20px rgba(0,0,0,0.25);"
-    >
-      Crear mi cuenta gratis →
-    </a>
-  </section>
-
-  <footer style="padding:40px 24px;border-top:1px solid var(--brand-border);background:var(--brand-surface);">
-    <div style="max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;">
-      <p style="font-size:0.875rem;color:var(--brand-muted);margin:0;">
-        {merged.footerNote}
-      </p>
-      <div style="display:flex;gap:24px;flex-wrap:wrap;">
-        {ecommerceEnabled && (
-          <a href="/productos" style="font-size:0.875rem;color:var(--brand-muted);text-decoration:none;">Productos</a>
-        )}
-        <a href="/privacidad" style="font-size:0.875rem;color:var(--brand-muted);text-decoration:none;">Privacidad</a>
-        <a href="/terminos"   style="font-size:0.875rem;color:var(--brand-muted);text-decoration:none;">Términos</a>
-        <a href={`${appUrl}/login`} style="font-size:0.875rem;color:var(--brand-accent);text-decoration:none;">Iniciar sesión</a>
+      <!-- Social proof -->
+      <div
+        class="border-y border-brand-border/80 bg-white/60 py-4 text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-brand-steel/90 backdrop-blur-sm dark:bg-slate-900/45"
+      >
+        {merged.socialProofBar}
       </div>
-    </div>
-  </footer>
+
+      <!-- Bento features -->
+      <section id="features" class="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <header class="mx-auto mb-12 max-w-2xl text-center">
+          <h2 class="text-3xl font-extrabold tracking-tight text-brand-dark sm:text-4xl">
+            {merged.featuresIntroTitle}
+          </h2>
+          <p class="mt-3 text-pretty text-brand-steel sm:text-lg">
+            {merged.featuresIntroSubtitle}
+          </p>
+        </header>
+
+        <div
+          class:list={[
+            'grid auto-rows-fr gap-4',
+            featTotal >= 4 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2',
+          ]}
+        >
+          {
+            features.map((f, i) =>
+              f.href ? (
+                <a
+                  href={f.href}
+                  class:list={[
+                    'bento-feature-card',
+                    featTotal >= 4 && i === 0 && 'sm:col-span-2 sm:row-span-2 sm:min-h-[280px]',
+                    featTotal === 3 && i === 0 && 'sm:col-span-2 sm:row-span-2 sm:min-h-[240px]',
+                  ]}
+                >
+                  <div class="bento-feature-icon-wrap" aria-hidden="true">
+                    <PublicIcon name={f.icon} className="h-5 w-5" />
+                  </div>
+                  <h3 class="bento-feature-title">{f.title}</h3>
+                  <p class="bento-feature-body">{f.description}</p>
+                  <span class="bento-feature-cta">
+                    {f.href === '/productos' ? 'Ver productos →' : 'Ver más →'}
+                  </span>
+                </a>
+              ) : (
+                <div
+                  class:list={[
+                    'bento-feature-card',
+                    featTotal >= 4 && i === 0 && 'sm:col-span-2 sm:row-span-2 sm:min-h-[280px]',
+                    featTotal === 3 && i === 0 && 'sm:col-span-2 sm:row-span-2 sm:min-h-[240px]',
+                  ]}
+                >
+                  <div class="bento-feature-icon-wrap" aria-hidden="true">
+                    <PublicIcon name={f.icon} className="h-5 w-5" />
+                  </div>
+                  <h3 class="bento-feature-title">{f.title}</h3>
+                  <p class="bento-feature-body">{f.description}</p>
+                </div>
+              ),
+            )
+          }
+        </div>
+      </section>
+
+      <!-- Pricing CTA -->
+      <section id="pricing" class="mx-auto max-w-6xl px-4 pb-20 sm:px-6 sm:pb-28">
+        <div
+          class="relative overflow-hidden rounded-pragmata border border-slate-700/80 bg-slate-900 px-6 py-16 text-center shadow-psy-glow-lg sm:px-12 sm:py-20"
+        >
+          <div
+            class="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-brand-accent/25 blur-3xl"
+            aria-hidden="true"
+          />
+          <div
+            class="pointer-events-none absolute -bottom-20 -right-16 h-56 w-56 rounded-full bg-sky-400/15 blur-3xl"
+            aria-hidden="true"
+          />
+          <div class="relative">
+            <h2 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+              {merged.pricingTitle}
+            </h2>
+            <p class="mx-auto mt-4 max-w-xl text-pretty text-lg text-slate-300">
+              {merged.pricingSubtitle}
+            </p>
+            <a
+              href={`${appUrl.replace(/\/+$/, '')}/login`}
+              class="mt-10 inline-flex items-center justify-center rounded-pragmata bg-white px-8 py-4 text-base font-bold text-slate-900 shadow-lg transition hover:bg-slate-100"
+            >
+              Crear mi cuenta gratis →
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <PublicFooter
+      brand={merged.brand}
+      note={merged.footerNote}
+      appUrl={appUrl}
+      ecommerceEnabled={ecommerceEnabled}
+    />
+  </div>
 </BaseLayout>

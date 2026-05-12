@@ -6,6 +6,8 @@
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PublicNav from '../components/public/PublicNav.astro';
+import PublicFooter from '../components/public/PublicFooter.astro';
 import { marked } from 'marked';
 import { supabase } from '../lib/supabase';
 
@@ -18,6 +20,9 @@ if (!slug || RESERVED.has(slug)) {
 
 const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? 'https://tucliente.com';
 const brandFallback = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
+const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';
+const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
+const pathname = Astro.url.pathname;
 
 marked.setOptions({ gfm: true, breaks: true });
 
@@ -37,9 +42,8 @@ if (error || !page || page.page_kind !== 'standard' || !md) {
 }
 
 const html = marked.parse(md) as string;
-const title = typeof page.seo_title === 'string' && page.seo_title.trim()
-  ? page.seo_title.trim()
-  : slug;
+const title =
+  typeof page.seo_title === 'string' && page.seo_title.trim() ? page.seo_title.trim() : slug;
 const description =
   typeof page.seo_description === 'string' && page.seo_description.trim()
     ? page.seo_description.trim()
@@ -53,26 +57,25 @@ const og =
 ---
 
 <BaseLayout title={title} description={description} canonicalUrl={canonical} image={og}>
-  <article style="max-width:720px;margin:0 auto;padding:48px 24px 80px;">
-    <div class="cms-md" set:html={html} />
-  </article>
-</BaseLayout>
+  <div class="ps-mesh flex min-h-screen flex-col">
+    <PublicNav
+      brand={brandFallback}
+      appUrl={appUrl}
+      ecommerceEnabled={ecommerceEnabled}
+      pathname={pathname}
+    />
 
-<style is:global>
-  .cms-md :where(h1, h2, h3) {
-    color: var(--brand-fg);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    line-height: 1.25;
-    margin: 1.75rem 0 0.75rem;
-  }
-  .cms-md h1 { font-size: 2rem; margin-top: 0; }
-  .cms-md h2 { font-size: 1.375rem; }
-  .cms-md h3 { font-size: 1.125rem; font-weight: 700; }
-  .cms-md p { margin: 0 0 1rem; color: var(--brand-muted); line-height: 1.7; }
-  .cms-md ul, .cms-md ol { margin: 0 0 1rem 1.25rem; padding: 0; color: var(--brand-muted); line-height: 1.7; }
-  .cms-md a { color: var(--brand-accent); text-decoration: underline; text-underline-offset: 2px; }
-  .cms-md code { font-size: 0.9em; background: var(--brand-surface); padding: 0.15em 0.35em; border-radius: 6px; border: 1px solid var(--brand-border); }
-  .cms-md pre { background: var(--brand-primary); color: #e8eef8; padding: 1rem; border-radius: 12px; overflow-x: auto; margin: 0 0 1rem; font-size: 0.875rem; }
-  .cms-md pre code { background: transparent; border: none; padding: 0; color: inherit; }
-</style>
+    <main class="flex-1">
+      <article class="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16 lg:py-20">
+        <div class="cms-md" set:html={html} />
+      </article>
+    </main>
+
+    <PublicFooter
+      brand={brandFallback}
+      note={`${brandFallback} · Contenido legal e informativo.`}
+      appUrl={appUrl}
+      ecommerceEnabled={ecommerceEnabled}
+    />
+  </div>
+</BaseLayout>

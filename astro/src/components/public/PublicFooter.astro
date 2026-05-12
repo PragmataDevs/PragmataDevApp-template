@@ -1,0 +1,40 @@
+---
+export interface Props {
+  brand: string;
+  note: string;
+  appUrl: string;
+  ecommerceEnabled: boolean;
+}
+
+const { brand, note, appUrl, ecommerceEnabled } = Astro.props;
+const loginHref = `${appUrl.replace(/\/+$/, '')}/login`;
+---
+
+<footer
+  class="border-t border-brand-border bg-white/80 backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/85"
+>
+  <div
+    class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+  >
+    <div>
+      <p class="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-steel/90">
+        {brand}
+      </p>
+      <p class="mt-1 max-w-md text-sm leading-relaxed text-brand-steel">
+        {note}
+      </p>
+    </div>
+    <nav class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium text-brand-steel">
+      {
+        ecommerceEnabled && (
+          <a href="/productos" class="transition hover:text-brand-dark"> Productos </a>
+        )
+      }
+      <a href="/privacidad" class="transition hover:text-brand-dark"> Privacidad </a>
+      <a href="/terminos" class="transition hover:text-brand-dark"> Términos </a>
+      <a href={loginHref} class="text-brand-accent transition hover:text-brand-accent-dark">
+        Iniciar sesión
+      </a>
+    </nav>
+  </div>
+</footer>

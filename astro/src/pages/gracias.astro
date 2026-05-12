@@ -1,22 +1,15 @@
 ---
-/**
- * /gracias — Order confirmation page.
- *
- * Shown after a successful Stripe Checkout redirect.
- * Receives session_id in the URL (from Stripe redirect).
- * Clears the cart on client side and shows a confirmation.
- *
- * noindex: true — transactional page, should never be indexed.
- */
-export const prerender = false; // SSR — never cache
+export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PublicNav from '../components/public/PublicNav.astro';
+import { PublicIcon } from '../components/icons/PublicIcon';
 
-const brand    = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
-const appUrl   = import.meta.env.PUBLIC_APP_URL    ?? '#';
-const siteUrl  = import.meta.env.PUBLIC_SITE_URL   ?? '';
+const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
+const appUrl = import.meta.env.PUBLIC_APP_URL ?? '#';
+const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
+const pathname = Astro.url.pathname;
 
-// Stripe passes ?session_id=xxx when redirecting here
 const sessionId = Astro.url.searchParams.get('session_id') ?? '';
 ---
 
@@ -26,61 +19,60 @@ const sessionId = Astro.url.searchParams.get('session_id') ?? '';
   noindex={true}
   hideCart={true}
 >
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 24px;background:var(--brand-bg);">
-    <div style="max-width:520px;width:100%;text-align:center;">
+  <div class="ps-mesh flex min-h-screen flex-col">
+    <PublicNav brand={brand} appUrl={appUrl} ecommerceEnabled={ecommerceEnabled} pathname={pathname} />
 
-      <!-- Success icon -->
-      <div style="width:80px;height:80px;background:linear-gradient(135deg,#d1fae5,#a7f3d0);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:2.5rem;">
-        ✓
-      </div>
-
-      <!-- Title -->
-      <h1 style="font-size:1.75rem;font-weight:800;color:var(--brand-fg);margin:0 0 12px;line-height:1.2;">
-        ¡Gracias por tu compra!
-      </h1>
-      <p style="font-size:1rem;color:var(--brand-muted);margin:0 0 32px;line-height:1.6;">
-        Tu pedido fue procesado correctamente. Recibirás un correo de confirmación en breve.
-      </p>
-
-      <!-- Order ref (if Stripe session available) -->
-      {sessionId && (
-        <div style="background:var(--brand-surface);border:1px solid var(--brand-border);border-radius:10px;padding:16px;margin-bottom:32px;">
-          <p style="margin:0;font-size:0.8125rem;color:var(--brand-muted);">Referencia del pedido</p>
-          <p style="margin:4px 0 0;font-family:monospace;font-size:0.875rem;color:var(--brand-fg);word-break:break-all;">
-            {sessionId}
-          </p>
+    <main class="flex flex-1 items-center justify-center px-4 py-16 sm:px-6">
+      <div class="w-full max-w-lg rounded-pragmata border border-brand-border bg-white/90 p-8 text-center shadow-psy-soft backdrop-blur-md sm:p-10 dark:bg-slate-900/88">
+        <div
+          class="mx-auto flex h-16 w-16 items-center justify-center rounded-pragmata bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-lg"
+          aria-hidden="true"
+        >
+          <PublicIcon name="check" className="h-8 w-8 text-white" />
         </div>
-      )}
+        <h1 class="mt-6 text-2xl font-extrabold tracking-tight text-brand-dark sm:text-3xl">
+          ¡Gracias por tu compra!
+        </h1>
+        <p class="mt-3 text-sm leading-relaxed text-brand-steel sm:text-base">
+          Tu pedido fue procesado correctamente. Recibirás un correo de confirmación en breve.
+        </p>
 
-      <!-- Actions -->
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <a
-          href="/productos"
-          style="display:block;padding:14px 24px;background:var(--brand-accent);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.9375rem;"
-        >
-          Seguir comprando
-        </a>
-        <a
-          href="/"
-          style="display:block;padding:12px 24px;background:var(--brand-surface);color:var(--brand-muted);border:1px solid var(--brand-border);border-radius:10px;text-decoration:none;font-weight:500;font-size:0.875rem;"
-        >
-          Volver al inicio
-        </a>
+        {
+          sessionId && (
+            <div class="mt-8 rounded-pragmata border border-brand-border bg-brand-surface px-4 py-3 text-left">
+              <p class="font-mono text-[10px] font-semibold uppercase tracking-wider text-brand-steel">
+                Referencia
+              </p>
+              <p class="mt-1 break-all font-mono text-xs text-brand-dark">{sessionId}</p>
+            </div>
+          )
+        }
+
+        <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <a
+            href="/productos"
+            class="inline-flex items-center justify-center rounded-pragmata bg-brand-accent px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-accent-dark"
+          >
+            Seguir comprando
+          </a>
+          <a
+            href="/"
+            class="inline-flex items-center justify-center rounded-pragmata border border-brand-border bg-white px-6 py-3 text-sm font-semibold text-brand-steel transition hover:border-brand-accent/30 hover:text-brand-dark dark:border-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800"
+          >
+            Volver al inicio
+          </a>
+        </div>
+        <p class="mt-8 text-xs text-brand-steel">¿Tienes alguna duda? Escríbenos y te ayudamos.</p>
       </div>
-
-      <!-- Support note -->
-      <p style="margin:32px 0 0;font-size:0.8125rem;color:var(--brand-muted);">
-        ¿Tienes alguna duda? Escríbenos y te ayudamos.
-      </p>
-    </div>
+    </main>
   </div>
 </BaseLayout>
 
-<!-- Clear cart on load -->
 <script>
   try {
     localStorage.removeItem('pragmata_cart');
-    // Notify any CartDrawer still mounted
     window.dispatchEvent(new CustomEvent('cart:updated', { detail: [] }));
-  } catch (_) { /* ignore */ }
+  } catch (_) {
+    /* ignore */
+  }
 </script>

@@ -3,6 +3,7 @@
  */
 
 export interface LandingFeature {
+  /** Clave de icono (`layout-grid`, `users`, …) o emoji legacy resuelto por `PublicIcon`. */
   icon: string;
   title: string;
   description: string;
@@ -41,38 +42,38 @@ function pickStr(v: unknown, fallback: string): string {
 function defaultFeatures(ecommerceEnabled: boolean): LandingFeature[] {
   return [
     {
-      icon: '📋',
+      icon: 'layout-grid',
       title: 'Gestión de Proyectos',
       description:
         'Organiza tareas en tableros Kanban, asigna responsables y haz seguimiento en tiempo real.',
       href: null,
     },
     {
-      icon: '👥',
+      icon: 'users',
       title: 'Equipos y Roles',
       description: 'Control de acceso granular por rol. Define permisos exactos para cada miembro del equipo.',
       href: null,
     },
     {
-      icon: '📄',
+      icon: 'file-text',
       title: 'Documentos',
       description: 'Centraliza contratos, facturas y reportes. Acceso seguro con URLs firmadas de Supabase.',
       href: null,
     },
     {
-      icon: '🤖',
+      icon: 'sparkles',
       title: 'Inteligencia Artificial',
       description: 'Resúmenes automáticos, búsqueda semántica y asistente contextual para tu negocio.',
       href: null,
     },
     {
-      icon: '🛒',
+      icon: 'shopping-cart',
       title: 'E-Commerce',
       description: 'Catálogo de productos, carrito de compras y pagos integrados con Stripe o MercadoPago.',
       href: ecommerceEnabled ? '/productos' : null,
     },
     {
-      icon: '📊',
+      icon: 'chart-column',
       title: 'Dashboard y KPIs',
       description: 'Métricas clave de tu negocio en tiempo real: usuarios, entidades, tareas y más.',
       href: null,
@@ -86,7 +87,7 @@ function normalizeFeatures(raw: unknown, ecommerceEnabled: boolean): LandingFeat
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
     const o = item as Record<string, unknown>;
-    const icon = typeof o.icon === 'string' ? o.icon : '📌';
+    const icon = typeof o.icon === 'string' ? o.icon : 'circle';
     const title = typeof o.title === 'string' ? o.title : '';
     const description = typeof o.description === 'string' ? o.description : '';
     if (!title || !description) continue;
@@ -126,7 +127,7 @@ export function mergeLandingFromCms(opts: {
 
   const primaryCtaLabel = pickStr(c.primaryCtaLabel, 'Comenzar gratis →');
   const secondaryCtaLabel = opts.ecommerceEnabled
-    ? pickStr(c.secondaryCtaLabel, '🛍️ Ver catálogo')
+    ? pickStr(c.secondaryCtaLabel, 'Ver catálogo')
     : pickStr(c.secondaryCtaLabel, 'Ver características');
   const secondaryCtaHref = opts.ecommerceEnabled
     ? typeof c.secondaryCtaHref === 'string' && c.secondaryCtaHref.trim()

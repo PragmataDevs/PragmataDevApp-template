@@ -1,41 +1,36 @@
 ---
 /**
  * /productos — Product catalog (SSR with URL-based filters).
- *
- * SSR so filters (category, search, sort) are reflected in the URL and
- * can be indexed by search engines per category page.
- *
- * Data: fetched live from public.products (Supabase anon key — public RLS).
- * Schema.org: ItemList for the catalog page.
  */
-export const prerender = false; // SSR — dynamic per request
+export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PublicNav from '../../components/public/PublicNav.astro';
+import PublicFooter from '../../components/public/PublicFooter.astro';
+import { PublicIcon } from '../../components/icons/PublicIcon';
 import { supabase } from '../../lib/supabase';
 
-// ── URL filter params ────────────────────────────────────────────────────────
-const url       = Astro.url;
-const searchQ   = url.searchParams.get('q')        ?? '';
-const category  = url.searchParams.get('categoria') ?? '';
-const sort      = url.searchParams.get('orden')     ?? 'nombre';
+const url = Astro.url;
+const searchQ = url.searchParams.get('q') ?? '';
+const category = url.searchParams.get('categoria') ?? '';
+const sort = url.searchParams.get('orden') ?? 'nombre';
+const pathname = url.pathname;
 
-// ── Fetch products from Supabase ─────────────────────────────────────────────
 let query = supabase
   .from('products')
   .select('id, name, slug, price, compare_at_price, currency, description, image_url, category, in_stock')
   .eq('status', 'active');
 
-if (searchQ)  query = query.ilike('name', `%${searchQ}%`);
+if (searchQ) query = query.ilike('name', `%${searchQ}%`);
 if (category) query = query.eq('category', category);
 
-if (sort === 'precio_asc')  query = query.order('price', { ascending: true });
+if (sort === 'precio_asc') query = query.order('price', { ascending: true });
 else if (sort === 'precio_desc') query = query.order('price', { ascending: false });
-else                             query = query.order('name',  { ascending: true });
+else query = query.order('name', { ascending: true });
 
 const { data: productsRaw } = await query;
 const products = productsRaw ?? [];
 
-// ── Get all categories for the filter dropdown ───────────────────────────────
 const { data: catRowsRaw } = await supabase
   .from('products')
   .select('category')
@@ -43,17 +38,21 @@ const { data: catRowsRaw } = await supabase
   .not('category', 'is', null);
 
 const catRows = catRowsRaw ?? [];
-const categories = [...new Set(catRows.map((r: { category: string | null }) => r.category).filter(Boolean))] as string[];
+const categories = [
+  ...new Set(catRows.map((r: { category: string | null }) => r.category).filter(Boolean)),
+] as string[];
 
-const brand   = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
-const siteUrl = import.meta.env.PUBLIC_SITE_URL   ?? '';
+const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
+const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';
+const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? '';
+const tagline = import.meta.env.PUBLIC_BRAND_TAGLINE ?? 'Catálogo y checkout seguros.';
+const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 
-// ── Schema.org ItemList ───────────────────────────────────────────────────────
 const schema = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
   name: `Catálogo de productos — ${brand}`,
-  itemListElement: products.map((p: any, i: number) => ({
+  itemListElement: products.map((p: { name: string; description: string | null; slug: string }, i: number) => ({
     '@type': 'ListItem',
     position: i + 1,
     item: {
@@ -71,99 +70,175 @@ const schema = {
   description={`Explora nuestro catálogo. ${products.length} producto${products.length !== 1 ? 's' : ''} disponible${products.length !== 1 ? 's' : ''}.`}
   schema={schema}
 >
-  <div style="max-width:1100px;margin:0 auto;padding:40px 24px;">
+  <div class="ps-mesh flex min-h-screen flex-col">
+    <PublicNav brand={brand} appUrl={appUrl} ecommerceEnabled={ecommerceEnabled} pathname={pathname} />
 
-    <!-- Header -->
-    <div style="margin-bottom:32px;">
-      <h1 style="font-size:clamp(1.5rem,3vw,2rem);font-weight:700;color:var(--brand-fg);margin:0 0 8px;">
-        Nuestros Productos
-      </h1>
-      <p style="color:var(--brand-muted);font-size:0.875rem;">{products.length} productos disponibles</p>
-    </div>
+    <main class="flex-1">
+      <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+        <header class="mb-10 max-w-2xl">
+          <p class="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-accent-dark">
+            Tienda
+          </p>
+          <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-brand-dark sm:text-4xl">
+            Nuestros productos
+          </h1>
+          <p class="mt-2 text-sm text-brand-steel sm:text-base">
+            {products.length} producto{products.length !== 1 ? 's' : ''} disponible{products.length !== 1
+              ? 's'
+              : ''}
+            {searchQ && ` · Resultados para “${searchQ}”`}
+          </p>
+        </header>
 
-    <!-- Filters bar -->
-    <form method="get" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:32px;padding:16px;background:var(--brand-surface);border:1px solid var(--brand-border);border-radius:10px;">
-      <input
-        type="search"
-        name="q"
-        value={searchQ}
-        placeholder="Buscar productos..."
-        style="flex:1;min-width:180px;padding:8px 14px;border:1px solid var(--brand-border);border-radius:8px;font-size:0.875rem;"
-      />
-      {categories.length > 0 && (
-        <select name="categoria" style="padding:8px 14px;border:1px solid var(--brand-border);border-radius:8px;font-size:0.875rem;background:#fff;">
-          <option value="">Todas las categorías</option>
-          {categories.map(cat => (
-            <option value={cat} selected={category === cat}>{cat}</option>
-          ))}
-        </select>
-      )}
-      <select name="orden" style="padding:8px 14px;border:1px solid var(--brand-border);border-radius:8px;font-size:0.875rem;background:#fff;">
-        <option value="nombre"       selected={sort === 'nombre'}>Nombre A-Z</option>
-        <option value="precio_asc"   selected={sort === 'precio_asc'}>Precio: menor a mayor</option>
-        <option value="precio_desc"  selected={sort === 'precio_desc'}>Precio: mayor a menor</option>
-      </select>
-      <button type="submit" style="padding:8px 20px;background:var(--brand-accent);color:#fff;border:none;border-radius:8px;font-size:0.875rem;font-weight:600;cursor:pointer;">
-        Filtrar
-      </button>
-    </form>
-
-    <!-- Product grid -->
-    {products.length === 0 ? (
-      <div style="text-align:center;padding:80px 0;color:var(--brand-muted);">
-        <div style="font-size:3rem;margin-bottom:16px;">🛍️</div>
-        <p style="margin:0 0 12px;font-weight:500;">
-          {searchQ || category ? 'No se encontraron productos con esos filtros.' : 'No hay productos disponibles aún.'}
-        </p>
-        {(searchQ || category) && (
-          <a href="/productos" style="color:var(--brand-accent);font-size:0.875rem;">Ver todos los productos</a>
-        )}
-      </div>
-    ) : (
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px;">
-        {(products as any[]).map(product => (
-          <a
-            href={`/productos/${product.slug}`}
-            style="display:block;border:1px solid var(--brand-border);border-radius:12px;background:var(--brand-surface);overflow:hidden;text-decoration:none;transition:box-shadow 0.2s,transform 0.15s;"
-            onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,0.08)';this.style.transform='translateY(-2px)'"
-            onmouseout="this.style.boxShadow='none';this.style.transform='none'"
+        <form
+          method="get"
+          class="catalog-filter-panel mb-10 flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-end"
+        >
+          <label class="min-w-[200px] flex-1">
+            <span class="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-brand-steel"
+              >Buscar</span
+            >
+            <input
+              type="search"
+              name="q"
+              value={searchQ}
+              placeholder="Nombre del producto…"
+              class="catalog-filter-field w-full ring-brand-accent/30 transition focus:border-brand-accent focus:ring-2"
+            />
+          </label>
+          {
+            categories.length > 0 && (
+              <label class="min-w-[160px] sm:max-w-[220px]">
+                <span class="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-brand-steel">
+                  Categoría
+                </span>
+                <select
+                  name="categoria"
+                  class="catalog-filter-field focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/30"
+                >
+                  <option value="">Todas</option>
+                  {categories.map(cat => (
+                    <option value={cat} selected={category === cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )
+          }
+          <label class="min-w-[160px] sm:max-w-[220px]">
+            <span class="mb-1 block font-mono text-[10px] font-semibold uppercase tracking-wider text-brand-steel"
+              >Orden</span
+            >
+            <select
+              name="orden"
+              class="catalog-filter-field focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/30"
+            >
+              <option value="nombre" selected={sort === 'nombre'}>Nombre A-Z</option>
+              <option value="precio_asc" selected={sort === 'precio_asc'}>Precio: menor a mayor</option>
+              <option value="precio_desc" selected={sort === 'precio_desc'}>Precio: mayor a menor</option>
+            </select>
+          </label>
+          <button
+            type="submit"
+            class="rounded-pragmata bg-brand-accent px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-accent-dark hover:shadow-psy-glow sm:shrink-0"
           >
-            <!-- Product image -->
-            <div style="aspect-ratio:4/3;background:var(--brand-bg);display:flex;align-items:center;justify-content:center;overflow:hidden;">
-              {product.image_url
-                ? <img src={product.image_url} alt={product.name} style="width:100%;height:100%;object-fit:cover;" loading="lazy" />
-                : <span style="font-size:3rem;">🛍️</span>
-              }
-            </div>
-            <!-- Product info -->
-            <div style="padding:16px;">
-              {product.category && (
-                <p style="font-size:0.75rem;color:var(--brand-muted);margin:0 0 4px;text-transform:uppercase;letter-spacing:0.05em;">{product.category}</p>
-              )}
-              <h2 style="font-size:0.9375rem;font-weight:600;color:var(--brand-fg);margin:0 0 8px;">{product.name}</h2>
-              {product.description && (
-                <p style="font-size:0.8125rem;color:var(--brand-muted);margin:0 0 12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{product.description}</p>
-              )}
-              <div style="display:flex;align-items:center;justify-content:space-between;">
-                <div>
-                  <span style="font-size:1.125rem;font-weight:700;color:var(--brand-fg);">
-                    {new Intl.NumberFormat('es-MX', { style: 'currency', currency: product.currency ?? 'MXN' }).format(product.price)}
-                  </span>
-                  {product.compare_at_price && (
-                    <span style="font-size:0.75rem;color:var(--brand-muted);text-decoration:line-through;margin-left:6px;">
-                      {new Intl.NumberFormat('es-MX', { style: 'currency', currency: product.currency ?? 'MXN' }).format(product.compare_at_price)}
-                    </span>
-                  )}
-                </div>
-                <span style="font-size:0.75rem;font-weight:600;color:var(--brand-accent);">Ver →</span>
-              </div>
-              {!product.in_stock && (
-                <p style="font-size:0.75rem;color:#ef4444;margin:8px 0 0;font-weight:500;">Sin stock</p>
+            Aplicar
+          </button>
+        </form>
+
+        {
+          products.length === 0 ? (
+            <div class="catalog-empty-state py-20 text-center">
+              <PublicIcon name="package" className="mx-auto h-12 w-12 text-slate-300" />
+              <p class="catalog-empty-state__text mt-4">
+                {searchQ || category
+                  ? 'No se encontraron productos con esos filtros.'
+                  : 'No hay productos disponibles aún.'}
+              </p>
+              {(searchQ || category) && (
+                <a
+                  href="/productos"
+                  class="mt-4 inline-block text-sm font-semibold text-brand-accent hover:text-brand-accent-dark"
+                >
+                  Ver todos los productos
+                </a>
               )}
             </div>
-          </a>
-        ))}
+          ) : (
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {products.map(
+                (product: {
+                  slug: string;
+                  image_url: string | null;
+                  name: string;
+                  category: string | null;
+                  description: string | null;
+                  price: number;
+                  currency: string | null;
+                  compare_at_price: number | null;
+                  in_stock: boolean;
+                }) => (
+                  <a
+                    href={`/productos/${product.slug}`}
+                    class="group catalog-product-card"
+                  >
+                    <div class="catalog-product-card__media">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div class="flex h-full w-full items-center justify-center text-slate-300">
+                          <PublicIcon name="package" className="h-14 w-14" />
+                        </div>
+                      )}
+                      {!product.in_stock && (
+                        <span class="absolute left-2 top-2 rounded-pragmata bg-red-600/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                          Agotado
+                        </span>
+                      )}
+                    </div>
+                    <div class="catalog-product-card__body">
+                      {product.category && (
+                        <p class="catalog-product-card__category">{product.category}</p>
+                      )}
+                      <h2 class="catalog-product-card__title">{product.name}</h2>
+                      {product.description && (
+                        <p class="catalog-product-card__desc">{product.description}</p>
+                      )}
+                      <div class="catalog-product-card__footer">
+                        <div>
+                          <span class="catalog-product-card__price">
+                            {new Intl.NumberFormat('es-MX', {
+                              style: 'currency',
+                              currency: product.currency ?? 'MXN',
+                            }).format(product.price)}
+                          </span>
+                          {product.compare_at_price && (
+                            <span class="catalog-product-card__compare">
+                              {new Intl.NumberFormat('es-MX', {
+                                style: 'currency',
+                                currency: product.currency ?? 'MXN',
+                              }).format(product.compare_at_price)}
+                            </span>
+                          )}
+                        </div>
+                        <span class="catalog-product-card__link">Ver →</span>
+                      </div>
+                    </div>
+                  </a>
+                ),
+              )}
+            </div>
+          )
+        }
       </div>
-    )}
+    </main>
+
+    <PublicFooter brand={brand} note={tagline} appUrl={appUrl} ecommerceEnabled={ecommerceEnabled} />
   </div>
 </BaseLayout>
