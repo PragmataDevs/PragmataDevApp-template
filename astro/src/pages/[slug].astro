@@ -18,6 +18,10 @@ if (!slug || RESERVED.has(slug)) {
   return new Response(null, { status: 404, statusText: 'Not Found' });
 }
 
+if (!supabase) {
+  return new Response(null, { status: 404, statusText: 'Not Found' });
+}
+
 const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? 'https://tucliente.com';
 const brandFallback = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
 const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';

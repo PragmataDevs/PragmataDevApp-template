@@ -292,7 +292,7 @@ astro/
       BaseLayout.astro     # SEO base (<title>, OG, JSON-LD)
     lib/
       supabase.ts          # Cliente público (anon)
-  astro.config.mjs         # hybrid + @astrojs/node; env desde raíz del monorepo
+  astro.config.mjs         # hybrid + @astrojs/vercel/serverless; env desde raíz del monorepo
   tailwind.config.mjs      # Extiende tailwind raíz; content apunta a astro/src
 ```
 
@@ -1108,7 +1108,7 @@ Hay **dos** superficies de portada en el monorepo; no son mutuamente excluyentes
 
 **Producción típica:** `www.cliente.com` → build Astro · `app.cliente.com` → build React. El operativo **no** sustituye la landing SEO en el dominio público; Astro es la cabecera de marca y conversión; el ERP es la consola autenticada.
 
-**Deploy Astro (hybrid + `@astrojs/node`):** después de `pnpm build` en `astro/`, el servidor es `node ./dist/server/entry.mjs` (en plantilla: `pnpm start`). Para **desarrollo local**, `pnpm dev:all` en la raíz levanta ERP (`:7070`) y Astro (`:4321`) — detalle en **`docs/SETUP.md`** (secciones 8.0 y 8.3). Variables de build, VPS/hosting y sitemap: secciones 8.4–8.8 del mismo documento.
+**Deploy Astro (hybrid + `@astrojs/vercel`):** después de `pnpm build` en `astro/`, la salida para Vercel está en **`.vercel/output/`**; en local, `pnpm start` en `astro/` ejecuta **`vercel dev`**. Detalle, parche de runtime Node y checklist: **[`docs/template-handoff-vercel-y-astro.md`](./template-handoff-vercel-y-astro.md)** y **`docs/SETUP.md`** (sección 8). Para desarrollo local, `pnpm dev:all` en la raíz levanta ERP (`:7070`) y Astro (`:4321`).
 
 **Dominios, Vercel y Supabase por entorno:** en producción suele haber dos hosts (`www` → Astro, `app` → ERP) y variables cruzadas (`PUBLIC_APP_URL`, `VITE_PUBLIC_SITE_URL`, claves Supabase alineadas al mismo entorno). Para una matriz reutilizable (local con `supabase start`, staging, dos proyectos en Vercel, scopes de variables y URLs de Auth en el dashboard), ver **`docs/deployment-environments.md`**.
 

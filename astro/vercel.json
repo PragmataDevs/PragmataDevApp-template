@@ -1,0 +1,3 @@
+{
+  "rewrites": [{ "source": "/favicon.ico", "destination": "/favicon.svg" }]
+}

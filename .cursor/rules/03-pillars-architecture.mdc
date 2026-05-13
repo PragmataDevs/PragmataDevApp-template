@@ -49,7 +49,7 @@ astro/
       supabase.ts       # createClient con claves públicas (mapeadas desde .env raíz)
       site-origin.ts    # helper origen canónico (PUBLIC_SITE_URL / astro.site)
   public/               # estáticos (favicon, etc.) — no robots.txt plano
-  astro.config.mjs      # output:'hybrid', @astrojs/node, @astrojs/react
+  astro.config.mjs      # output:'hybrid', @astrojs/vercel/serverless, @astrojs/react
   package.json          # Dependencias Astro (independiente de React app)
   .env.example
 ```
@@ -62,7 +62,7 @@ pnpm dev:all                          # :7070 ERP + :4321 Astro — ver docs/SET
 # Solo público:  cd astro && pnpm dev
 pnpm build && pnpm start              # prod local Astro (cwd astro/)
 ```
-Ver **`docs/SETUP.md`** sección 8 para URLs `.env` (LOCAL vs prod), hybrid + `@astrojs/node` y sitemap. Despliegue (dominios, Vercel, `supabase start`): **`docs/deployment-environments.md`**.
+Ver **`docs/SETUP.md`** sección 8 para URLs `.env` (LOCAL vs prod), hybrid + `@astrojs/vercel` y sitemap. Despliegue (dominios, Vercel, `supabase start`): **`docs/deployment-environments.md`**. Handoff Vercel/Astro: **`docs/template-handoff-vercel-y-astro.md`**.
 
 **Restricciones:**
 - Prohibido server-side mutations desde Astro. Toda escritura va a Edge Functions.

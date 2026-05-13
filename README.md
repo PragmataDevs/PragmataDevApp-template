@@ -10,7 +10,7 @@ Plantilla base para apps web **offline-first** con arquitectura feature-based.
 - PowerSync (sincronización offline en el ERP, con feature flag; si está apagado, lectura/escritura **online** directa a Supabase)
 - **Entrega:** aplicaciones **web** en navegador (despliegue en hosting); no es una app nativa “descargable” de serie — ver **`docs/architecture.md`** secciones **0.1**–**0.3** (PWA / service worker opcional por proyecto; no ligado al flag de PowerSync).
 
-Arquitectura completa: `docs/architecture.md` · PWA / service worker (propuesta, no código aún): `docs/pwa-service-worker-proposal.md`
+Arquitectura completa: `docs/architecture.md` · PWA / service worker (propuesta): `docs/pwa-service-worker-proposal.md` · **Vercel + Astro (adapter, runtime, Supabase SSR):** `docs/template-handoff-vercel-y-astro.md`
 
 **¿Acabas de crear el repo?** Lee primero **`docs/PARA-INICIAR.md`** (pasos en orden + Vercel resumido). Luego profundiza en `docs/SETUP.md` cuando necesites cada módulo.
 

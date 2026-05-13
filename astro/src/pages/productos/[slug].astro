@@ -13,6 +13,10 @@ import CartButton from '../../components/islands/CartButton';
 import { supabase } from '../../lib/supabase';
 import { resolveSiteOrigin } from '../../lib/site-origin';
 
+if (!supabase) {
+  return Astro.redirect('/productos?notfound=1', 302);
+}
+
 function truncateMeta(text: string, max = 160): string {
   const t = text.replace(/\s+/g, ' ').trim();
   if (t.length <= max) return t;

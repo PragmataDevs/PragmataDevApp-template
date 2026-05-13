@@ -137,4 +137,5 @@ Así las pruebas destructivas (borrar usuarios, datos de prueba, migraciones) no
 | Esta matriz (dominios, env, Vercel, local vs nube) | Este archivo |
 | Lectura corta “qué hago después de clonar” | [PARA-INICIAR.md](./PARA-INICIAR.md) |
 | Naturaleza del producto (web vs “descargable”), datos: Supabase / PowerSync / `localStorage`, service worker vs flag | [architecture.md](./architecture.md) secciones **0.1**–**0.3** |
+| Vercel + Astro (adapter, parche runtime, Supabase SSR, favicon, `PublicSiteEntry`) | [template-handoff-vercel-y-astro.md](./template-handoff-vercel-y-astro.md) |
 | Propuesta PWA / service worker (fases, ERP vs Astro, checklist) | [pwa-service-worker-proposal.md](./pwa-service-worker-proposal.md) |

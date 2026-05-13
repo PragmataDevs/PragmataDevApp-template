@@ -16,31 +16,49 @@ const category = url.searchParams.get('categoria') ?? '';
 const sort = url.searchParams.get('orden') ?? 'nombre';
 const pathname = url.pathname;
 
-let query = supabase
-  .from('products')
-  .select('id, name, slug, price, compare_at_price, currency, description, image_url, category, in_stock')
-  .eq('status', 'active');
+type CatalogProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  compare_at_price: number | null;
+  currency: string | null;
+  description: string | null;
+  image_url: string | null;
+  category: string | null;
+  in_stock: boolean;
+};
 
-if (searchQ) query = query.ilike('name', `%${searchQ}%`);
-if (category) query = query.eq('category', category);
+let products: CatalogProduct[] = [];
+let categories: string[] = [];
 
-if (sort === 'precio_asc') query = query.order('price', { ascending: true });
-else if (sort === 'precio_desc') query = query.order('price', { ascending: false });
-else query = query.order('name', { ascending: true });
+if (supabase) {
+  let query = supabase
+    .from('products')
+    .select('id, name, slug, price, compare_at_price, currency, description, image_url, category, in_stock')
+    .eq('status', 'active');
 
-const { data: productsRaw } = await query;
-const products = productsRaw ?? [];
+  if (searchQ) query = query.ilike('name', `%${searchQ}%`);
+  if (category) query = query.eq('category', category);
 
-const { data: catRowsRaw } = await supabase
-  .from('products')
-  .select('category')
-  .eq('status', 'active')
-  .not('category', 'is', null);
+  if (sort === 'precio_asc') query = query.order('price', { ascending: true });
+  else if (sort === 'precio_desc') query = query.order('price', { ascending: false });
+  else query = query.order('name', { ascending: true });
 
-const catRows = catRowsRaw ?? [];
-const categories = [
-  ...new Set(catRows.map((r: { category: string | null }) => r.category).filter(Boolean)),
-] as string[];
+  const { data: productsRaw } = await query;
+  products = (productsRaw ?? []) as CatalogProduct[];
+
+  const { data: catRowsRaw } = await supabase
+    .from('products')
+    .select('category')
+    .eq('status', 'active')
+    .not('category', 'is', null);
+
+  const catRows = catRowsRaw ?? [];
+  categories = [
+    ...new Set(catRows.map((r: { category: string | null }) => r.category).filter(Boolean)),
+  ] as string[];
+}
 
 const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
 const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';

@@ -36,24 +36,26 @@ let cmsHome: {
 } | null = null;
 
 try {
-  const { data, error } = await supabase
-    .from('cms_pages')
-    .select('is_published, seo_title, seo_description, og_image_url, content')
-    .eq('slug', 'home')
-    .eq('status', 'active')
-    .maybeSingle();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('cms_pages')
+      .select('is_published, seo_title, seo_description, og_image_url, content')
+      .eq('slug', 'home')
+      .eq('status', 'active')
+      .maybeSingle();
 
-  if (!error && data?.is_published === true) {
-    cmsHome = {
-      is_published: true,
-      seo_title: data.seo_title as string | null,
-      seo_description: data.seo_description as string | null,
-      og_image_url: data.og_image_url as string | null,
-      content: (data.content && typeof data.content === 'object' ? data.content : {}) as Record<
-        string,
-        unknown
-      >,
-    };
+    if (!error && data?.is_published === true) {
+      cmsHome = {
+        is_published: true,
+        seo_title: data.seo_title as string | null,
+        seo_description: data.seo_description as string | null,
+        og_image_url: data.og_image_url as string | null,
+        content: (data.content && typeof data.content === 'object' ? data.content : {}) as Record<
+          string,
+          unknown
+        >,
+      };
+    }
   }
 } catch {
   cmsHome = null;

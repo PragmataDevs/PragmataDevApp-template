@@ -494,43 +494,37 @@ Scripts útiles en la raíz del `package.json`:
 | `pnpm dev:astro` | Solo Astro → `:4321` |
 | `pnpm dev:all` | Ambos en paralelo (`concurrently`) — definido en la **raíz**; en `astro/` existe el mismo nombre y llama al raíz |
 
-### 8.4 Build para producción (`hybrid` + Node)
+### 8.4 Build para producción (`hybrid` + Vercel)
 
-El proyecto usa **`output: 'hybrid'`** y el adapter **`@astrojs/node`** (`mode: 'standalone'`). Eso permite:
+El proyecto usa **`output: 'hybrid'`** y el adapter **`@astrojs/vercel/serverless`** (salida compatible con **Vercel** y `vercel dev`). Eso permite:
 
-- **SSG:** páginas con `prerender = true` (p. ej. la landing `/`) → HTML estático en `dist/client/`.
-- **SSR:** páginas con `prerender = false` (p. ej. `/productos`, `/productos/[slug]`, `/checkout`) → servidor Node en `dist/server/`.
+- **SSG:** páginas con `prerender = true` (p. ej. la landing `/`) → estáticos en el output de Vercel.
+- **SSR:** páginas con `prerender = false` (p. ej. `/productos`, `/productos/[slug]`, `/checkout`) → función serverless de render.
 
 ```bash
 cd astro
+pnpm install
 pnpm build
 ```
 
-Salida típica:
-
-- `astro/dist/client/` — assets estáticos e hidratación del cliente.
-- `astro/dist/server/entry.mjs` — **punto de entrada del servidor** que sirve rutas SSR y mezcla lo estático.
+Tras el build, la salida típica incluye **`astro/.vercel/output/`** (Build Output API). **Ya no** se usa `node ./dist/server/entry.mjs` como verificación oficial del hybrid en Vercel.
 
 > **`astro.config.mjs` debe exportar un objeto plano** (`defineConfig({ ... })`). Una función tipo `defineConfig(() => ({...}))` (estilo Vite) hace que Astro ignore adapter y modo hybrid.
 
-### 8.5 Probar el build en local (servidor Node)
+**Runtime Node en Vercel:** el adapter `@astrojs/vercel@7.8.2` original puede emitir `nodejs18.x` en algunos casos; Vercel ya no acepta ese runtime en despliegues nuevos. Esta template aplica un **`pnpm` patch** (`patches/@astrojs__vercel@7.8.2.patch`) para que el runtime sea **`nodejs20.x`** o **`nodejs22.x`** según la versión de Node del builder. Tras `pnpm build`, comprueba `astro/.vercel/output/functions/_render.func/.vc-config.json` → **`runtime`** no debe ser `nodejs18.x`.
+
+Checklist y variables: **[docs/template-handoff-vercel-y-astro.md](./template-handoff-vercel-y-astro.md)**.
+
+### 8.5 Probar el build en local (Vercel CLI)
 
 Después de `pnpm build`, desde **`astro/`**:
 
 ```bash
 pnpm start
-# equivale a: node ./dist/server/entry.mjs
+# equivale a: vercel dev — sirve el output en .vercel/output (hybrid SSR)
 ```
 
-Por defecto escucha en **`http://localhost:4321`**. Para exponer en la red (p. ej. móvil en la misma Wi‑Fi):
-
-```bash
-HOST=0.0.0.0 PORT=4321 pnpm start
-```
-
-*(Si tu versión del adapter ignora `HOST`/`PORT`, revisa la [guía oficial del adapter Node](https://docs.astro.build/en/guides/integrations-guide/node/).)*
-
-**`pnpm preview` (`astro preview`):** útil sobre todo para sitios **100% estáticos**. Con hybrid + SSR, la verificación fiable del comportamiento de producción es **`pnpm start`** tras el build.
+**`astro preview`:** no reproduce fielmente el hybrid con este adapter; para acercarte a producción usa **`vercel dev`** vía `pnpm start`.
 
 ### 8.6 Variables de entorno en producción
 
@@ -544,8 +538,8 @@ Para la matriz completa por entorno (local con `supabase start`, producción, st
 
 | Destino | Idea general |
 |--------|----------------|
-| **VPS / Docker / Node** | Copiar `astro/dist/` + `node_modules` de producción (o imagen multi-stage), ejecutar `node dist/server/entry.mjs`, proxy reverso (nginx/Caddy) con TLS. |
-| **Vercel / Netlify** | Suelen tener integración Astro con SSR; sigue la doc del proveedor (pueden no usar el mismo layout `standalone`). |
+| **Vercel (recomendado para esta template)** | Proyecto Vercel apuntando a `astro/`; build `pnpm build`; runtime Node 20/22 (ver **8.4** y [template-handoff-vercel-y-astro.md](./template-handoff-vercel-y-astro.md)). |
+| **VPS / Docker / Node “clásico”** | Si necesitas servidor Node propio, valorar adapter `@astrojs/node` en un fork o rama aparte (esta template está alineada a Vercel + `@astrojs/vercel`). |
 
 Dominios, scopes de variables y separación ERP / sitio público en Vercel: **[deployment-environments.md](./deployment-environments.md)**.
 
@@ -625,7 +619,7 @@ Marca cada ítem antes de considerar el setup completo:
 - [ ] En el `.env` raíz están `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (Astro las reutiliza)
 - [ ] Para local: `VITE_PUBLIC_SITE_URL`, `PUBLIC_SITE_URL` → `http://localhost:4321` y `PUBLIC_APP_URL` → `http://localhost:7070` (ver `.env.example`)
 - [ ] `pnpm dev:all` desde la raíz levanta ERP + Astro; o cada uno por separado con `pnpm dev` / `pnpm dev:astro`
-- [ ] `pnpm build` en `astro/` termina sin error (`output: hybrid`, adapter `@astrojs/node`)
+- [ ] `pnpm build` en `astro/` termina sin error (`output: hybrid`, adapter `@astrojs/vercel`; revisar `astro/.vercel/output/functions/_render.func/.vc-config.json` → runtime **nodejs20.x** o **nodejs22.x**)
 - [ ] `pnpm start` en `astro/` (tras el build) sirve el sitio y `/productos/[slug]` responde sin error de rutas estáticas
 
 ### RBAC
@@ -658,7 +652,7 @@ El baseline ya incluye `is_god()` en políticas RLS. Verifica que el perfil teng
 - La service role key es diferente a la anon key — está en Settings → API → `service_role`
 
 ### Astro: `GetStaticPathsRequired` en `/productos/[slug]` o error de renderer `.tsx`
-- El sitio debe compilarse en modo **hybrid** con adapter **`@astrojs/node`** (`astro.config.mjs`: objeto plano en `defineConfig`, **no** función callback).
+- El sitio debe compilarse en modo **hybrid** con adapter **`@astrojs/vercel`** (`astro.config.mjs`: objeto plano en `defineConfig`, **no** función callback).
 - Tras `pnpm build`, validar con `pnpm start` desde `astro/` (servidor Node real).
 
 ### Astro: el build dice `output: "static"` sin adapter

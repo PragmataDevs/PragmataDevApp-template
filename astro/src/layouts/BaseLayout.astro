@@ -99,11 +99,8 @@ const absImage = image.startsWith('http') ? image : `${siteUrl}${image}`;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={absImage} />
 
-    <!-- ── Favicon (estáticos en `astro/public/`, sirven en la raíz del sitio) ─ -->
-    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <!-- ── Favicon (`astro/public/favicon.svg`; `/favicon.ico` → rewrite en `astro/vercel.json`) ─ -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/site.webmanifest" />
 
     <!-- ── Typography (público) ─────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
