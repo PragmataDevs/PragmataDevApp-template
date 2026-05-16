@@ -250,6 +250,3 @@ export const WORKSPACE_ROUTES: AppRoute[] = [
     hideInMenu: true,
   },
 ];
-
-// Alias for backward compatibility during migration
-export const PROJECT_ROUTES = WORKSPACE_ROUTES;

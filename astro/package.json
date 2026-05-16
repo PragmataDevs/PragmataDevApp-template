@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "astro dev --port 4321",
+    "dev": "astro dev",
     "dev:all": "pnpm --dir .. run dev:all",
     "build": "astro build",
     "start": "vercel dev",

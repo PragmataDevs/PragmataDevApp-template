@@ -77,6 +77,12 @@ Este proyecto requiere:
 - `true`: lectura local con PowerSync/SQLite (offline-first)
 - `false`: fallback directo a Supabase (modo online)
 
+## Mantenimiento y CI
+
+- Cambios recientes (legacy workspace, usuario dios, Astro en LAN): **`docs/template-maintenance.md`**
+- Usuario dios en frontend: **`docs/security-god-user-frontend.md`**
+- Workflow mínimo de CI (GitHub Actions): **`docs/ci-workflow.md`**
+
 ## Scripts
 
 - `pnpm dev`: solo ERP (Vite, `:7070`)

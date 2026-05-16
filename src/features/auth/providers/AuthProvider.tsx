@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
+import { isGodUser } from '@/lib/auth/isGodUser';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/types/users/profile';
 
@@ -15,6 +16,10 @@ const NO_REDIRECT_PATHS = ['/auth/reset-password'];
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
+  /** Equipo del perfil: `teams.is_platform_owner` (requerido para usuario dios). */
+  teamIsPlatformOwner: boolean | null;
+  /** `access_level === 'god'` y equipo platform owner — alineado con `public.is_god()`. */
+  isGod: boolean;
   permissions: UserPermissionsMap;
   loading: boolean;
   isAuthenticated: boolean;
@@ -33,6 +38,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [teamIsPlatformOwner, setTeamIsPlatformOwner] = useState<boolean | null>(null);
   const [permissions, setPermissions] = useState<UserPermissionsMap>({});
   // loading stays true until BOTH session AND profile are resolved.
   // This prevents the RouteGuard / useCrudResource flash where loading=false
@@ -80,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, team:teams(is_platform_owner)')
         .eq('id', userId)
         .single();
 
@@ -89,9 +95,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      const row = data as Profile & {
+        team?: { is_platform_owner: boolean } | null;
+      };
+      const { team, ...profileRow } = row;
+
       const nextPermissions = await fetchPermissions(userId);
-      console.log('[AuthProvider] Profile loaded:', data);
-      setProfile(data as Profile);
+      console.log('[AuthProvider] Profile loaded:', profileRow);
+      setProfile(profileRow as Profile);
+      setTeamIsPlatformOwner(team?.is_platform_owner ?? null);
       setPermissions(nextPermissions);
     } catch (err: any) {
       if (err?.name === 'AbortError' || /aborted/i.test(err?.message || '')) {
@@ -157,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!currentUser) {
         setProfile(null);
+        setTeamIsPlatformOwner(null);
         setPermissions({});
         lastProfileUserIdRef.current = null;
         return;
@@ -242,9 +255,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     lastProfileUserIdRef.current = user.id;
   };
 
+  const isGod = useMemo(
+    () => isGodUser(profile, teamIsPlatformOwner),
+    [profile, teamIsPlatformOwner],
+  );
+
   const value = {
     user,
     profile,
+    teamIsPlatformOwner,
+    isGod,
     permissions,
     loading,
     isAuthenticated: !!user,

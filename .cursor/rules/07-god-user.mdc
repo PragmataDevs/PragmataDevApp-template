@@ -80,10 +80,20 @@ Sin esas dos condiciones, `is_god()` retorna FALSE.
 En el frontend, el god user debe tener acceso a **todas las secciones**
 del sidebar y **todas las rutas** sin verificación adicional.
 
+Usar el helper canónico (espejo de `is_god()`), no solo `access_level`:
+
 ```ts
-// En cualquier guard de permisos:
-if (profile?.access_level === 'god') return true;
+import { isGodUser } from '@/lib/auth/isGodUser';
+
+// En contexto React:
+const { isGod } = useAuth(); // AuthProvider ya une profile + teams.is_platform_owner
+if (isGod) return true;
+
+// Fuera de React / tests:
+if (isGodUser(profile, teamIsPlatformOwner)) return true;
 ```
+
+Detalle: `docs/security-god-user-frontend.md`
 
 ## Invariantes que NUNCA deben romperse
 

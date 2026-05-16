@@ -50,6 +50,12 @@ const site =
 export default defineConfig({
   site,
 
+  /** Misma UX que Vite (`host: true`): localhost + IP LAN en `pnpm dev` / `dev:all`. */
+  server: {
+    host: true,
+    port: 4321,
+  },
+
   output: 'hybrid',
   adapter: vercel(),
 

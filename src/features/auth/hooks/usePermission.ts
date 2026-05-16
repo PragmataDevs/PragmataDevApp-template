@@ -4,11 +4,11 @@ import { useAuth } from './useAuth';
 /**
  * Hook para validar permisos basado en Data-Driven RBAC.
  * Valida contra códigos de recurso (sys_resources.code) usando:
- * - access_level (god/admin = bypass)
+ * - isGod (public.is_god()) / access_level admin = bypass
  * - sys_user_permissions cargados en AuthProvider (members)
  */
 export function usePermission() {
-  const { profile, permissions, loading } = useAuth();
+  const { profile, permissions, loading, isGod } = useAuth();
   
   /**
    * Verifica si el usuario tiene permiso para un código de recurso específico.
@@ -22,8 +22,8 @@ export function usePermission() {
     // Si la ruta no requiere recurso explícito, basta con estar autenticado.
     if (!resourceCode) return true;
 
-    // 1. GOD MODE: acceso total si su team es platform_owner
-    if (profile.access_level === 'god') return true;
+    // 1. GOD MODE — alineado con public.is_god() (god + platform owner)
+    if (isGod) return true;
 
     // 2. ADMIN: acceso total dentro de su equipo
     if (profile.access_level === 'admin') return true;
@@ -37,11 +37,11 @@ export function usePermission() {
 
     // Verificar que la acción esté en el array
     return grantedActions.includes(action);
-  }, [profile, permissions, loading]);
+  }, [profile, permissions, loading, isGod]);
 
   const isAdmin = useCallback(() => {
-    return profile?.access_level === 'god' || profile?.access_level === 'admin';
-  }, [profile]);
+    return isGod || profile?.access_level === 'admin';
+  }, [profile, isGod]);
 
   return { hasPermission, isAdmin, loading };
 }

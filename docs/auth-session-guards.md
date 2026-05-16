@@ -27,3 +27,7 @@ Estos cambios se aplicaron en este repo para eliminar pantallas vacías que apar
 - [ ] Log/Sentry del número de 401 por pantalla para validar la mejora.
 
 Aplicando estos pasos eliminamos la necesidad de refrescar manualmente y dejamos los fetches alineados con el ciclo de vida real de la sesión de Supabase.
+
+## 6) Usuario dios en guards de UI
+
+Los guards de rutas (`RouteGuard`, `usePermission`) deben usar `useAuth().isGod`, alineado con `public.is_god()` (god + `teams.is_platform_owner`). Ver **`docs/security-god-user-frontend.md`**.
