@@ -5,9 +5,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PublicNav from '../components/public/PublicNav.astro';
 import PublicFooter from '../components/public/PublicFooter.astro';
 import CartCheckout from '../components/islands/CartCheckout';
+import { resolveAppOrigin } from '../lib/public-urls';
 
 const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
-const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';
+
+const appUrl = resolveAppOrigin(Astro.url);
 const tagline = import.meta.env.PUBLIC_BRAND_TAGLINE ?? 'Checkout seguro.';
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 const pathname = Astro.url.pathname;

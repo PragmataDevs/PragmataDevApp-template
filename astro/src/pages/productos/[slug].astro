@@ -11,7 +11,7 @@ import PublicFooter from '../../components/public/PublicFooter.astro';
 import { PublicIcon } from '../../components/icons/PublicIcon';
 import CartButton from '../../components/islands/CartButton';
 import { supabase } from '../../lib/supabase';
-import { resolveSiteOrigin } from '../../lib/site-origin';
+import { resolveAppOrigin, resolveSiteOrigin } from '../../lib/public-urls';
 
 if (!supabase) {
   return Astro.redirect('/productos?notfound=1', 302);
@@ -38,7 +38,7 @@ if (error || !product) {
   return Astro.redirect('/productos?notfound=1', 302);
 }
 
-const origin = resolveSiteOrigin(Astro.site);
+const origin = resolveSiteOrigin(Astro.site, Astro.url);
 const currency = product.currency ?? 'MXN';
 const pathname = Astro.url.pathname;
 
@@ -93,7 +93,7 @@ const schema = {
 };
 
 const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
-const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';
+const appUrl = resolveAppOrigin(Astro.url);
 const tagline = import.meta.env.PUBLIC_BRAND_TAGLINE ?? '';
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 

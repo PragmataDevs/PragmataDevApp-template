@@ -10,9 +10,9 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import type { Task, TaskStatus } from '@/types/tasks/task';
 import { parseTagsField } from '@/types/tasks/task.schema';
 import type { TaskFormValues } from '@/types/tasks/task.schema';
+import { resolveSupabaseUrl } from '@/lib/supabase';
 
 const AI_ENABLED = import.meta.env.VITE_ENABLE_AI === 'true';
-const EDGE_FN_URL = `${import.meta.env.VITE_SUPABASE_URL as string}/functions/v1/ai-task-summary`;
 
 export default function TasksPage() {
   const { entityId: rawEntityId } = useParams<{ entityId: string }>();
@@ -46,7 +46,7 @@ export default function TasksPage() {
     try {
       const { data: sessionData } = await import('@/lib/supabase').then(m => m.supabase.auth.getSession());
       const token = sessionData?.session?.access_token;
-      const res = await fetch(EDGE_FN_URL, {
+      const res = await fetch(`${resolveSupabaseUrl()}/functions/v1/ai-task-summary`, {
         method: 'POST',
         headers: {
           'Content-Type':  'application/json',

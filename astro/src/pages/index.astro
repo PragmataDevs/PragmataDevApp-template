@@ -11,6 +11,7 @@ import PublicFooter from '../components/public/PublicFooter.astro';
 import { PublicIcon } from '../components/icons/PublicIcon';
 import { supabase } from '../lib/supabase';
 import { mergeLandingFromCms } from '../lib/cms-defaults';
+import { loginPath, resolveAppOrigin, resolveSiteOrigin } from '../lib/public-urls';
 import { marked } from 'marked';
 
 function landingMdToHtml(md: string): string {
@@ -22,8 +23,9 @@ function landingMdToHtml(md: string): string {
 
 const brandEnv = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
 const taglineEnv = import.meta.env.PUBLIC_BRAND_TAGLINE ?? 'Tu solución de negocio';
-const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';
-const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? 'https://tucliente.com';
+const appUrl = resolveAppOrigin(Astro.url);
+const siteUrl = resolveSiteOrigin(Astro.site, Astro.url);
+const loginUrl = loginPath(appUrl);
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 const pathname = Astro.url.pathname;
 
@@ -137,7 +139,7 @@ const featTotal = features.length;
           />
           <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
             <a
-              href={`${appUrl.replace(/\/+$/, '')}/login`}
+              href={loginUrl}
               class="inline-flex items-center justify-center rounded-pragmata bg-brand-accent px-7 py-3.5 text-base font-semibold text-white shadow-psy-glow transition hover:bg-brand-accent-dark hover:shadow-psy-glow-lg"
             >
               {merged.primaryCtaLabel}
@@ -237,7 +239,7 @@ const featTotal = features.length;
               {merged.pricingSubtitle}
             </p>
             <a
-              href={`${appUrl.replace(/\/+$/, '')}/login`}
+              href={loginUrl}
               class="mt-10 inline-flex items-center justify-center rounded-pragmata bg-white px-8 py-4 text-base font-bold text-slate-900 shadow-lg transition hover:bg-slate-100"
             >
               Crear mi cuenta gratis →

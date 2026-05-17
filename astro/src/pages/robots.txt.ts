@@ -8,7 +8,7 @@ import { resolveSiteOrigin } from '../lib/site-origin';
 export const prerender = false;
 
 export const GET: APIRoute = ({ site }) => {
-  const origin = resolveSiteOrigin(site);
+  const origin = resolveSiteOrigin(site, Astro.url);
   const ecommerceOn = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 
   const lines = [

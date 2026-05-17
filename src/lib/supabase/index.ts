@@ -1,21 +1,47 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import {
+  isSupabaseConfigured,
+  resolveSupabaseAnonKey,
+  resolveSupabaseUrl,
+} from './resolveSupabaseConfig';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Faltan las variables de entorno de Supabase. Asegúrate de configurar .env');
+function missingConfigMessage(): string {
+  return (
+    'Faltan VITE_SUPABASE_URL y/o VITE_SUPABASE_ANON_KEY. ' +
+    'En la raíz del repo: cp .env.example .env → supabase start → supabase status ' +
+    '(pega Project URL y Publishable). Reinicia pnpm dev.'
+  );
 }
 
-export const supabase = createClient(
-  supabaseUrl || '', // Fallback vacío para evitar crash inmediato si faltan envs en build time, pero fallará runtime si no se proveen.
-  supabaseAnonKey || '',
-  {
+let client: SupabaseClient | null = null;
+
+function getClient(): SupabaseClient {
+  if (client) return client;
+
+  const supabaseUrl = resolveSupabaseUrl();
+  const supabaseAnonKey = resolveSupabaseAnonKey();
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(missingConfigMessage());
+  }
+
+  client = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
       storageKey: 'pragmata-auth-v1',
     },
-  }
-);
+  });
+
+  return client;
+}
+
+/** Cliente Supabase; lanza error claro si falta `.env` (no `supabaseUrl is required`). */
+export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getClient(), prop, receiver);
+  },
+});
+
+export { isSupabaseConfigured, resolveSupabaseUrl, resolveSupabaseAnonKey };

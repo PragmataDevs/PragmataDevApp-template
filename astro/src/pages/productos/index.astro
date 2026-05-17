@@ -9,6 +9,7 @@ import PublicNav from '../../components/public/PublicNav.astro';
 import PublicFooter from '../../components/public/PublicFooter.astro';
 import { PublicIcon } from '../../components/icons/PublicIcon';
 import { supabase } from '../../lib/supabase';
+import { resolveAppOrigin, resolveSiteOrigin } from '../../lib/public-urls';
 
 const url = Astro.url;
 const searchQ = url.searchParams.get('q') ?? '';
@@ -61,8 +62,8 @@ if (supabase) {
 }
 
 const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
-const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';
-const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? '';
+const appUrl = resolveAppOrigin(Astro.url);
+const siteUrl = resolveSiteOrigin(Astro.site, Astro.url);
 const tagline = import.meta.env.PUBLIC_BRAND_TAGLINE ?? 'Catálogo y checkout seguros.';
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 

@@ -31,8 +31,8 @@ Sigue el orden de esta guía la primera vez; después solo activa lo que necesit
 
 | Herramienta | Versión mínima | Instalar |
 |-------------|---------------|---------|
-| Node.js | 18+ | [nodejs.org](https://nodejs.org) |
-| pnpm | 8+ | `npm i -g pnpm` |
+| Node.js | 20+ | [nodejs.org](https://nodejs.org) |
+| pnpm | 9+ | `npm i -g pnpm` |
 | Docker Desktop (macOS/Windows) o motor Docker compatible | actual | [Docker Desktop](https://docs.docker.com/desktop/) (macOS: elige imagen **Apple Chip** o **Intel** según tu Mac) |
 | Supabase CLI | latest | `brew install supabase/tap/supabase` |
 | Cuenta Supabase | — | [supabase.com](https://supabase.com) — solo si usas proyecto **en la nube**; para solo local hace falta la CLI |
@@ -121,9 +121,9 @@ cd astro && pnpm install && cd ..
 
 > Orden canónico: primero **`pnpm install`** en la raíz, luego **`cd astro && pnpm install`**. Repite el segundo cuando cambie `astro/package.json`.
 
-### 2.2 Crear archivo `.env`
+### 2.2 Crear archivo `.env` (obligatorio)
 
-Copia el ejemplo:
+Copia el ejemplo — **sin `.env` el ERP no arranca Auth** (error `supabaseUrl is required`):
 
 ```bash
 cp .env.example .env
@@ -136,7 +136,22 @@ El **`.env.example`** documenta en bloque:
 
 **Nube (sin Docker local):** Dashboard → Settings → API → `URL` y `anon public` en las variables activas (o intercambia bloques comentados según prefieras).
 
-**Local:** tras `supabase start`, `supabase status` → **Project URL** (`http://127.0.0.1:54321`) y clave **Publishable**. Flujo completo (Studio, god user, sesión): [**sección 1.2**](#12-supabase-local-studio-env-y-usuario-god).
+**Local:** tras `supabase start`, `supabase status` → **Project URL** (`http://127.0.0.1:54321`) y clave **Publishable** en `VITE_SUPABASE_ANON_KEY`. Flujo completo (Studio, god user, sesión): [**sección 1.2**](#12-supabase-local-studio-env-y-usuario-god).
+
+> **Reinicia** `pnpm dev` o `pnpm dev:all` después de crear o cambiar `.env` (Vite solo lee variables al arrancar).
+
+#### 2.2.1 Pruebas desde el celular o LAN (URLs automáticas)
+
+Vite y Astro usan `server.host: true` (`:7070` y `:4321`). Puedes abrir el sitio como `http://<IP-de-tu-server>:4321` sin editar el `.env` a mano:
+
+| Qué abres | A dónde van los enlaces (automático) |
+|-----------|--------------------------------------|
+| Astro en `http://100.x.x.x:4321` | Login → `http://100.x.x.x:7070/login` |
+| ERP en `http://100.x.x.x:7070` | Supabase API → `http://100.x.x.x:54321` (si en `.env` tenías `127.0.0.1:54321`) |
+
+Implementación: `astro/src/lib/public-urls.ts` y `src/lib/supabase/resolveSupabaseConfig.ts`. Detalle en **`docs/architecture.md`** (resolución automática de URLs) y **`docs/template-maintenance.md`** §5.
+
+Requisitos: `supabase start` activo; puertos **54321**, **7070** y **4321** accesibles desde el dispositivo (firewall del server). La clave anon sigue saliendo del `.env` (no se infiere).
 
 ```env
 # … ver .env.example para el resto de flags (PowerSync, ecommerce, IA, etc.)
@@ -417,7 +432,7 @@ Son **dos aplicaciones** en el mismo monorepo:
 | **ERP / operativo** | raíz (`vite`) | **7070** | Login, dashboard, Workspace, admin de productos |
 | **Sitio público** | `astro/` | **4321** | Landing SEO, catálogo `/productos`, carrito |
 
-En **desarrollo** enlazas una con la otra con URLs **localhost** en el `.env` raíz:
+En **desarrollo** el `.env` raíz suele llevar **localhost** (ver `.env.example`):
 
 ```env
 VITE_PUBLIC_SITE_URL=http://localhost:4321
@@ -425,10 +440,10 @@ PUBLIC_SITE_URL=http://localhost:4321
 PUBLIC_APP_URL=http://localhost:7070
 ```
 
-- **`PUBLIC_APP_URL`** — Base del ERP: Astro usa esto en “Iniciar sesión” → `{PUBLIC_APP_URL}/login`.
-- **`VITE_PUBLIC_SITE_URL`** / **`PUBLIC_SITE_URL`** — Base del sitio público: el ERP (`PublicSiteEntry` en `/`) redirige aquí.
+- **`PUBLIC_APP_URL`** — En **producción**, base del ERP para “Iniciar sesión”. En **dev**, `public-urls.ts` prioriza el **host de la petición** si entras por IP (móvil/LAN); localhost en `.env` basta en la máquina del server.
+- **`VITE_PUBLIC_SITE_URL`** / **`PUBLIC_SITE_URL`** — Base del sitio público: el ERP (`PublicSiteEntry` en `/`) redirige aquí. Misma inferencia por host en dev para Astro (canonical/OG cuando aplica).
 
-En **producción** sustituye por tus dominios (ej. `https://www.tucliente.com` y `https://app.tucliente.com`) en el `.env` del build / variables del hosting.
+En **producción** define dominios reales en Vercel (ej. `https://www.tudominio.com`, `https://app.tudominio.com`). Los placeholders `tucliente.com` del example **no** se usan en runtime.
 
 **Un solo comando para pruebas locales** (después de **§2.1**: dependencias en raíz y en `astro/`):
 
@@ -456,13 +471,15 @@ cd astro && pnpm install && cd ..
 
 `astro/astro.config.mjs` carga el `.env` del **repositorio padre** (`envDir: ..`). Con el `.env` que ya usas para el ERP (al menos `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`) el catálogo puede leer Supabase sin duplicar claves.
 
-Las URLs públicas en **local** están en **`.env.example`** (bloque “Desarrollo local”). Mínimo recomendado para que CTAs y redirecciones encajen:
+Las URLs públicas en **local** están en **`.env.example`** (bloque “Desarrollo local”). Mínimo recomendado:
 
 ```env
 VITE_PUBLIC_SITE_URL=http://localhost:4321
 PUBLIC_SITE_URL=http://localhost:4321
 PUBLIC_APP_URL=http://localhost:7070
 ```
+
+Desde **otro dispositivo en la red** no hace falta duplicar la IP en el `.env` para login/Supabase: ver [**§2.2.1**](#221-pruebas-desde-el-celular-o-lan-urls-automáticas).
 
 Opcional: `PUBLIC_ENABLE_ECOMMERCE`, `PUBLIC_BRAND_NAME`, etc.
 
@@ -588,8 +605,9 @@ Marca cada ítem antes de considerar el setup completo:
 - [ ] Schema aplicado: **modo industrial** (`supabase link` + migraciones en `supabase/migrations/` + `supabase db push`, véase **sección 3.0**) **o** modo rápido pegando scripts en SQL Editor (**sección 3.1**)
 - [ ] SQL baseline aplicado (`01_security_engine.sql` o migración `…20000_pragmata_schema.sql`; incluye tasks, documents, ecommerce, CMS)
 - [ ] SQL `02_seed_god_user.sql` aplicado (usuario god creado) — en nube: SQL Editor del proyecto; en local: SQL Editor de Studio **:54323**
-- [ ] `pnpm dev` arranca sin errores en `localhost:7070` (o el puerto de tu `vite.config.ts`)
+- [ ] `pnpm dev` arranca sin errores en `localhost:7070` (o el puerto de tu `vite.config.ts`); consola del navegador **sin** `supabaseUrl is required`
 - [ ] Login funciona con el usuario god
+- [ ] (Opcional LAN) Desde móvil: Astro por `http://<IP>:4321` → “Iniciar sesión” abre `http://<IP>:7070/login` y el ERP habla con `http://<IP>:54321`
 
 ### Módulo Documentos
 - [ ] Baseline (`01`) aplicado (tabla `documents` incluida)
@@ -617,7 +635,7 @@ Marca cada ítem antes de considerar el setup completo:
 ### Astro / Público
 - [ ] `cd astro && pnpm install` ejecutado
 - [ ] En el `.env` raíz están `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (Astro las reutiliza)
-- [ ] Para local: `VITE_PUBLIC_SITE_URL`, `PUBLIC_SITE_URL` → `http://localhost:4321` y `PUBLIC_APP_URL` → `http://localhost:7070` (ver `.env.example`)
+- [ ] Para local: `VITE_PUBLIC_SITE_URL`, `PUBLIC_SITE_URL`, `PUBLIC_APP_URL` en `.env.example` (localhost); prueba LAN opcional sin cambiar IP en `.env` (§2.2.1)
 - [ ] `pnpm dev:all` desde la raíz levanta ERP + Astro; o cada uno por separado con `pnpm dev` / `pnpm dev:astro`
 - [ ] `pnpm build` en `astro/` termina sin error (`output: hybrid`, adapter `@astrojs/vercel`; revisar `astro/.vercel/output/functions/_render.func/.vc-config.json` → runtime **nodejs20.x** o **nodejs22.x**)
 - [ ] `pnpm start` en `astro/` (tras el build) sirve el sitio y `/productos/[slug]` responde sin error de rutas estáticas

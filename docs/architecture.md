@@ -2,7 +2,7 @@
 
 **Proyecto:** Plantilla Universal — Fábrica de Software Industrial (SaaS / Enterprise / Ecommerce / IA)
 **Stack:** React + Vite + Astro + Supabase + PowerSync + Tailwind + pgvector
-**Última Actualización:** 8 de Mayo 2026
+**Última Actualización:** Mayo 2026 (URLs dev/LAN, `.env` obligatorio)
 
 ---
 
@@ -67,6 +67,21 @@ PragmataDevs opera como una **fábrica de software modular**. No construimos apl
 Para desarrollo **sin tocar la nube**, el mismo contrato de API (`/rest/v1`, `/auth/v1`, Storage…) corre en Docker (`supabase start`). **Studio local** (`http://127.0.0.1:54323`) sustituye al Dashboard web para crear usuarios y ejecutar SQL (p. ej. `docs/database/02_seed_god_user.sql`). **No** mezcles sesión del navegador entre instancias: al cambiar `VITE_SUPABASE_URL` entre nube y `127.0.0.1:54321`, limpia `localStorage` del origen del ERP o cierra sesión.
 
 Procedimiento canónico (puertos, `.env`, god user, troubleshooting Storage): **`docs/SETUP.md`** secciones **1.1** y **1.2**. Matriz de dominios y Vercel: **`docs/deployment-environments.md`**.
+
+#### Resolución automática de URLs en desarrollo (ERP ↔ Astro ↔ Supabase)
+
+En **desarrollo**, si abres el sitio o el ERP por **IP de red** (LAN, Tailscale `100.x`, etc.) en lugar de `localhost`, la plantilla **no** debe mandarte a `localhost` ni a dominios placeholder (`tucliente.com`, `app.tucliente.com`). La lógica vive en:
+
+| Módulo | Archivo | Comportamiento |
+| :--- | :--- | :--- |
+| Enlaces «Iniciar sesión» (Astro → ERP) | `astro/src/lib/public-urls.ts` | Si la petición llega por IP/host no loopback, el login apunta a `{mismo-host}:7070/login`, aunque `.env` tenga `PUBLIC_APP_URL=http://localhost:7070`. En prod: `PUBLIC_APP_URL` real (Vercel). Placeholders de template se ignoran. |
+| API Supabase en el navegador (ERP) | `src/lib/supabase/resolveSupabaseConfig.ts` | Si el ERP se abre por IP y `VITE_SUPABASE_URL` es `127.0.0.1:54321`, el cliente usa `{mismo-host}:54321` (Kong local debe escuchar en `0.0.0.0`, como con `supabase start`). |
+| API Supabase (Astro, islas/SSR) | `astro/src/lib/supabase.ts` | Misma regla en el cliente; en SSR del server sigue `127.0.0.1` (correcto en la máquina que corre Astro). |
+| Build Astro | `astro/astro.config.mjs` | En `development` inyecta localhost si faltan `PUBLIC_*`; en `production` exige dominios reales (sin fallback `tucliente.com`). |
+
+**Obligatorio:** archivo **`.env`** en la raíz (`cp .env.example .env`) con `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`. Sin ellos, el ERP falla al usar Auth (`supabaseUrl is required`). Tras crear o editar `.env`, **reinicia** `pnpm dev` / `pnpm dev:all`.
+
+**Producción:** no hay inferencia por IP; configura en Vercel `PUBLIC_APP_URL`, `PUBLIC_SITE_URL`, `VITE_PUBLIC_SITE_URL` y el par Supabase del entorno (véase **`docs/deployment-environments.md`**).
 
 ### 1.2 Pilar Público (SEO/Ecommerce)
 
@@ -1102,7 +1117,7 @@ Hay **dos** superficies de portada en el monorepo; no son mutuamente excluyentes
 | **Sitio público (SEO)** | Astro (`astro/`) | `http://localhost:4321/` | Landing indexable, Schema.org, catálogo si `PUBLIC_ENABLE_ECOMMERCE=true` |
 | **ERP / app** | React (`src/`) | `http://localhost:7070/` | Auth (`/login`), dashboard, Workspace |
 
-**Enlace "Iniciar sesión" desde Astro:** los CTAs de `astro/src/pages/index.astro` usan `PUBLIC_APP_URL` + `/login` (p. ej. en desarrollo `PUBLIC_APP_URL=http://localhost:7070`). Así el visitante del dominio público entra al operativo en el dominio/subdominio correcto.
+**Enlace "Iniciar sesión" desde Astro:** `resolveAppOrigin()` en `astro/src/lib/public-urls.ts` construye la base del ERP + `/login`. En **producción** usa `PUBLIC_APP_URL` del build (Vercel). En **desarrollo**: `localhost:7070` si entras por localhost; si entras por IP (móvil, LAN), usa esa IP con puerto **7070** aunque el `.env` diga localhost. Los placeholders `tucliente.com` / `app.tucliente.com` del example **no** se usan como fallback.
 
 **Landing React** (eliminada en plantilla): la ruta `/` del ERP (`PublicSiteEntry`) **redirige** al origen Astro (`VITE_PUBLIC_SITE_URL`, o `http://localhost:4321` en dev). El login del operativo sigue en `/login` en el host del ERP.
 

@@ -59,6 +59,20 @@ El ERP usa `VITE_PUBLIC_SITE_URL` para redirigir al sitio público (p. ej. entra
 
 **Coherencia:** en cada entorno, `PUBLIC_APP_URL` y `VITE_PUBLIC_SITE_URL` deben apuntar al **mismo mundo** (todo local, todo prod, o todo staging).
 
+### 3.3 Desarrollo local: localhost en `.env` + acceso por IP (automático)
+
+En **producción** las URLs son fijas (Vercel + dominios). En **desarrollo**, la plantilla resuelve el host de la **petición HTTP** cuando no es loopback:
+
+| Servicio | Puerto | Variable típica en `.env` | Si abres por `http://192.168.x.x:…` o Tailscale |
+|----------|--------|---------------------------|--------------------------------------------------|
+| Astro | 4321 | `PUBLIC_SITE_URL=localhost:4321` | Canonical/login usan `192.168.x.x` con el mismo puerto |
+| ERP | 7070 | `PUBLIC_APP_URL=localhost:7070` | Login desde Astro → `http://192.168.x.x:7070/login` |
+| Supabase API | 54321 | `VITE_SUPABASE_URL=127.0.0.1:54321` | Cliente JS del ERP → `http://192.168.x.x:54321` |
+
+Código: `astro/src/lib/public-urls.ts`, `src/lib/supabase/resolveSupabaseConfig.ts`. **No** hace falta copiar la IP en el `.env` para cada prueba móvil. **Sí** hace falta `.env` con el par Supabase y reiniciar Vite tras cambios.
+
+Los dominios de ejemplo del template (`tucliente.com`, `app.tucliente.com`) están **prohibidos** como fallback en runtime; en prod debes definir dominios reales.
+
 ---
 
 ## 4. Vercel: dos proyectos por repositorio (recomendado)
@@ -110,7 +124,9 @@ Requisitos de **Docker**, **Supabase CLI** y flujo **Studio / god user**: [SETUP
 2. En la raíz del repo: `supabase start`.
 3. Copia `API URL` y `anon key` del output de `supabase status` a tu `.env` como `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 4. Aplica migraciones al local (`supabase db reset` o `migration up`, según tu flujo en SETUP sección 3).
-5. Arranca `pnpm dev:all` con `VITE_PUBLIC_SITE_URL`, `PUBLIC_SITE_URL` y `PUBLIC_APP_URL` en localhost como en `.env.example`.
+5. Arranca `pnpm dev:all` con `.env` como en `.env.example` (`cp .env.example .env` + claves de `supabase status`).
+
+6. (Opcional) Prueba desde otro dispositivo con la IP **Network** del terminal; enlaces ERP/Astro/Supabase se adaptan solos (§3.3).
 
 Así las pruebas destructivas (borrar usuarios, datos de prueba, migraciones) no afectan el proyecto cloud que usan los clientes.
 

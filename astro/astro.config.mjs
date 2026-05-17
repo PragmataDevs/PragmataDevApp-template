@@ -27,6 +27,23 @@ const supabaseAnon =
   merged.VITE_SUPABASE_ANON_KEY?.trim?.() ??
   '';
 
+/** Dominios de ejemplo del template — no deben usarse como fallback en runtime. */
+const PLACEHOLDER = /tucliente|tudominio|your-project-ref|example\.com/i;
+
+function pickPublicUrl(raw, devDefault) {
+  const t = raw?.trim?.() ?? '';
+  if (t && !PLACEHOLDER.test(t)) return t;
+  if (mode === 'development') return devDefault;
+  return t;
+}
+
+const site = pickPublicUrl(
+  merged.PUBLIC_SITE_URL || merged.VITE_PUBLIC_SITE_URL,
+  'http://localhost:4321',
+);
+
+const publicAppUrl = pickPublicUrl(merged.PUBLIC_APP_URL, 'http://localhost:7070');
+
 /** @type {Record<string, string>} */
 const defineMap = {};
 
@@ -41,14 +58,18 @@ if (supabaseUrl && supabaseAnon) {
     JSON.stringify(supabaseAnon);
 }
 
-const site =
-  merged.PUBLIC_SITE_URL?.trim?.() ||
-  merged.VITE_PUBLIC_SITE_URL?.trim?.() ||
-  (mode === 'development' ? 'http://localhost:4321' : 'https://tucliente.com');
+if (publicAppUrl) {
+  defineMap['import.meta.env.PUBLIC_APP_URL'] = JSON.stringify(publicAppUrl);
+}
+if (site && !PLACEHOLDER.test(site)) {
+  defineMap['import.meta.env.PUBLIC_SITE_URL'] = JSON.stringify(site);
+}
+
+const astroSite = site && !PLACEHOLDER.test(site) ? site : undefined;
 
 // ───────────────────────────────────────────────────────────────────────────────
 export default defineConfig({
-  site,
+  ...(astroSite ? { site: astroSite } : {}),
 
   /** Misma UX que Vite (`host: true`): localhost + IP LAN en `pnpm dev` / `dev:all`. */
   server: {

@@ -65,12 +65,16 @@ URLs y variables (local vs producción vs staging): **`docs/deployment-environme
 
 ## Variables de entorno
 
+Crea **`.env`** en la raíz (`cp .env.example .env`). Sin `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` el login del ERP falla. Tras `supabase start`, copia URL y **Publishable** de `supabase status`. Reinicia `pnpm dev` al cambiar el archivo.
+
 Este proyecto requiere:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_POWERSYNC_URL`
 - `VITE_ENABLE_POWERSYNC`
+
+En **desarrollo**, si abres Astro o el ERP por **IP de red** (móvil, LAN), los enlaces «Iniciar sesión» y la API Supabase en el navegador usan esa IP automáticamente (puertos `7070` / `54321`); ver `docs/SETUP.md` §2.2.1 y `docs/architecture.md`.
 
 `VITE_ENABLE_POWERSYNC` controla el modo:
 
@@ -79,7 +83,7 @@ Este proyecto requiere:
 
 ## Mantenimiento y CI
 
-- Cambios recientes (legacy workspace, usuario dios, Astro en LAN): **`docs/template-maintenance.md`**
+- Cambios recientes (URLs LAN automáticas, `.env` obligatorio, usuario dios): **`docs/template-maintenance.md`**
 - Usuario dios en frontend: **`docs/security-god-user-frontend.md`**
 - Workflow mínimo de CI (GitHub Actions): **`docs/ci-workflow.md`**
 

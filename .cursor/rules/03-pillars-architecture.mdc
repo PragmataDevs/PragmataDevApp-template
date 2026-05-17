@@ -24,7 +24,7 @@ Ruta: **`astro/`** (dentro del mismo monorepo). Proyecto Astro independiente con
 - NO importa hooks React del pilar Operativo. Solo tipos puros si fuera necesario.
 - Comunicación con Supabase: solo lectura pública (anon key del mismo `.env` raíz: `VITE_SUPABASE_*` inyectadas como públicas en build, u opcionalmente `PUBLIC_SUPABASE_*`).
 - Activar ecommerce público: `PUBLIC_ENABLE_ECOMMERCE=true` en el `.env` raíz o en `astro/.env` (capa opcional).
-- **Landings:** la portada **SEO** canónica es `astro/src/pages/index.astro`. La ruta `/` del ERP (`src/pages/PublicSiteEntry.tsx`) **redirige** al sitio Astro (`VITE_PUBLIC_SITE_URL` o `http://localhost:4321` en dev), sin duplicar landing en React. CTAs en Astro usan `PUBLIC_APP_URL/login` hacia el operativo.
+- **Landings:** la portada **SEO** canónica es `astro/src/pages/index.astro`. La ruta `/` del ERP (`src/pages/PublicSiteEntry.tsx`) **redirige** al sitio Astro (`VITE_PUBLIC_SITE_URL` o `http://localhost:4321` en dev), sin duplicar landing en React. CTAs «Iniciar sesión» usan `resolveAppOrigin()` (`astro/src/lib/public-urls.ts`): prod → `PUBLIC_APP_URL`; dev → mismo host de la petición (`:7070` en LAN/móvil).
 - SEO: `BaseLayout.astro` con `title`, `description`, OG tags, Schema.org JSON-LD.
 - Estructura real del proyecto:
 
@@ -141,7 +141,7 @@ await fetch('https://api.openai.com/v1/...', { headers: { Authorization: `Bearer
 | `VITE_ENABLE_AI` | Intelligence | Activa features de IA en la UI |
 | `VITE_ENABLE_ECOMMERCE` | Operativo | Ruta/sidebar **Productos** en Workspace (catálogo admin). `false` → no se registra la ruta. |
 | `PUBLIC_ENABLE_ECOMMERCE` | Público (Astro) | Catálogo, carrito, islas de checkout en el sitio público. |
-| `PUBLIC_APP_URL` | Público (Astro) | URL base del ERP para botones "Iniciar sesión" → `{PUBLIC_APP_URL}/login` (ej. dev `http://localhost:7070`). |
+| `PUBLIC_APP_URL` | Público (Astro) | Prod: URL base del ERP para «Iniciar sesión». Dev: opcional en `.env` (`localhost:7070`); LAN/móvil infiere `{host-petición}:7070` vía `public-urls.ts`. ERP Supabase en navegador: `resolveSupabaseConfig.ts` (mismo host `:54321` si `.env` es `127.0.0.1`). |
 
 **Patrón de guard en código:**
 

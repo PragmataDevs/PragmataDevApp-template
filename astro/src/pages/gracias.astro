@@ -4,9 +4,11 @@ export const prerender = false;
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PublicNav from '../components/public/PublicNav.astro';
 import { PublicIcon } from '../components/icons/PublicIcon';
+import { resolveAppOrigin } from '../lib/public-urls';
 
 const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
-const appUrl = import.meta.env.PUBLIC_APP_URL ?? '#';
+
+const appUrl = resolveAppOrigin(Astro.url);
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 const pathname = Astro.url.pathname;
 

@@ -10,6 +10,7 @@ import PublicNav from '../components/public/PublicNav.astro';
 import PublicFooter from '../components/public/PublicFooter.astro';
 import { marked } from 'marked';
 import { supabase } from '../lib/supabase';
+import { resolveAppOrigin, resolveSiteOrigin } from '../lib/public-urls';
 
 const slug = Astro.params.slug ?? '';
 const RESERVED = new Set(['home']);
@@ -22,9 +23,9 @@ if (!supabase) {
   return new Response(null, { status: 404, statusText: 'Not Found' });
 }
 
-const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? 'https://tucliente.com';
+const siteUrl = resolveSiteOrigin(Astro.site, Astro.url);
 const brandFallback = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
-const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://app.tucliente.com';
+const appUrl = resolveAppOrigin(Astro.url);
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 const pathname = Astro.url.pathname;
 

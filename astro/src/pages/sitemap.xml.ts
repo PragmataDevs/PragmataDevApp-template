@@ -39,7 +39,7 @@ function urlEntry(loc: string, opts?: { lastmod?: string | null; priority?: stri
 }
 
 export const GET: APIRoute = async ({ site }) => {
-  const origin = resolveSiteOrigin(site);
+  const origin = resolveSiteOrigin(site, Astro.url);
   const ecommerceOn = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 
   const locs: { path: string; lastmod?: string | null; priority?: string }[] = [

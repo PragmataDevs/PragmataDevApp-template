@@ -39,7 +39,7 @@ Archivos tocados:
 
 ---
 
-## 3. Astro dev en red local (`host: true`)
+## 3. Astro y Vite en red local (`host: true`)
 
 Para paridad con Vite (`vite.config.ts` → `server.host: true`), Astro expone **Local** y **Network** al ejecutar `pnpm dev:astro` o `pnpm dev:all`:
 
@@ -51,27 +51,29 @@ server: {
 },
 ```
 
-### Pruebas desde otro dispositivo en LAN
+---
 
-Las URLs del terminal funcionan por IP, pero `.env` suele tener `localhost` en:
+## 4. URLs automáticas en desarrollo (sin `app.tucliente.com`)
 
-- `VITE_PUBLIC_SITE_URL`
-- `PUBLIC_SITE_URL`
-- `PUBLIC_APP_URL`
+**Problema que resuelve:** CTAs “Iniciar sesión” que iban a `https://app.tucliente.com` o a `localhost` cuando el usuario abría Astro desde el **móvil** por IP; y ERP con `supabaseUrl is required` sin archivo `.env`.
 
-Para enlaces entre sitio público y ERP desde el móvil/tablet, usa temporalmente la IP de tu máquina:
+| Archivo | Cambio |
+|---------|--------|
+| `astro/src/lib/public-urls.ts` | `resolveAppOrigin` / `resolveSiteOrigin`: prioridad al host de la petición en dev; ignora placeholders `tucliente` / `tudominio`. |
+| `astro/astro.config.mjs` | En dev inyecta `localhost:7070` / `:4321`; en prod no usa fallback `tucliente.com`. |
+| `src/lib/supabase/resolveSupabaseConfig.ts` | Si el ERP se abre por IP y `.env` tiene `127.0.0.1:54321`, API → `{mismo-host}:54321`. |
+| `src/lib/supabase/index.ts` | Error claro si faltan variables; proxy lazy del cliente. |
+| `astro/src/lib/supabase.ts` | Misma regla Supabase en el navegador del sitio público. |
 
-```env
-VITE_PUBLIC_SITE_URL=http://192.168.x.x:4321
-PUBLIC_SITE_URL=http://192.168.x.x:4321
-PUBLIC_APP_URL=http://192.168.x.x:7070
-```
+**LAN / móvil:** deja `PUBLIC_APP_URL=http://localhost:7070` y `VITE_SUPABASE_URL=http://127.0.0.1:54321` en `.env`; abre `http://<IP>:4321` — no hace falta reescribir la IP en el `.env` para cada dispositivo.
 
-Detalle dev local: `docs/SETUP.md` sección 8.
+**Producción:** sigue siendo obligatorio `PUBLIC_APP_URL` y `PUBLIC_SITE_URL` reales en Vercel.
+
+Documentación: `docs/architecture.md` (resolución automática), `docs/SETUP.md` §2.2.1, `docs/deployment-environments.md` §3.3.
 
 ---
 
-## 4. CI (workflow mínimo recomendado)
+## 5. CI (workflow mínimo recomendado)
 
 La template **no incluye aún** `.github/workflows/`; se documenta el objetivo en **`docs/ci-workflow.md`** para que cada fork lo active cuando use GitHub Actions.
 
@@ -80,7 +82,8 @@ La template **no incluye aún** `.github/workflows/`; se documenta el objetivo e
 ## Checklist post-clone
 
 - [ ] `pnpm install` y `cd astro && pnpm install`
-- [ ] `.env` desde `.env.example`
+- [ ] `.env` desde `.env.example` + `supabase status` (Publishable en `VITE_SUPABASE_ANON_KEY`)
 - [ ] Seed god user si desarrollas con RLS estricto
 - [ ] `pnpm dev:all` — comprobar Local + Network en ERP y Astro
+- [ ] (Opcional) Móvil: IP Network → login `:7070` y API `:54321` sin editar `.env`
 - [ ] (Opcional) Activar workflow de `docs/ci-workflow.md`

@@ -42,14 +42,18 @@ Primero la raíz, luego `astro/` — así no te faltan paquetes del sitio públi
 cp .env.example .env
 ```
 
+**Sin este archivo el ERP falla al cargar** (`supabaseUrl is required`). Después de editarlo, reinicia `pnpm dev` o `pnpm dev:all`.
+
 Abre **`.env`** y mira los bloques:
 
-- **Arriba (Supabase):** lo que está **sin `#` al inicio de la línea** es lo que usa la app *ahora*. En el example viene pensado para **local** (`http://127.0.0.1:54321` + clave Publishable).
+- **Arriba (Supabase):** lo que está **sin `#` al inicio de la línea** es lo que usa la app *ahora*. En el example viene pensado para **local** (`http://127.0.0.1:54321` + clave Publishable de `supabase status`).
 - **Las líneas comentadas** con `#` son la **chuleta para Vercel / producción** (URL de tu proyecto en la nube + anon + dominios `www` / `app`) — las copias al dashboard de Vercel cuando toque, no hace falta descomentarlas todas en tu máquina si sigues en local.
 
 **Si usas la nube:** pon `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` con los valores del Dashboard → *Settings* → *API*.
 
 **Si usas local:** Docker abierto → en la raíz del repo `supabase start` → `supabase status` y pegas **Project URL** (puerto **54321**, no 54323) y la clave **Publishable**. El paso a paso “Studio, usuario god, no mezclar sesión con la nube” está en **`docs/SETUP.md`** sección **1.2**.
+
+**Celular o LAN:** puedes abrir Astro como `http://<IP-del-server>:4321`; “Iniciar sesión” irá a `http://<IP>:7070/login` y Supabase a `:54321` **sin** cambiar el `.env` a la IP (automático). Ver **`docs/SETUP.md`** §2.2.1.
 
 ---
 
@@ -77,6 +81,8 @@ pnpm dev:all
 ```
 
 Entra al login del ERP (`/login`) con el usuario que creaste + seed god si aplica.
+
+Desde el **móvil** en la misma red: usa la IP que muestra el terminal (`Network` en `pnpm dev:all`), no `localhost`.
 
 ---
 

@@ -26,6 +26,7 @@ export interface Props {
 }
 
 import CartDrawer from '../components/islands/CartDrawer';
+import { resolveSiteOrigin } from '../lib/public-urls';
 import '../styles/tailwind.css';
 import '../styles/public-site.css';
 
@@ -43,7 +44,7 @@ const {
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 
 const siteName = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
-const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? 'https://tucliente.com';
+const siteUrl = resolveSiteOrigin(Astro.site, Astro.url);
 const pageTitle = `${title} — ${siteName}`;
 const absImage = image.startsWith('http') ? image : `${siteUrl}${image}`;
 ---
