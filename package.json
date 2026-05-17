@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "db:seed": "tsx scripts/seed-resources.ts",
     "db:sync": "tsx scripts/sync-resources.ts",
-    "ai:sync-prompts": "node scripts/sync-ai-prompts.mjs"
+    "ai:sync-prompts": "node scripts/sync-ai-prompts.mjs",
+    "brand:sync": "cp astro/public/favicon.svg public/favicon.svg && cp astro/public/favicon.svg src/assets/brand-icon.svg"
   },
   "dependencies": {
     "@pragmata/core": "workspace:*",

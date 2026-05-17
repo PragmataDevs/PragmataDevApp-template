@@ -26,9 +26,15 @@ Componente compartido ERP: [`src/components/brand/BrandIcon.tsx`](../src/compone
 - Navbar del sitio público Astro (`PublicNav.astro`)
 - JSON-LD de la landing (`logo` → `/favicon.svg`)
 
-## Archivos legacy
+## Sincronizar icono tras cambiar el SVG
 
-`public/pragmata-devs-icon.png` y `src/assets/pragmata-devs-icon.png` son la versión anterior; no usarlos en UI nueva. Se pueden eliminar en una limpieza posterior si ningún cliente los referencia en emails externos.
+Fuente única: `astro/public/favicon.svg`. Desde la raíz del monorepo:
+
+```bash
+pnpm brand:sync
+```
+
+Copia a `public/favicon.svg` (Vite) y `src/assets/brand-icon.svg` (import opcional).
 
 ## Emails Auth
 

@@ -59,7 +59,7 @@ Abre **`.env`** y mira los bloques:
 
 ## 4. Base de datos y usuario “dios”
 
-1. Aplica el **schema** (migraciones o scripts SQL) como dice **`docs/SETUP.md`** sección **3** — en local: `01`, `02`, **`04` Realtime (siempre)**, `03` solo si PowerSync; muchas ya corren al hacer `supabase start`. Tras un `git pull` o si en el ERP ves **«Error al cargar cms_pages»** (módulo SEO): `supabase migration up` en la raíz (incluye tabla `cms_pages` y página `home`).
+1. Aplica el **schema** como en **`docs/SETUP.md`** §3 — local: `supabase start` aplica **2 migraciones** (`…20000…` con schema+Realtime, `…20001…` si PowerSync). Luego usuario Auth + `02_seed_god_user.sql` + **`pnpm db:sync`**. CMS legacy: `05_cms_pages_ensure_legacy.sql` solo si la base es antigua.
 2. **Usuario god** (el que lo ve todo): crear usuario en **Auth** (Dashboard nube **o** Studio local `http://127.0.0.1:54323`), copiar UUID, ejecutar **`docs/database/02_seed_god_user.sql`** en el **SQL Editor** de *esa misma* instancia.
 
 **Supabase local — guía paso a paso** (Studio, usuario `ltorres@pragmatadevs.com`, migraciones `01` y `02`): [**`docs/proceso-supabase-studio-local.md`**](./proceso-supabase-studio-local.md).

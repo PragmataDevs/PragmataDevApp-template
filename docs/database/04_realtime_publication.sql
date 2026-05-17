@@ -1,5 +1,6 @@
 -- Supabase Realtime — todas las tablas de negocio en `supabase_realtime`
--- Fuente canónica: supabase/migrations/20260111120002_pragmata_realtime_publication.sql
+-- Referencia manual (Studio). En CLI va integrado al final de
+-- supabase/migrations/20260111120000_pragmata_schema.sql (sección 10. REALTIME).
 --
 -- Cuándo: después de 01 y 02 (local Studio :54323 o nube). Siempre, con o sin PowerSync.
 -- Verificación al final de este archivo.

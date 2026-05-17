@@ -74,6 +74,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const { data: mayCreateUser, error: permError } = await supabaseCaller.rpc('check_permission', {
+      requested_resource: 'page_settings_usuarios',
+      requested_action: 'create',
+    });
+
+    if (permError) {
+      console.error('[create-auth-user] check_permission error:', permError);
+      return new Response(
+        JSON.stringify({ error: 'No se pudo validar permisos.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (!mayCreateUser) {
+      return new Response(
+        JSON.stringify({ error: 'No tienes permiso para crear usuarios.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     // ── 2. Validar payload ──
     const { email, full_name, redirectTo } = await req.json();
 

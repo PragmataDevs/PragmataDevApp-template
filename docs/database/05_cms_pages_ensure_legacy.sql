@@ -1,9 +1,7 @@
 -- ==============================================================================
--- CMS sitio público — asegurar tabla cms_pages y dependencias
--- Idempotente: seguro en DB nuevas y en instalaciones que aplicaron un schema
--- anterior sin CMS (p. ej. solo docs/database/01 antiguo en Studio).
--- Ejecuta automáticamente con `supabase start` / `supabase migration up`.
--- Mantener alineado con docs/database/01_security_engine.sql (bloque cms_pages).
+-- LEGACY — solo bases creadas ANTES de integrar CMS en 01 / …20000_pragmata_schema.sql
+-- NO está en supabase/migrations/ (copias nuevas: `supabase start` ya incluye cms_pages).
+-- Ejecutar una vez en SQL Editor si el ERP muestra «Error al cargar cms_pages».
 -- ==============================================================================
 
 -- --- Tabla ---

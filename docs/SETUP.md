@@ -100,6 +100,8 @@ Objetivo: misma **API** (PostgREST, Auth, Storage…) que en la nube, pero **sol
 
 **Correos Auth (olvidé contraseña / invitación):** plantillas en `supabase/templates/`; se publican al `supabase start`. Ver [**auth-email-templates-local.md**](./auth-email-templates-local.md). Prueba en Mailpit: http://127.0.0.1:54324.
 
+**Seguridad y branding:** [**security-checklist.md**](./security-checklist.md) · [**brand-assets.md**](./brand-assets.md) (`pnpm brand:sync` tras cambiar el favicon).
+
 **Edge Functions:** el stack local expone `http://127.0.0.1:54321/functions/v1`; las funciones hay que **servirlas o desplegarlas** según tu flujo (`supabase functions serve` / deploy a nube). No se asume que todo el Intelligence esté disponible offline sin pasos extra.
 
 **Opcional:** `supabase/seed.sql` — si no existe, `supabase start` mostrará un aviso; puedes añadir seeds cuando quieras datos de prueba repetibles.
@@ -209,16 +211,22 @@ Opcional: `supabase projects list` confirma el ref si tienes varios proyectos.
 
 #### 3.0.2 Migraciones en el repo (`supabase/migrations/`)
 
-La plantilla ya incluye el baseline en **dos archivos** (orden cronológico por nombre):
+La plantilla incluye **dos migraciones versionadas** (copias nuevas limpias):
 
 | Archivo | Contenido |
 |---------|-----------|
-| `20260111120000_pragmata_schema.sql` | Copia de `docs/database/01_security_engine.sql`: motor de seguridad + chat + notificaciones + tasks + documents + ecommerce + CMS + bucket `product-images` |
-| `20260111120001_pragmata_powersync_publication.sql` | Publicación lógica `powersync` (equivalente a `docs/database/03_powersync_publication.sql`) |
-| `20260111120002_pragmata_realtime_publication.sql` | Realtime en todas las tablas de negocio (`supabase_realtime`; equivalente a `docs/database/04_realtime_publication.sql`) |
-| `20260517120000_pragmata_cms_pages_ensure.sql` | **Idempotente:** asegura `cms_pages`, RLS, recurso RBAC `page_seo_site_pages`, seed `home`, Realtime/PowerSync para CMS (bases que aplicaron un schema anterior sin CMS) |
+| `20260111120000_pragmata_schema.sql` | Baseline completo (`docs/database/01_security_engine.sql`) + **Realtime** (`supabase_realtime`, sección 10 al final del archivo) |
+| `20260111120001_pragmata_powersync_publication.sql` | Publicación lógica `powersync` — solo si `VITE_ENABLE_POWERSYNC=true` (`docs/database/03_powersync_publication.sql`) |
 
-Flujo habitual: **`supabase db push`** tras `supabase link`. En local, tras `git pull` o si falta CMS: **`supabase migration up`**. El seed del usuario god **no** va en migraciones versionadas: sigue siendo `docs/database/02_seed_god_user.sql` (ajusta UUID/email antes de ejecutarlo).
+Scripts manuales en `docs/database/` (no duplican migraciones CLI salvo referencia):
+
+| # | Archivo | Cuándo |
+|---|---------|--------|
+| `02_seed_god_user.sql` | Siempre tras crear usuario en Auth (no versionado) |
+| `04_realtime_publication.sql` | Solo SQL Editor si no usas CLI (mismo bloque que §10 en `…20000…`) |
+| `05_cms_pages_ensure_legacy.sql` | **Solo bases antiguas** sin `cms_pages`; copias nuevas ya lo traen en `…20000…` |
+
+Flujo habitual: **`supabase db push`** tras `supabase link`, luego **`pnpm db:sync`** (catálogo RBAC) y seed god manual.
 
 Si mantienes `docs/database/01_security_engine.sql` y la migración `…20000…` al mismo tiempo, **mantén el contenido sincronizado** (o edita solo uno y copia al otro).
 
@@ -247,7 +255,7 @@ supabase migration list
 #### 3.0.6 Incidencias habituales
 
 - **`Could not find the column/table in the schema cache`** (PostgREST): en SQL Editor, `NOTIFY pgrst, 'reload schema';` — varios scripts en `docs/database/` ya lo incluyen al final.
-- **«Error al cargar cms_pages»** en el ERP (*SEO → Páginas del sitio*): la tabla no existe o PostgREST no la ve. En la raíz: `supabase migration up` (aplica `20260517120000_pragmata_cms_pages_ensure.sql`). Verifica: `SELECT slug FROM public.cms_pages;` → al menos `home`. Detalle: [**proceso-supabase-studio-local.md**](./proceso-supabase-studio-local.md) §1 y §6.
+- **«Error al cargar cms_pages»** en el ERP: base legacy sin CMS. Copia nueva: `supabase db reset` o `migration up` con `…20000…`. Base antigua: ejecuta una vez `docs/database/05_cms_pages_ensure_legacy.sql` en SQL Editor. Verifica `SELECT slug FROM public.cms_pages;` → `home`.
 - **Diff desde el Dashboard:** si cambiaste schema a mano en Supabase, puedes intentar alinear el repo con `supabase db pull` (genera/mezcla tipos y a veces migraciones según versión de CLI); lo habitual en plantilla es **solo migraciones en repo como fuente de verdad**.
 
 ### 3.1 Modo rápido (Dashboard → SQL Editor)
@@ -617,7 +625,7 @@ Marca cada ítem antes de considerar el setup completo:
 - [ ] Si usas **Supabase local**: Docker + `supabase start`; usuario creado en Studio **http://127.0.0.1:54323** → Auth; seed god en SQL Editor local ([**sección 1.2**](#12-supabase-local-studio-env-y-usuario-god) · guía [**proceso-supabase-studio-local.md**](./proceso-supabase-studio-local.md))
 - [ ] Schema aplicado: **modo industrial** (`supabase link` + migraciones en `supabase/migrations/` + `supabase db push`, véase **sección 3.0**) **o** modo rápido pegando scripts en SQL Editor (**sección 3.1**)
 - [ ] SQL baseline aplicado (`01_security_engine.sql` o migración `…20000_pragmata_schema.sql`; incluye tasks, documents, ecommerce, CMS)
-- [ ] Migraciones CLI al día (`supabase migration up` local o `supabase db push` remoto); si falla CMS, debe estar aplicada `…20260517120000_pragmata_cms_pages_ensure.sql`
+- [ ] Migraciones CLI al día (`…20000…` + `…20001…` si PowerSync); bases legacy sin CMS: `05_cms_pages_ensure_legacy.sql`
 - [ ] SQL `02_seed_god_user.sql` aplicado (usuario god creado) — en nube: SQL Editor del proyecto; en local: SQL Editor de Studio **:54323**
 - [ ] `pnpm dev` arranca sin errores en `localhost:7070` (o el puerto de tu `vite.config.ts`); consola del navegador **sin** `supabaseUrl is required`
 - [ ] Login funciona con el usuario god

@@ -81,15 +81,9 @@ VITE_SUPABASE_URL=http://127.0.0.1:54321
 VITE_SUPABASE_ANON_KEY=<clave de supabase status>
 ```
 
-> Al hacer `supabase start`, la CLI aplica las migraciones en `supabase/migrations/` (equivalente a `01_security_engine.sql` + publicaciones Realtime/PowerSync + asegurado CMS). Si en Studio → **Table Editor** ves tablas como `profiles`, `teams`, `entities`, **no vuelvas a ejecutar** la migración 1 (evitas errores de “relation already exists”). En ese caso ve directo al paso 4 tras crear el usuario.
+> Al hacer `supabase start`, la CLI aplica **2 migraciones**: `…20000_pragmata_schema.sql` (schema + Realtime + CMS) y `…20001…` (PowerSync). Si en Studio → **Table Editor** ya ves `profiles`, `entities`, `cms_pages`, **no vuelvas a pegar** `01_security_engine.sql` entero. Ve al paso 4 tras crear el usuario.
 >
-> Si clonaste el repo **después** de haber levantado Supabase local una vez, o el ERP muestra **«Error al cargar cms_pages»** en *SEO → Páginas del sitio*, aplica migraciones pendientes:
->
-> ```bash
-> supabase migration up
-> ```
->
-> Eso ejecuta (entre otras) `20260517120000_pragmata_cms_pages_ensure.sql`: crea `public.cms_pages`, RLS, recurso `page_seo_site_pages` y fila `home` si faltaban. Comprueba en SQL Editor: `SELECT slug FROM public.cms_pages;` → debe aparecer `home`.
+> Si el ERP muestra **«Error al cargar cms_pages»** en una base **antigua** (sin CMS en el baseline), ejecuta una vez en SQL Editor: `docs/database/05_cms_pages_ensure_legacy.sql`. Copia nueva: `supabase db reset` o `supabase migration up` tras `git pull`.
 
 ---
 
@@ -277,6 +271,6 @@ Deberías ver el sidebar completo (usuario dios sin bloqueos de RBAC en frontend
 | — | [brand-assets.md](./brand-assets.md) | Icono SVG canónico ERP + Astro |
 | — | [ui-z-index-layers.md](./ui-z-index-layers.md) | Capas UI (notificaciones, modales) |
 
-Equivalente versionado (CLI): `…20000_pragmata_schema.sql`, `…20001_pragmata_powersync_publication.sql`, `…20002_pragmata_realtime_publication.sql`, `…20260517120000_pragmata_cms_pages_ensure.sql` (idempotente: CMS + recurso `page_seo_site_pages` + seed `home`).
+Migraciones CLI (copia nueva): `…20000_pragmata_schema.sql` (schema + Realtime) y `…20001_pragmata_powersync_publication.sql` (opcional). Legacy CMS: `docs/database/05_cms_pages_ensure_legacy.sql`.
 
 **Siguiente paso (solo local):** scripts RBAC + `supabase functions serve` → [**proceso-post-migraciones-scripts-y-funciones-local.md**](./proceso-post-migraciones-scripts-y-funciones-local.md).

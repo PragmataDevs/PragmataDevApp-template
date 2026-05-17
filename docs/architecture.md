@@ -35,7 +35,7 @@ PragmataDevs opera como una **fábrica de software modular**. No construimos apl
 | **Solo online vía Supabase** | `VITE_ENABLE_POWERSYNC=false` (modo habitual si no necesitáis offline en el ERP) | El cliente lee y escribe contra **PostgREST / Auth** de Supabase (nube o `supabase start` local). Sin red no hay datos nuevos del servidor. |
 | **Offline-first con PowerSync** | `VITE_ENABLE_POWERSYNC=true` + instancia PowerSync configurada | Tablas y reglas definidas en **sync rules** se mantienen en **SQLite en el navegador** y se **sincronizan** con Supabase al recuperar conectividad. Implementación: `PowerSyncProvider`, `docs/deployment.md`. |
 | **`localStorage` / `sessionStorage`** | Estado **no** canónico o tolerante a pérdida (UX, carrito público, borradores) | Ejemplo en el pilar público: carrito de ecommerce en el navegador + evento `cart:updated`. **No** reemplaza al modelo de negocio en Postgres ni al merge multi-dispositivo de PowerSync; sirve para “resolver con lo mínimo” cuando el offline-first del ERP está apagado. |
-| **Supabase Realtime** | Siempre (migración `04_realtime_publication.sql` / `…20002…`) | Todas las tablas de negocio en la publicación `supabase_realtime` + `REPLICA IDENTITY FULL`. El ERP usa `postgres_changes` vía `useCrudResource` (`realtime: true` por defecto). Independiente de PowerSync. Setup: [proceso-supabase-studio-local.md](./proceso-supabase-studio-local.md). |
+| **Supabase Realtime** | Siempre (sección 10 de `…20000_pragmata_schema.sql` o `04_realtime_publication.sql` en Studio) | Todas las tablas de negocio en `supabase_realtime` + `REPLICA IDENTITY FULL`. `useCrudResource` con `realtime: true` por defecto. Setup: [proceso-supabase-studio-local.md](./proceso-supabase-studio-local.md). |
 
 **Decisión por cliente:** en el `.env` del despliegue se fija si el operativo va **directo a Supabase**, **PowerSync + Supabase**, o se combina con **almacenamiento en navegador** solo donde tenga sentido de producto.
 
@@ -1025,12 +1025,13 @@ Las reglas se definen en **buckets**:
 
 ### 7.5 Scripts de Base de Datos
 
-Orden de ejecución en cada branch (solo tres scripts en `docs/database/`):
-1. `01_security_engine.sql` — Esquema completo: auth/RBAC, entidades, chat, notificaciones, **tasks**, **documents**, **ecommerce**, **cms**, bucket `product-images`, RLS con `is_god()`
-2. `02_seed_god_user.sql` — Bootstrap del primer usuario god (manual, datos sensibles)
-3. `03_powersync_publication.sql` — Publicación lógica para PowerSync (equivalente a `supabase/migrations/20260111120001_pragmata_powersync_publication.sql`)
+Orden en cada branch:
 
-Para CLI, la fuente canónica aplicada con `supabase db push` está en `supabase/migrations/` (`…20000_pragmata_schema.sql` + `…20001_pragmata_powersync_publication.sql`).
+**CLI (`supabase db push`):** `20260111120000_pragmata_schema.sql` (schema + Realtime) → `20260111120001_pragmata_powersync_publication.sql` (solo si PowerSync).
+
+**Manual (`docs/database/`):** `01` (mismo baseline que `…20000…`) → `02` seed god → `03` PowerSync opcional → `04` Realtime solo si no usas CLI → `05` CMS solo bases legacy.
+
+Seguridad: [security-checklist.md](./security-checklist.md). Branding: [brand-assets.md](./brand-assets.md) (`pnpm brand:sync`).
 
 ---
 
