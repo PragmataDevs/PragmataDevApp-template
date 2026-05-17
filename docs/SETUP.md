@@ -66,6 +66,8 @@ Para parar los contenedores: `supabase stop`. Más contexto (URLs, Vercel, no me
 
 Objetivo: misma **API** (PostgREST, Auth, Storage…) que en la nube, pero **solo en tu máquina** — ideal para migraciones y pruebas sin tocar datos de clientes. Detalle de variables y Vercel: [**deployment-environments.md**](./deployment-environments.md).
 
+> **Paso a paso completo (Studio → usuario → migraciones 01 y 02):** [**proceso-supabase-studio-local.md**](./proceso-supabase-studio-local.md)
+
 | Comando | Uso |
 |---------|-----|
 | `supabase start` | Levanta el stack (primera vez descarga imágenes; puede tardar). Aplica migraciones en `supabase/migrations/` sobre la Postgres local. |
@@ -93,7 +95,7 @@ Objetivo: misma **API** (PostgREST, Auth, Storage…) que en la nube, pero **sol
 2. **Authentication** → **Users** → **Add user** (email/contraseña).
 3. Copia el **UUID** del usuario.
 
-**Usuario god (`is_god()`):** en Studio local → **SQL Editor**, ejecuta `docs/database/02_seed_god_user.sql` sustituyendo el UUID en el `INSERT` por el del paso anterior (mismo script que en la nube; solo cambia **dónde** lo ejecutas). Luego entra al ERP en **http://localhost:7070/login** con ese usuario.
+**Usuario god (`is_god()`):** en Studio local → **SQL Editor**, ejecuta `docs/database/02_seed_god_user.sql` sustituyendo el UUID en el `INSERT` por el del paso anterior (mismo script que en la nube; solo cambia **dónde** lo ejecutas). Luego entra al ERP en **http://localhost:7070/login** con ese usuario. Guía detallada con checklist: [**proceso-supabase-studio-local.md**](./proceso-supabase-studio-local.md).
 
 **Edge Functions:** el stack local expone `http://127.0.0.1:54321/functions/v1`; las funciones hay que **servirlas o desplegarlas** según tu flujo (`supabase functions serve` / deploy a nube). No se asume que todo el Intelligence esté disponible offline sin pasos extra.
 
@@ -244,7 +246,7 @@ supabase migration list
 
 ### 3.1 Modo rápido (Dashboard → SQL Editor)
 
-Si arrancas una base sin CLI, ejecuta en **Supabase Dashboard → SQL Editor**, en este orden:
+Si arrancas una base sin CLI, ejecuta en **Supabase Dashboard → SQL Editor** (o **Studio local** `http://127.0.0.1:54323` tras `supabase start`; ver [**proceso-supabase-studio-local.md**](./proceso-supabase-studio-local.md)), en este orden:
 
 | # | Archivo | Qué hace |
 |---|---------|----------|
@@ -601,7 +603,7 @@ Marca cada ítem antes de considerar el setup completo:
 ### Base (obligatorio para que funcione la app)
 - [ ] `pnpm install` ejecutado en la **raíz** del repo
 - [ ] `.env` creado (partir de `.env.example`): `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` alineados al entorno (**local** `127.0.0.1:54321` + Publishable, o **nube** desde Dashboard)
-- [ ] Si usas **Supabase local**: Docker + `supabase start`; usuario creado en Studio **http://127.0.0.1:54323** → Auth; seed god en SQL Editor local (véase [**sección 1.2**](#12-supabase-local-studio-env-y-usuario-god))
+- [ ] Si usas **Supabase local**: Docker + `supabase start`; usuario creado en Studio **http://127.0.0.1:54323** → Auth; seed god en SQL Editor local ([**sección 1.2**](#12-supabase-local-studio-env-y-usuario-god) · guía [**proceso-supabase-studio-local.md**](./proceso-supabase-studio-local.md))
 - [ ] Schema aplicado: **modo industrial** (`supabase link` + migraciones en `supabase/migrations/` + `supabase db push`, véase **sección 3.0**) **o** modo rápido pegando scripts en SQL Editor (**sección 3.1**)
 - [ ] SQL baseline aplicado (`01_security_engine.sql` o migración `…20000_pragmata_schema.sql`; incluye tasks, documents, ecommerce, CMS)
 - [ ] SQL `02_seed_god_user.sql` aplicado (usuario god creado) — en nube: SQL Editor del proyecto; en local: SQL Editor de Studio **:54323**

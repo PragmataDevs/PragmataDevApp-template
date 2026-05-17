@@ -60,7 +60,9 @@ Abre **`.env`** y mira los bloques:
 ## 4. Base de datos y usuario “dios”
 
 1. Aplica el **schema** (migraciones o scripts SQL) como dice **`docs/SETUP.md`** sección **3** — en la nube suele ser `supabase link` + `supabase db push`; en local muchas migraciones ya corren al hacer `supabase start`.
-2. **Usuario god** (el que lo ve todo): el flujo que ya usas — crear usuario en **Auth** (Dashboard nube **o** Studio local `http://127.0.0.1:54323`), copiar UUID, ejecutar **`docs/database/02_seed_god_user.sql`** en el **SQL Editor** de *esa misma* instancia.
+2. **Usuario god** (el que lo ve todo): crear usuario en **Auth** (Dashboard nube **o** Studio local `http://127.0.0.1:54323`), copiar UUID, ejecutar **`docs/database/02_seed_god_user.sql`** en el **SQL Editor** de *esa misma* instancia.
+
+**Supabase local — guía paso a paso** (Studio, usuario `ltorres@pragmatadevs.com`, migraciones `01` y `02`): [**`docs/proceso-supabase-studio-local.md`**](./proceso-supabase-studio-local.md).
 
 ---
 
@@ -107,6 +109,7 @@ La tabla completa y el checklist por cliente: **`docs/deployment-environments.md
 
 | Necesitas… | Documento |
 |------------|-------------|
+| Studio local tras `supabase start`, usuario god, SQL 01/02 | **`docs/proceso-supabase-studio-local.md`** |
 | Setup largo, módulos, IA, Edge Functions, checklist | **`docs/SETUP.md`** |
 | Dominios, dos apps en Vercel, local vs nube | **`docs/deployment-environments.md`** |
 | PowerSync y flags por entorno | **`docs/deployment.md`** |
