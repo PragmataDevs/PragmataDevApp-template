@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*, team:teams(is_platform_owner)')
+        .select('*, team:teams!profiles_team_id_fkey(is_platform_owner)')
         .eq('id', userId)
         .single();
 

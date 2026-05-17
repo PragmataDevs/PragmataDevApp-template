@@ -102,7 +102,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                         {profile?.full_name || user?.email?.split('@')[0] || 'User'}
                     </p>
                     <p className="text-[10px] text-[color:var(--pragmata-muted)] leading-none mt-1 capitalize">
-                        {profile?.access_level || 'Member'}
+                        {profile?.access_level ?? '—'}
                     </p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-[color:var(--pragmata-muted-2)] hidden md:block" />
