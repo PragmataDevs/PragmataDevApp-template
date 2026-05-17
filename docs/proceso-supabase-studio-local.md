@@ -243,3 +243,5 @@ Deberías ver el sidebar completo (usuario dios sin bloqueos de RBAC en frontend
 | 3 | `docs/database/03_powersync_publication.sql` | Solo si `VITE_ENABLE_POWERSYNC=true` |
 
 Equivalente versionado (CLI): `supabase/migrations/20260111120000_pragmata_schema.sql` y `…20001_pragmata_powersync_publication.sql`.
+
+**Siguiente paso (solo local):** scripts RBAC + `supabase functions serve` → [**proceso-post-migraciones-scripts-y-funciones-local.md**](./proceso-post-migraciones-scripts-y-funciones-local.md).

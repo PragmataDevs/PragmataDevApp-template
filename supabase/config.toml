@@ -47,11 +47,18 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
-# ── Edge Functions ────────────────────────────────────────────
-# Los secrets se configura en Supabase Dashboard → Edge Functions → Manage Secrets
-# o via CLI: supabase secrets set OPENAI_API_KEY=sk-...
-#
-# Secrets requeridos por las funciones de esta template:
+# ── Edge Functions (local: supabase functions serve; nube: supabase functions deploy) ──
+# verify_jwt por función — local respeta config.toml al hacer `supabase functions serve`.
+# Ver docs/proceso-post-migraciones-scripts-y-funciones-local.md (local)
+
+[functions.create-auth-user]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+# Secrets en nube: supabase secrets set OPENAI_API_KEY=sk-...
+# Local: opcional en supabase/.env.local o --env-file al hacer functions serve
 #   OPENAI_API_KEY            → ai-task-summary, ai-gateway
 #   STRIPE_SECRET_KEY         → stripe-checkout, stripe-webhook
 #   STRIPE_WEBHOOK_SECRET     → stripe-webhook

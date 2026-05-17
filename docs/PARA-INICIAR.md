@@ -64,6 +64,8 @@ Abre **`.env`** y mira los bloques:
 
 **Supabase local — guía paso a paso** (Studio, usuario `ltorres@pragmatadevs.com`, migraciones `01` y `02`): [**`docs/proceso-supabase-studio-local.md`**](./proceso-supabase-studio-local.md).
 
+3. **Scripts y Edge Functions en local** (tras SQL 01–03): `pnpm db:sync`, `supabase functions serve` → [**`docs/proceso-post-migraciones-scripts-y-funciones-local.md`**](./proceso-post-migraciones-scripts-y-funciones-local.md). Nube: [SETUP.md §7](./SETUP.md#7-edge-functions--deploy).
+
 ---
 
 ## 5. Levantar la app en tu máquina
@@ -110,6 +112,7 @@ La tabla completa y el checklist por cliente: **`docs/deployment-environments.md
 | Necesitas… | Documento |
 |------------|-------------|
 | Studio local tras `supabase start`, usuario god, SQL 01/02 | **`docs/proceso-supabase-studio-local.md`** |
+| Scripts `scripts/`, `db:sync`, Edge Functions **local** (`functions serve`) | **`docs/proceso-post-migraciones-scripts-y-funciones-local.md`** |
 | Setup largo, módulos, IA, Edge Functions, checklist | **`docs/SETUP.md`** |
 | Dominios, dos apps en Vercel, local vs nube | **`docs/deployment-environments.md`** |
 | PowerSync y flags por entorno | **`docs/deployment.md`** |

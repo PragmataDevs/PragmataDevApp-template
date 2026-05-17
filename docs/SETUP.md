@@ -365,6 +365,8 @@ La misma `OPENAI_API_KEY` sirve para `ai-task-summary` y `ai-gateway`. Prueba r�
 
 ## 7. Edge Functions — Deploy
 
+> **Local (post-SQL):** scripts + `supabase functions serve` → [**proceso-post-migraciones-scripts-y-funciones-local.md**](./proceso-post-migraciones-scripts-y-funciones-local.md). **Nube:** esta sección §7.
+
 Necesitas el **Supabase CLI** instalado y autenticado.
 
 ### 7.1 Login y link del proyecto
@@ -579,6 +581,8 @@ No usamos **`@astrojs/sitemap`** en hybrid (evita errores `_routes` en integraci
 
 
 ## 9. RBAC — Sincronizar recursos
+
+> Local tras migraciones 01–03: [**proceso-post-migraciones-scripts-y-funciones-local.md**](./proceso-post-migraciones-scripts-y-funciones-local.md)
 
 Cada vez que agregas una página nueva con `resourceCode`, debes registrarla en la base de datos.
 
