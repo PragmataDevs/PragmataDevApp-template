@@ -212,6 +212,7 @@ La plantilla ya incluye el baseline en **dos archivos** (orden cronológico por 
 |---------|-----------|
 | `20260111120000_pragmata_schema.sql` | Copia de `docs/database/01_security_engine.sql`: motor de seguridad + chat + notificaciones + tasks + documents + ecommerce + CMS + bucket `product-images` |
 | `20260111120001_pragmata_powersync_publication.sql` | Publicación lógica `powersync` (equivalente a `docs/database/03_powersync_publication.sql`) |
+| `20260111120002_pragmata_realtime_publication.sql` | Realtime en todas las tablas de negocio (`supabase_realtime`; equivalente a `docs/database/04_realtime_publication.sql`) |
 
 Flujo habitual: **`supabase db push`** tras `supabase link`. El seed del usuario god **no** va en migraciones versionadas: sigue siendo `docs/database/02_seed_god_user.sql` (ajusta UUID/email antes de ejecutarlo).
 
@@ -253,6 +254,7 @@ Si arrancas una base sin CLI, ejecuta en **Supabase Dashboard → SQL Editor** (
 | 1 | `docs/database/01_security_engine.sql` | Esquema completo (incluye tasks, documents, ecommerce, CMS, bucket product-images, `NOTIFY pgrst` al final) |
 | 2 | `docs/database/02_seed_god_user.sql` | Usuario god (edita UUID/email antes) |
 | 3 | `docs/database/03_powersync_publication.sql` | Solo si usas PowerSync |
+| 4 | `docs/database/04_realtime_publication.sql` | **Siempre** — activa Realtime (`supabase_realtime`) en todas las tablas de negocio |
 
 El script `01` está pensado para **base vacía** (instalación nueva). Si ya tienes tablas creadas, usa migraciones incrementales o `supabase db diff` en lugar de pegar el baseline entero.
 

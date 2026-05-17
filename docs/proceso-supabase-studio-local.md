@@ -20,7 +20,11 @@ flowchart TD
   E -->|Sí - supabase start ya migró| G[Saltar 01]
   F --> H[SQL: 02_seed_god_user.sql con UUID]
   G --> H
-  H --> I[Login ERP :7070/login]
+  H --> I[SQL: 04_realtime_publication.sql]
+  I --> J{PowerSync?}
+  J -->|Sí| K[SQL: 03_powersync]
+  J -->|No| L[Login ERP :7070]
+  K --> L
 ```
 
 | Paso | Qué | Archivo / URL |
@@ -31,7 +35,9 @@ flowchart TD
 | 4 | Copiar **User UID** | Authentication → Users |
 | 5 | Migración 1 — schema | `docs/database/01_security_engine.sql` |
 | 6 | Migración 2 — perfil god | `docs/database/02_seed_god_user.sql` (pegar UUID) |
-| 7 | Entrar al ERP | http://localhost:7070/login |
+| 7 | Migración 4 — Realtime | `docs/database/04_realtime_publication.sql` (**siempre**) |
+| 8 | Migración 3 — PowerSync | `03_powersync_publication.sql` solo si `VITE_ENABLE_POWERSYNC=true` |
+| 9 | Entrar al ERP | http://localhost:7070/login |
 
 **Orden obligatorio:** primero el usuario en **Auth** (pasos 3–4), luego la migración **1** (si hace falta), y por último la **2** con el UUID. La migración 2 inserta en `public.profiles` usando el mismo `id` que `auth.users`.
 
@@ -229,6 +235,8 @@ Deberías ver el sidebar completo (usuario dios sin bloqueos de RBAC en frontend
 - [ ] UUID copiado
 - [ ] `01_security_engine.sql` ejecutado **solo si** la base no tenía schema
 - [ ] `02_seed_god_user.sql` ejecutado con ese UUID
+- [ ] `04_realtime_publication.sql` ejecutado (Realtime en todas las tablas de negocio)
+- [ ] `03_powersync_publication.sql` solo si PowerSync
 - [ ] `.env` apunta a `http://127.0.0.1:54321`
 - [ ] Login en http://localhost:7070/login con `ltorres15`
 
@@ -241,7 +249,8 @@ Deberías ver el sidebar completo (usuario dios sin bloqueos de RBAC en frontend
 | 1 | `docs/database/01_security_engine.sql` | Security Engine — baseline schema |
 | 2 | `docs/database/02_seed_god_user.sql` | Seed manual usuario dios (requiere UUID de Auth) |
 | 3 | `docs/database/03_powersync_publication.sql` | Solo si `VITE_ENABLE_POWERSYNC=true` |
+| 4 | `docs/database/04_realtime_publication.sql` | **Siempre** — publicación `supabase_realtime` |
 
-Equivalente versionado (CLI): `supabase/migrations/20260111120000_pragmata_schema.sql` y `…20001_pragmata_powersync_publication.sql`.
+Equivalente versionado (CLI): `…20000_pragmata_schema.sql`, `…20001_pragmata_powersync_publication.sql`, `…20002_pragmata_realtime_publication.sql`.
 
 **Siguiente paso (solo local):** scripts RBAC + `supabase functions serve` → [**proceso-post-migraciones-scripts-y-funciones-local.md**](./proceso-post-migraciones-scripts-y-funciones-local.md).

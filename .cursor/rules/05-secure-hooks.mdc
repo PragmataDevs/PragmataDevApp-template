@@ -21,7 +21,7 @@ export function useClientes(entityId: string | undefined) {
     select: '*, entity:entities(name)',
     filter: (q) => q.eq('entity_id', entityId!).eq('status', 'active'),
     orderBy: { column: 'name', ascending: true },
-    realtime: true,
+    realtime: true,       // default en useCrudResource; tabla debe estar en supabase_realtime (migración 04)
     enabled: !!entityId,  // no fetchea si entityId es undefined
   });
 }
@@ -39,7 +39,7 @@ const { data, loading, error, upsert, softDelete, refetch } = useClientes(entity
 1. Gate auth: solo fetcha cuando `isAuthenticated === true`.
 2. `sessionEpoch` en deps → re-fetcha tras `TOKEN_REFRESHED` o idle.
 3. Fetch envuelto en `withSessionRetry` → recupera sesión si el JWT expira.
-4. Suscripción `postgres_changes` con cleanup correcto (si `realtime: true`).
+4. Suscripción `postgres_changes` con cleanup correcto (`realtime` default `true`; desactivar solo si la tabla no está en `supabase_realtime`).
 5. `upsert` usa `{ onConflict: 'id' }` — insert si no hay `id`, update si tiene.
 6. `softDelete` pasa `version` → OCC: rechaza si hubo un conflicto mid-air.
 7. Actualizaciones optimistas en estado local (sin esperar re-fetch).

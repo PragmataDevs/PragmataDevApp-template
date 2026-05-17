@@ -41,6 +41,7 @@ flowchart TD
 
 - Migración **1** ya aplicada (al hacer `supabase start` suele bastar; si no, SQL `01` en Studio).
 - Migración **2** con UUID del usuario Auth.
+- Migración **4** (`04_realtime_publication.sql`) — **siempre** (Realtime en todas las tablas).
 - Migración **3** solo si `VITE_ENABLE_POWERSYNC=true`.
 
 **Service role local** (para `db:sync`, nunca en `.env` del repo):

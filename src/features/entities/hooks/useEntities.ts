@@ -313,7 +313,7 @@ export function useEntities() {
           user_id,
           entity_id,
           created_at,
-          profiles!sys_entity_access_user_id_fkey(full_name, email, avatar_url, role_id, sys_roles(name))
+          profiles!sys_entity_access_user_id_fkey(full_name, email, avatar_url, role_id, sys_roles!profiles_role_id_fkey(name))
         `)
         .eq('entity_id', entityId);
 

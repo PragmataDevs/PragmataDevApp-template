@@ -118,7 +118,7 @@ export function useUsers() {
         const { profilesData, rolesData } = await withSessionRetry(async () => {
           const profilesResponse = await supabase
             .from('profiles')
-            .select('*, sys_roles(name)')
+            .select('*, sys_roles!profiles_role_id_fkey(name)')
             .order('created_at', { ascending: false });
 
           if (profilesResponse.error) throw profilesResponse.error;

@@ -15,7 +15,7 @@
  *       select: '*, entity:entities(name)',
  *       filter: (q) => q.eq('entity_id', entityId).eq('status', 'active'),
  *       orderBy: { column: 'name', ascending: true },
- *       realtime: true,
+ *       realtime: true,  // default; requiere migración 04 / supabase_realtime
  *     });
  */
 
@@ -91,7 +91,7 @@ export function useCrudResource<T extends AuditRecord>({
   select = '*',
   filter,
   orderBy,
-  realtime = false,
+  realtime = true,
   enabled = true,
 }: UseCrudResourceOptions): UseCrudResourceReturn<T> {
   const { user, isAuthenticated, loading: authLoading, sessionEpoch } = useAuth();

@@ -109,7 +109,7 @@ export default function EntityMembersPanel({
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, avatar_url, role_id, sys_roles(name)')
+        .select('id, full_name, email, avatar_url, role_id, sys_roles!profiles_role_id_fkey(name)')
         .eq('team_id', profile.team_id)
         .eq('status', 'active')
         .eq('profile_status', 'active')

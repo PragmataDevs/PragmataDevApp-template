@@ -31,7 +31,8 @@ Antecedentes: reglas en `.cursor/rules/`, detalle en `docs/architecture.md` y se
 
 ## 3. Hook de datos
 
-- Preferir **`useCrudResource`** (`src/lib/hooks/useCrudResource.ts`) con `table`, `filter` por `entity_id` si aplica, `realtime` opcional.
+- Preferir **`useCrudResource`** (`src/lib/hooks/useCrudResource.ts`) con `table`, `filter` por `entity_id` si aplica; **`realtime` viene `true` por defecto** (requiere la tabla en `supabase_realtime` — ver migración `04_realtime_publication.sql`).
+- Al crear una **tabla nueva** en SQL: añádela al ARRAY de `20260111120002_pragmata_realtime_publication.sql` (y a `docs/database/04_realtime_publication.sql`) en una migración incremental.
 - Detalle de plantilla (por qué **`AuditRecord`** sin índice string, **`filter`** con cadena PostgREST laxamente tipada, **`upsert`** y `as unknown as T`): **`docs/architecture.md`** → *Hook genérico `useCrudResource`*.
 - Si hay varias tablas o lógica no CRUD (ej. Kanban), hook dedicado en `src/features/<modulo>/hooks/` usando **`withSessionRetry`** + **`sessionEpoch`** (`docs` rule `05-secure-hooks.mdc`).
 
