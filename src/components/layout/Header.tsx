@@ -8,6 +8,8 @@ import { NotificationBell } from '@/features/notifications/components/Notificati
 import { ChatIcon } from '@/features/chat/components/ChatPanel';
 import EntitySelector from '@/features/entities/components/EntitySelector';
 import { MULTI_ENTITY_ENABLED } from '@/types/entities/entity';
+import { OverlayPortal } from '@/lib/ui/OverlayPortal';
+import { useAnchoredPosition } from '@/lib/ui/useAnchoredPosition';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -17,7 +19,8 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { user, profile } = useAuth();
   const isInWorkspace = !!useMatch('/workspace/:entityId/*');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const profileAnchorRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const [headerAvatarUrl, setHeaderAvatarUrl] = useState<string | null>(null);
 
   // Resolve avatar signed URL
@@ -29,16 +32,33 @@ export function Header({ onMenuClick }: HeaderProps) {
     }
   }, [profile?.avatar_url]);
 
-  // Close dropdown on click outside
+  // Cerrar menú perfil cuando se abre el panel de chat (misma zona del header)
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    const observer = new MutationObserver(() => {
+      if (document.body.hasAttribute('data-chat-open')) {
         setIsProfileOpen(false);
       }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-chat-open'] });
+    return () => observer.disconnect();
   }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    if (!isProfileOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      if (
+        profileAnchorRef.current?.contains(target) ||
+        profileMenuRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setIsProfileOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isProfileOpen]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -53,12 +73,21 @@ export function Header({ onMenuClick }: HeaderProps) {
     return user?.email?.substring(0, 2).toUpperCase();
   };
 
+  const profileMenuStyle = useAnchoredPosition({
+    isOpen: isProfileOpen,
+    anchorRef: profileAnchorRef,
+    width: 224,
+    align: 'right',
+  });
+
   return (
-    <header className="h-16 bg-[color:var(--pragmata-surface)] border-b border-[color:var(--pragmata-border)] flex items-center justify-between px-4 md:px-6 z-20 sticky top-0">
+    <header className="h-16 bg-[color:var(--pragmata-surface)] border-b border-[color:var(--pragmata-border)] flex items-center justify-between px-4 md:px-6 z-header sticky top-0">
       
       {/* Left: Mobile Menu + EntitySelector */}
       <div className="flex items-center gap-4">
-        <button 
+        <button
+          type="button"
+          data-mobile-menu-trigger
           onClick={onMenuClick}
           className="p-2 -ml-2 text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] md:hidden rounded-pragmata hover:bg-[color:var(--pragmata-surface-2)]"
         >
@@ -85,7 +114,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         <div className="h-8 w-px bg-[color:var(--pragmata-border)] mx-1 hidden md:block"></div>
 
         {/* User Profile Dropdown */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative" ref={profileAnchorRef}>
             <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center gap-2 p-1 rounded-full hover:bg-[color:var(--pragmata-surface-2)] border border-transparent hover:border-[color:var(--pragmata-border)] transition-all"
@@ -108,9 +137,14 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <ChevronDown className="w-4 h-4 text-[color:var(--pragmata-muted-2)] hidden md:block" />
             </button>
 
-            {/* Dropdown Menu */}
             {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-[color:var(--pragmata-surface)] rounded-pragmata shadow-lg border border-[color:var(--pragmata-border)] py-1 origin-top-right animate-in fade-in zoom-in-95 duration-200">
+              <OverlayPortal layer="floating">
+                <div
+                  ref={profileMenuRef}
+                  style={profileMenuStyle}
+                  data-floating-menu
+                  className="z-floating pointer-events-auto bg-[color:var(--pragmata-surface)] rounded-pragmata shadow-lg border border-[color:var(--pragmata-border)] py-1 origin-top-right animate-in fade-in zoom-in-95 duration-200"
+                >
                     <div className="px-4 py-3 border-b border-[color:var(--pragmata-border)] md:hidden">
                       <p className="text-sm font-semibold text-[color:var(--pragmata-fg)]">{user?.email}</p>
                       <p className="text-xs text-[color:var(--pragmata-muted)] capitalize">{profile?.access_level}</p>
@@ -137,6 +171,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                         </button>
                     </div>
                 </div>
+              </OverlayPortal>
             )}
         </div>
       </div>

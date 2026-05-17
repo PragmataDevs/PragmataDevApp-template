@@ -13,6 +13,7 @@ import {
 } from '../hooks/useChat';
 import { supabase } from '@/lib/supabase';
 import { resolveSignedUrl } from '@/lib/storage';
+import { OverlayPortal } from '@/lib/ui/OverlayPortal';
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -81,6 +82,15 @@ export function ChatIcon() {
   const { conversations } = useConversations();
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.setAttribute('data-chat-open', '');
+    } else {
+      document.body.removeAttribute('data-chat-open');
+    }
+    return () => document.body.removeAttribute('data-chat-open');
+  }, [isOpen]);
+
   return (
     <>
       <button
@@ -95,7 +105,20 @@ export function ChatIcon() {
         )}
       </button>
 
-      {isOpen && <ChatPanel onClose={() => setIsOpen(false)} />}
+      {isOpen && (
+        <OverlayPortal
+          layer="sheet"
+          className="flex justify-end"
+          onBackdropClick={() => setIsOpen(false)}
+        >
+          <div
+            className="absolute inset-0 bg-black/30"
+            aria-hidden
+            onClick={() => setIsOpen(false)}
+          />
+          <ChatPanel onClose={() => setIsOpen(false)} />
+        </OverlayPortal>
+      )}
     </>
   );
 }
@@ -117,18 +140,26 @@ function ChatPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
-      <div className="w-full max-w-md bg-[color:var(--pragmata-surface)] shadow-2xl border-l border-[color:var(--pragmata-border)] flex flex-col animate-in slide-in-from-right duration-300 h-full">
+    <div
+      className="relative z-10 w-full max-w-md bg-[color:var(--pragmata-surface)] shadow-2xl border-l border-[color:var(--pragmata-border)] flex flex-col animate-in slide-in-from-right duration-300 h-full ml-auto pointer-events-auto"
+      onClick={(e) => e.stopPropagation()}
+    >
         {/* New Chat Modal */}
         {showNewChat && (
-          <NewConversationModal
-            onClose={() => setShowNewChat(false)}
-            onCreate={async (participantIds, name) => {
-              const conv = await createConversation(participantIds, name);
-              if (conv) setActiveConvId(conv.id);
-              setShowNewChat(false);
-            }}
-          />
+          <OverlayPortal
+            layer="modalElevated"
+            className="fixed inset-0 flex items-center justify-center bg-black/50 p-4"
+            onBackdropClick={() => setShowNewChat(false)}
+          >
+            <NewConversationModal
+              onClose={() => setShowNewChat(false)}
+              onCreate={async (participantIds, name) => {
+                const conv = await createConversation(participantIds, name);
+                if (conv) setActiveConvId(conv.id);
+                setShowNewChat(false);
+              }}
+            />
+          </OverlayPortal>
         )}
 
         {/* Message View */}
@@ -235,7 +266,6 @@ function ChatPanel({ onClose }: { onClose: () => void }) {
             </div>
           </>
         )}
-      </div>
     </div>
   );
 }
@@ -563,11 +593,10 @@ function NewConversationModal({
   const canCreate = chatType === 'group' && selectedIds.length >= 2 && groupName.trim().length > 0;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div
-        className="w-full max-w-md mx-4 bg-[color:var(--pragmata-surface)] rounded-2xl shadow-2xl border border-[color:var(--pragmata-border)] flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div
+      className="w-full max-w-md mx-4 bg-[color:var(--pragmata-surface)] rounded-2xl shadow-2xl border border-[color:var(--pragmata-border)] flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200"
+      onClick={(e) => e.stopPropagation()}
+    >
         {/* ── Header ── */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-[color:var(--pragmata-border)]">
           {step === 'select' ? (
@@ -768,7 +797,6 @@ function NewConversationModal({
             )}
           </>
         )}
-      </div>
     </div>
   );
 }

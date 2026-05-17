@@ -5,7 +5,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { KPICard } from '@/components/ui/KPICard';
 import { ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
-import PragmataIcon from '@/assets/pragmata-devs-icon.png';
+import { BrandIcon } from '@/components/brand/BrandIcon';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -152,10 +152,9 @@ export default function DashboardPage() {
         <div className="rounded-xl border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface)] p-6 shadow-sm relative overflow-hidden">
           <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-[color:var(--pragmata-accent-soft)] opacity-60" />
           <div className="relative z-10 flex items-center gap-4">
-            <img
-              src={PragmataIcon}
+            <BrandIcon
+              className="h-10 w-10 rounded-xl flex-shrink-0"
               alt="Pragmata"
-              className="h-10 w-10 rounded-xl bg-[color:var(--pragmata-surface-2)] p-2 border border-[color:var(--pragmata-border)] flex-shrink-0"
             />
             <div>
               <h1 className="text-xl font-bold text-[color:var(--pragmata-fg)]">

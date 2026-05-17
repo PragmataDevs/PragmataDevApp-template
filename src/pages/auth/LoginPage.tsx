@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
+import { authRedirectUrl } from '@/lib/auth/authRedirect';
+import { BrandIcon } from '@/components/brand/BrandIcon';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +37,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: authRedirectUrl('/auth/callback'),
       },
     });
     
@@ -53,7 +55,7 @@ export default function LoginPage() {
         {/* Cabecera de la tarjeta */}
         <div className="px-8 pt-8 pb-6 text-center">
             <div className="mx-auto mb-6 flex justify-center">
-                <img src="/pragmata-devs-icon.png" alt="PragmataDevs" className="h-16 w-auto" />
+                <BrandIcon className="h-16 w-16" alt="PragmataDevs" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Welcome Back</h1>
             <p className="text-slate-500 mt-2 text-sm">Enter your credentials to access your account</p>
@@ -90,7 +92,7 @@ export default function LoginPage() {
                 <div className="space-y-2">
                      <div className="flex items-center justify-between">
                         <label className="text-sm font-medium text-slate-700 block">Password</label>
-                        <Link to="#" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
+                        <Link to="/auth/forgot-password" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
                             Forgot password?
                         </Link>
                     </div>

@@ -59,10 +59,12 @@ Abre **`.env`** y mira los bloques:
 
 ## 4. Base de datos y usuario “dios”
 
-1. Aplica el **schema** (migraciones o scripts SQL) como dice **`docs/SETUP.md`** sección **3** — en local: `01`, `02`, **`04` Realtime (siempre)**, `03` solo si PowerSync; muchas ya corren al hacer `supabase start`.
+1. Aplica el **schema** (migraciones o scripts SQL) como dice **`docs/SETUP.md`** sección **3** — en local: `01`, `02`, **`04` Realtime (siempre)**, `03` solo si PowerSync; muchas ya corren al hacer `supabase start`. Tras un `git pull` o si en el ERP ves **«Error al cargar cms_pages»** (módulo SEO): `supabase migration up` en la raíz (incluye tabla `cms_pages` y página `home`).
 2. **Usuario god** (el que lo ve todo): crear usuario en **Auth** (Dashboard nube **o** Studio local `http://127.0.0.1:54323`), copiar UUID, ejecutar **`docs/database/02_seed_god_user.sql`** en el **SQL Editor** de *esa misma* instancia.
 
 **Supabase local — guía paso a paso** (Studio, usuario `ltorres@pragmatadevs.com`, migraciones `01` y `02`): [**`docs/proceso-supabase-studio-local.md`**](./proceso-supabase-studio-local.md).
+
+**Correo «olvidé contraseña» en local:** plantillas en `supabase/templates/` (se cargan al `supabase start`); prueba en Mailpit → [**`docs/auth-email-templates-local.md`**](./auth-email-templates-local.md).
 
 3. **Scripts y Edge Functions en local** (tras SQL 01–03): `pnpm db:sync`, `supabase functions serve` → [**`docs/proceso-post-migraciones-scripts-y-funciones-local.md`**](./proceso-post-migraciones-scripts-y-funciones-local.md). Nube: [SETUP.md §7](./SETUP.md#7-edge-functions--deploy).
 
@@ -111,7 +113,7 @@ La tabla completa y el checklist por cliente: **`docs/deployment-environments.md
 
 | Necesitas… | Documento |
 |------------|-------------|
-| Studio local tras `supabase start`, usuario god, SQL 01/02 | **`docs/proceso-supabase-studio-local.md`** |
+| Studio local tras `supabase start`, usuario god, SQL 01/02, CMS (`cms_pages`) | **`docs/proceso-supabase-studio-local.md`** |
 | Scripts `scripts/`, `db:sync`, Edge Functions **local** (`functions serve`) | **`docs/proceso-post-migraciones-scripts-y-funciones-local.md`** |
 | Setup largo, módulos, IA, Edge Functions, checklist | **`docs/SETUP.md`** |
 | Dominios, dos apps en Vercel, local vs nube | **`docs/deployment-environments.md`** |

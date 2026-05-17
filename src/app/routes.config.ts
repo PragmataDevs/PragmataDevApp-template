@@ -21,6 +21,7 @@ const PublicSiteEntry       = lazy(() => import('@/pages/PublicSiteEntry'));
 const LoginPage             = lazy(() => import('@/pages/auth/LoginPage'));
 const CallbackPage          = lazy(() => import('@/pages/auth/CallbackPage'));
 const ResetPasswordPage     = lazy(() => import('@/pages/auth/ResetPasswordPage'));
+const ForgotPasswordPage    = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
 
 const DashboardPage         = lazy(() => import('@/pages/dashboard/DashboardPage'));
 const ProfilePage           = lazy(() => import('@/pages/profile/ProfilePage'));
@@ -72,6 +73,13 @@ export const APP_ROUTES: AppRoute[] = [
     path: '/auth/callback',
     name: 'Auth Callback',
     element: CallbackPage,
+    layout: 'public',
+    hideInMenu: true,
+  },
+  {
+    path: '/auth/forgot-password',
+    name: 'Recuperar contraseña',
+    element: ForgotPasswordPage,
     layout: 'public',
     hideInMenu: true,
   },

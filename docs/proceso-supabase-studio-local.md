@@ -39,6 +39,8 @@ flowchart TD
 | 8 | Migración 3 — PowerSync | `03_powersync_publication.sql` solo si `VITE_ENABLE_POWERSYNC=true` |
 | 9 | Entrar al ERP | http://localhost:7070/login |
 
+**Recuperar contraseña (local):** en login → *Forgot password?* → correo en [Mailpit](http://127.0.0.1:54324). Plantilla HTML: [`supabase/templates/recovery.html`](../supabase/templates/recovery.html) (cargada vía `config.toml` al `supabase start`). Guía completa: [auth-email-templates-local.md](./auth-email-templates-local.md). Tras cambiar plantillas o `config.toml`, ejecuta `supabase stop` y `supabase start`. Si el enlace falla revisa `site_url` = `http://localhost:7070`.
+
 **Orden obligatorio:** primero el usuario en **Auth** (pasos 3–4), luego la migración **1** (si hace falta), y por último la **2** con el UUID. La migración 2 inserta en `public.profiles` usando el mismo `id` que `auth.users`.
 
 ---
@@ -79,7 +81,15 @@ VITE_SUPABASE_URL=http://127.0.0.1:54321
 VITE_SUPABASE_ANON_KEY=<clave de supabase status>
 ```
 
-> Al hacer `supabase start`, la CLI suele aplicar ya las migraciones versionadas en `supabase/migrations/` (equivalente al contenido de `01_security_engine.sql`). Si en Studio → **Table Editor** ves tablas como `profiles`, `teams`, `entities`, **no vuelvas a ejecutar** la migración 1 (evitas errores de “relation already exists”). En ese caso ve directo al paso 4 tras crear el usuario.
+> Al hacer `supabase start`, la CLI aplica las migraciones en `supabase/migrations/` (equivalente a `01_security_engine.sql` + publicaciones Realtime/PowerSync + asegurado CMS). Si en Studio → **Table Editor** ves tablas como `profiles`, `teams`, `entities`, **no vuelvas a ejecutar** la migración 1 (evitas errores de “relation already exists”). En ese caso ve directo al paso 4 tras crear el usuario.
+>
+> Si clonaste el repo **después** de haber levantado Supabase local una vez, o el ERP muestra **«Error al cargar cms_pages»** en *SEO → Páginas del sitio*, aplica migraciones pendientes:
+>
+> ```bash
+> supabase migration up
+> ```
+>
+> Eso ejecuta (entre otras) `20260517120000_pragmata_cms_pages_ensure.sql`: crea `public.cms_pages`, RLS, recurso `page_seo_site_pages` y fila `home` si faltaban. Comprueba en SQL Editor: `SELECT slug FROM public.cms_pages;` → debe aparecer `home`.
 
 ---
 
@@ -212,6 +222,13 @@ Esperado: `access_level = 'god'` y `is_platform_owner = true` (entonces `public.
 
 Deberías ver el sidebar completo (usuario dios sin bloqueos de RBAC en frontend).
 
+### CMS del sitio (SEO)
+
+- Ruta ERP: **SEO → Páginas del sitio** (`/seo/pages`). Activo por defecto; desactivar con `VITE_ENABLE_SITE_CMS=false` en `.env`.
+- Tabla: `public.cms_pages` (landing `slug = home` + páginas Markdown).
+- Si la lista no carga: `supabase migration up` (ver nota en §1). Usuario **god** o rol con permiso `page_seo_site_pages` → `read`.
+- Opcional: `SUPABASE_SERVICE_ROLE_KEY=… pnpm db:sync` para alinear `sys_resources` con el código.
+
 ---
 
 ## 7. Problemas frecuentes
@@ -224,6 +241,8 @@ Deberías ver el sidebar completo (usuario dios sin bloqueos de RBAC en frontend
 | `profiles` no existe al ejecutar 02 | Falta migración 1 | Ejecuta `01_security_engine.sql` |
 | `insert violates foreign key` en `profiles.id` | UUID incorrecto o usuario no creado en Auth | Crea el usuario en Authentication y vuelve a pegar el UID exacto |
 | Errores `already exists` en 01 | Schema ya aplicado por CLI | Omite migración 1; solo 02 con UUID |
+| **Error al cargar cms_pages** en `/seo/pages` | Tabla CMS ausente (DB antigua o migraciones sin aplicar) | `supabase migration up` en la raíz; verifica `SELECT slug FROM public.cms_pages;` |
+| Lista CMS vacía sin error | Normal al inicio | Edita `home` o crea páginas; Astro usa la fila publicada en `/` |
 
 ---
 
@@ -239,6 +258,9 @@ Deberías ver el sidebar completo (usuario dios sin bloqueos de RBAC en frontend
 - [ ] `03_powersync_publication.sql` solo si PowerSync
 - [ ] `.env` apunta a `http://127.0.0.1:54321`
 - [ ] Login en http://localhost:7070/login con `ltorres15`
+- [ ] (Opcional) Forgot password → correo con plantilla Pragmata en Mailpit
+- [ ] `supabase migration up` si faltaban migraciones (p. ej. CMS / `cms_pages`)
+- [ ] (Opcional) **SEO → Páginas del sitio** carga sin error; existe fila `home` en `cms_pages`
 
 ---
 
@@ -250,7 +272,11 @@ Deberías ver el sidebar completo (usuario dios sin bloqueos de RBAC en frontend
 | 2 | `docs/database/02_seed_god_user.sql` | Seed manual usuario dios (requiere UUID de Auth) |
 | 3 | `docs/database/03_powersync_publication.sql` | Solo si `VITE_ENABLE_POWERSYNC=true` |
 | 4 | `docs/database/04_realtime_publication.sql` | **Siempre** — publicación `supabase_realtime` |
+| — | `supabase/templates/recovery.html` | Email «olvidé contraseña» (local + referencia cloud) |
+| — | [auth-email-templates-local.md](./auth-email-templates-local.md) | Mailpit, `config.toml`, reinicio |
+| — | [brand-assets.md](./brand-assets.md) | Icono SVG canónico ERP + Astro |
+| — | [ui-z-index-layers.md](./ui-z-index-layers.md) | Capas UI (notificaciones, modales) |
 
-Equivalente versionado (CLI): `…20000_pragmata_schema.sql`, `…20001_pragmata_powersync_publication.sql`, `…20002_pragmata_realtime_publication.sql`.
+Equivalente versionado (CLI): `…20000_pragmata_schema.sql`, `…20001_pragmata_powersync_publication.sql`, `…20002_pragmata_realtime_publication.sql`, `…20260517120000_pragmata_cms_pages_ensure.sql` (idempotente: CMS + recurso `page_seo_site_pages` + seed `home`).
 
 **Siguiente paso (solo local):** scripts RBAC + `supabase functions serve` → [**proceso-post-migraciones-scripts-y-funciones-local.md**](./proceso-post-migraciones-scripts-y-funciones-local.md).

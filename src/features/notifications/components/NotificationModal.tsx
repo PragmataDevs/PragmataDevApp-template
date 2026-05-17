@@ -8,6 +8,7 @@ import { useNotifications, type Notification } from '../hooks/useNotifications';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import { NOTIFICATION_TYPES, BROADCAST_TARGETS, type NotificationType, type BroadcastTargetType } from '../config';
 import { supabase } from '@/lib/supabase';
+import { OverlayPortal } from '@/lib/ui/OverlayPortal';
 
 // ─── Notification row in modal ───────────────────────────────
 function NotificationRow({
@@ -357,8 +358,15 @@ export function NotificationModal({ onClose }: { onClose: () => void }) {
 
   if (view === 'send') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="bg-[color:var(--pragmata-surface)] rounded-2xl shadow-2xl border border-[color:var(--pragmata-border)] w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <OverlayPortal
+        layer="modal"
+        className="fixed inset-0 flex items-center justify-center bg-black/50 p-4"
+        onBackdropClick={onClose}
+      >
+        <div
+          className="bg-[color:var(--pragmata-surface)] rounded-2xl shadow-2xl border border-[color:var(--pragmata-border)] w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
           <SendNotificationForm
             onBack={() => setView('list')}
             onSent={() => {
@@ -367,13 +375,20 @@ export function NotificationModal({ onClose }: { onClose: () => void }) {
             }}
           />
         </div>
-      </div>
+      </OverlayPortal>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-[color:var(--pragmata-surface)] rounded-2xl shadow-2xl border border-[color:var(--pragmata-border)] w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <OverlayPortal
+      layer="modal"
+      className="fixed inset-0 flex items-center justify-center bg-black/50 p-4"
+      onBackdropClick={onClose}
+    >
+      <div
+        className="bg-[color:var(--pragmata-surface)] rounded-2xl shadow-2xl border border-[color:var(--pragmata-border)] w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[color:var(--pragmata-border)]">
           <div className="flex items-center gap-3">
@@ -459,6 +474,6 @@ export function NotificationModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
       </div>
-    </div>
+    </OverlayPortal>
   );
 }

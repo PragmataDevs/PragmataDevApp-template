@@ -26,7 +26,19 @@ export default {
       },
       letterSpacing: {
         tighter: '-0.05em',
-      }
+      },
+      zIndex: {
+        'sidebar-backdrop': 'var(--z-sidebar-backdrop)',
+        sidebar: 'var(--z-sidebar)',
+        header: 'var(--z-header)',
+        'header-dropdown': 'var(--z-header-dropdown)',
+        floating: 'var(--z-floating)',
+        overlay: 'var(--z-overlay)',
+        modal: 'var(--z-modal)',
+        'modal-elevated': 'var(--z-modal-elevated)',
+        sheet: 'var(--z-sheet)',
+        datatable: 'var(--z-datatable)',
+      },
     },
   },
   plugins: [],

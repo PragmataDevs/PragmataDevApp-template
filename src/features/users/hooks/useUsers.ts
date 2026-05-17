@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { authRedirectUrl } from '@/lib/auth/authRedirect';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
 import type { Profile } from '@/types/users/profile';
 import type { GrantedPermissions } from '@/features/settings/components/PermissionsPanel';
@@ -354,7 +355,7 @@ export function useUsers() {
           body: {
             email: payload.email,
             full_name: payload.full_name,
-            redirectTo: `${window.location.origin}/auth/reset-password`,
+            redirectTo: authRedirectUrl('/auth/reset-password'),
           },
         },
       );

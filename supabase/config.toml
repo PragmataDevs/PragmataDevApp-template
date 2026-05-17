@@ -32,11 +32,18 @@ port = 54324
 file_size_limit = "50MiB"
 
 [auth]
-site_url = "http://localhost:5173"
-# Lista de URLs permitidas para redireccionamiento OAuth
+site_url = "http://localhost:7070"
+# Lista de URLs permitidas para redireccionamiento (ERP :7070, Astro :4321 en dev)
 additional_redirect_urls = [
+  "http://localhost:7070/**",
+  "http://127.0.0.1:7070/**",
+  "http://localhost:7070/auth/callback",
+  "http://127.0.0.1:7070/auth/callback",
+  "http://localhost:7070/auth/reset-password",
+  "http://127.0.0.1:7070/auth/reset-password",
   "http://localhost:5173/auth/callback",
-  "https://app.tucliente.com/auth/callback"
+  "https://app.tucliente.com/auth/callback",
+  "https://app.tucliente.com/auth/reset-password"
 ]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
@@ -46,6 +53,18 @@ refresh_token_reuse_interval = 10
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
+
+# Plantillas HTML — se cargan al `supabase start` (ruta relativa a la raíz del repo).
+# Probar en local: Mailpit http://127.0.0.1:54324
+# Ver docs/auth-email-templates-local.md
+
+[auth.email.template.recovery]
+subject = "Restablece tu contraseña — PragmataDevs"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.invite]
+subject = "Establece tu contraseña — PragmataDevs"
+content_path = "./supabase/templates/invite.html"
 
 # ── Edge Functions (local: supabase functions serve; nube: supabase functions deploy) ──
 # verify_jwt por función — local respeta config.toml al hacer `supabase functions serve`.

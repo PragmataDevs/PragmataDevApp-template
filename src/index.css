@@ -35,6 +35,18 @@
 
   /* --- INTERACTION --- */
   --pragmata-row-hover: #F1F5F9;   /* Slate 100 for clear hover contrast */
+
+  /* --- Z-INDEX (capas UI) --- */
+  --z-sidebar-backdrop: 40;
+  --z-sidebar: 50;
+  --z-header: 60;
+  --z-header-dropdown: 110;
+  --z-overlay: 200;
+  --z-modal: 300;
+  --z-modal-elevated: 310;
+  --z-floating: 11000;
+  --z-sheet: 12000;
+  --z-datatable: 10000;
 }
 
 /* Dark Mode (Controlado por clase .dark en <html>) */
@@ -56,6 +68,24 @@
     --pragmata-border-strong: #273454;
     
     --pragmata-row-hover: #1E293B;  /* Slate 800 for dark mode contrast */
+}
+
+@layer utilities {
+  .z-sidebar-backdrop { z-index: var(--z-sidebar-backdrop); }
+  .z-sidebar { z-index: var(--z-sidebar); }
+  .z-header { z-index: var(--z-header); }
+  .z-header-dropdown { z-index: var(--z-header-dropdown); }
+  .z-floating { z-index: var(--z-floating); }
+  .z-overlay { z-index: var(--z-overlay); }
+  .z-modal { z-index: var(--z-modal); }
+  .z-modal-elevated { z-index: var(--z-modal-elevated); }
+  .z-sheet { z-index: var(--z-sheet); }
+  .z-datatable { z-index: var(--z-datatable); }
+}
+
+/* El panel de chat cubre el header: evita clics fantasma en avatar / campana */
+body[data-chat-open] header {
+  pointer-events: none;
 }
 
 body {

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useTheme, type ThemeOption } from '@/features/preferences/providers/ThemeProvider';
+import { authRedirectUrl } from '@/lib/auth/authRedirect';
 import { supabase } from '@/lib/supabase';
 import { uploadFile, deleteFile, resolveSignedUrl, AVATAR_PRESET } from '@/lib/storage';
 import { Button } from '@/components/ui/Button';
@@ -143,7 +144,7 @@ export default function ProfilePage() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: authRedirectUrl('/auth/reset-password'),
       });
 
       if (error) throw error;

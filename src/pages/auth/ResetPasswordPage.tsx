@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
+import { BrandIcon } from '@/components/brand/BrandIcon';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -13,6 +14,34 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [hasRecoverySession, setHasRecoverySession] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setHasRecoverySession(!!session);
+      setSessionReady(true);
+    };
+
+    void checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if (event === 'PASSWORD_RECOVERY' || session) {
+        setHasRecoverySession(!!session);
+        setSessionReady(true);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Password validation rules
   const validations = {
@@ -53,6 +82,34 @@ export default function ResetPasswordPage() {
     }
   };
 
+  if (!sessionReady) {
+    return (
+      <div className="min-h-screen w-full bg-slate-900 flex items-center justify-center p-4">
+        <div className="w-6 h-6 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!hasRecoverySession) {
+    return (
+      <div className="min-h-screen w-full bg-slate-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden px-8 py-10 text-center">
+          <AlertCircle className="h-10 w-10 text-amber-500 mx-auto mb-4" />
+          <h1 className="text-xl font-bold text-slate-900">Enlace inválido o expirado</h1>
+          <p className="text-slate-500 mt-2 text-sm">
+            Solicita un nuevo correo de recuperación e intenta de nuevo.
+          </p>
+          <Link
+            to="/auth/forgot-password"
+            className="mt-6 inline-block text-sm font-semibold text-blue-600 hover:text-blue-700"
+          >
+            Solicitar nuevo enlace
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="min-h-screen w-full bg-slate-900 flex items-center justify-center p-4">
@@ -82,7 +139,7 @@ export default function ResetPasswordPage() {
         {/* Header */}
         <div className="px-8 pt-8 pb-6 text-center">
           <div className="mx-auto mb-6 flex justify-center">
-            <img src="/pragmata-devs-icon.png" alt="PragmataDevs" className="h-16 w-auto" />
+            <BrandIcon className="h-16 w-16" alt="PragmataDevs" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Establece tu contraseña</h1>
           <p className="text-slate-500 mt-2 text-sm">

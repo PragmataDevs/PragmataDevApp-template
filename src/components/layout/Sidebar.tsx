@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { NavLink, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { ChevronDown, Settings, Layers, ShoppingCart, Globe } from 'lucide-react';
-import PragmataIcon from '@/assets/pragmata-devs-icon.png';
+import { BrandIcon } from '@/components/brand/BrandIcon';
 import { APP_ROUTES, WORKSPACE_ROUTES } from '@/app/routes.config';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import { useActiveEntity } from '@/features/entities/hooks/useActiveEntity';
@@ -25,7 +25,10 @@ interface SidebarProps {
   onToggleCollapse: () => void;
 }
 
-export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: SidebarProps) {
+export const Sidebar = forwardRef<HTMLElement, SidebarProps>(function Sidebar(
+  { isOpen, isCollapsed, onClose, onToggleCollapse },
+  ref,
+) {
   const { hasPermission } = usePermission();
   const location = useLocation();
   const navigate = useNavigate();
@@ -177,18 +180,10 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
 
   return (
     <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-[color:var(--pragmata-primary)]/30 backdrop-blur-sm z-40 md:hidden"
-          onClick={onClose}
-        />
-      )}
-
-      {/* Sidebar Container */}
       <aside
+        ref={ref}
         className={`
-          fixed inset-y-0 left-0 z-50 bg-[color:var(--pragmata-surface)] border-r border-[color:var(--pragmata-border)] transform transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)
+          fixed inset-y-0 left-0 z-sidebar md:z-auto bg-[color:var(--pragmata-surface)] border-r border-[color:var(--pragmata-border)] transform transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)
           md:relative md:translate-x-0 flex flex-col
           ${isCollapsed ? 'w-20' : 'w-64'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -201,11 +196,7 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
           className={`h-16 flex items-center gap-3 border-b border-[color:var(--pragmata-border)] transition-all hover:bg-[color:var(--pragmata-surface-2)] ${isCollapsed ? 'px-4 justify-center' : 'px-6'}`}
           title="Ocultar/Mostrar Sidebar"
         >
-          <img
-            src={PragmataIcon}
-            alt="Pragmata"
-            className="h-8 w-8 rounded-pragmata bg-[color:var(--pragmata-surface-2)] p-1.5 border border-[color:var(--pragmata-border)]"
-          />
+          <BrandIcon className="h-8 w-8 rounded-pragmata" alt="Pragmata" />
           {!isCollapsed && (
             <span className="font-bold text-lg tracking-tight text-[color:var(--pragmata-fg)]">Pragmata</span>
           )}
@@ -325,4 +316,4 @@ export function Sidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: Side
       </aside>
     </>
   );
-}
+});

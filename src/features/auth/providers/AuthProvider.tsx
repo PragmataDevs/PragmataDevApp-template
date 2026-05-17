@@ -11,7 +11,7 @@ export type UserPermissionsMap = Record<string, string[]>;
 const PUBLIC_PATHS = ['/', '/login', '/auth/callback'];
 
 /** Pages that should NOT redirect on auth events */
-const NO_REDIRECT_PATHS = ['/auth/reset-password'];
+const NO_REDIRECT_PATHS = ['/auth/reset-password', '/auth/forgot-password'];
 
 interface AuthContextType {
   user: User | null;

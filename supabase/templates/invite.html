@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Establece tu contraseña — PragmataDevs</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F7F8FB;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F7F8FB;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:12px;border:1px solid #E3E8F2;">
+          <tr>
+            <td style="padding:32px 40px 24px;text-align:center;border-bottom:1px solid #E3E8F2;">
+              <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                <tr>
+                  <td style="width:48px;height:48px;background:#0f172a;border-radius:6px;text-align:center;vertical-align:middle;">
+                    <span style="display:inline-block;width:24px;height:4px;background:#0ea5e9;margin:2px 0;"></span>
+                  </td>
+                  <td style="padding-left:12px;font-size:18px;font-weight:700;color:#0B1220;letter-spacing:-0.02em;">PragmataDevs</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 40px;">
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0B1220;text-align:center;">Establece tu contraseña</h1>
+              <p style="margin:0 0 28px;font-size:14px;line-height:22px;color:#5A6B85;text-align:center;">
+                Se creó una cuenta para <strong style="color:#0B1220;">{{ .Email }}</strong> en PragmataDevs.
+                Haz clic para definir tu contraseña y acceder al ERP.
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom:28px;">
+                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;background-color:#0EA5E9;color:#FFFFFF;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;">
+                      Establecer contraseña
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:24px 0 0;font-size:12px;line-height:18px;color:#8A9AB1;text-align:center;">
+                Enlace alternativo: <a href="{{ .ConfirmationURL }}" style="color:#0EA5E9;">{{ .ConfirmationURL }}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#F2F5FA;border-top:1px solid #E3E8F2;border-radius:0 0 12px 12px;padding:24px 40px;text-align:center;">
+              <p style="margin:0;font-size:11px;color:#8A9AB1;">Correo automático de PragmataDevs. No responder.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
