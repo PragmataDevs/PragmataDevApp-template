@@ -11,6 +11,7 @@ import { erpLoginUrl } from '../../lib/public-urls';
 
 const { brand, note, appUrl, siteOrigin = '', ecommerceEnabled } = Astro.props;
 const loginHref = erpLoginUrl(appUrl, siteOrigin.trim() || undefined);
+const year = new Date().getFullYear();
 ---
 
 <footer
@@ -39,5 +40,20 @@ const loginHref = erpLoginUrl(appUrl, siteOrigin.trim() || undefined);
         Iniciar sesión
       </a>
     </nav>
+  </div>
+  <div
+    class="mx-auto max-w-6xl border-t border-brand-border/80 px-4 py-4 sm:px-6 dark:border-slate-700/80"
+  >
+    <p class="text-center text-xs leading-relaxed text-brand-steel sm:text-left">
+      © {year} {brand}. Todos los derechos reservados.{' '}
+      <a
+        href="https://www.pragmatadevs.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="font-semibold text-brand-accent transition hover:text-brand-accent-dark hover:underline"
+      >
+        PragmataDevs
+      </a>
+    </p>
   </div>
 </footer>

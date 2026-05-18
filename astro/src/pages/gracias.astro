@@ -3,10 +3,12 @@ export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PublicNav from '../components/public/PublicNav.astro';
+import PublicFooter from '../components/public/PublicFooter.astro';
 import { PublicIcon } from '../components/icons/PublicIcon';
 import { resolveAppOrigin, resolveSiteOrigin } from '../lib/public-urls';
 
 const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
+const tagline = import.meta.env.PUBLIC_BRAND_TAGLINE ?? 'Tu compra, completada.';
 
 const appUrl = resolveAppOrigin(Astro.url);
 const siteUrl = resolveSiteOrigin(Astro.site, Astro.url);
@@ -68,6 +70,14 @@ const sessionId = Astro.url.searchParams.get('session_id') ?? '';
         <p class="mt-8 text-xs text-brand-steel">¿Tienes alguna duda? Escríbenos y te ayudamos.</p>
       </div>
     </main>
+
+    <PublicFooter
+      brand={brand}
+      note={tagline}
+      appUrl={appUrl}
+      siteOrigin={siteUrl}
+      ecommerceEnabled={ecommerceEnabled}
+    />
   </div>
 </BaseLayout>
 
