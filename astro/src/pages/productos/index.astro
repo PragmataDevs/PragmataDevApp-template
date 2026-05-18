@@ -90,7 +90,7 @@ const schema = {
   schema={schema}
 >
   <div class="ps-mesh flex min-h-screen flex-col">
-    <PublicNav brand={brand} appUrl={appUrl} ecommerceEnabled={ecommerceEnabled} pathname={pathname} />
+    <PublicNav brand={brand} appUrl={appUrl} siteOrigin={siteUrl} ecommerceEnabled={ecommerceEnabled} pathname={pathname} />
 
     <main class="flex-1">
       <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -258,6 +258,6 @@ const schema = {
       </div>
     </main>
 
-    <PublicFooter brand={brand} note={tagline} appUrl={appUrl} ecommerceEnabled={ecommerceEnabled} />
+    <PublicFooter brand={brand} note={tagline} appUrl={appUrl} siteOrigin={siteUrl} ecommerceEnabled={ecommerceEnabled} />
   </div>
 </BaseLayout>

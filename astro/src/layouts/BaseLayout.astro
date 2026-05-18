@@ -44,6 +44,8 @@ const {
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 
 const siteName = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
+const brandFavicon = import.meta.env.PUBLIC_BRAND_ICON_URL ?? '/favicon.svg';
+const faviconIsSvg = brandFavicon.endsWith('.svg');
 const siteUrl = resolveSiteOrigin(Astro.site, Astro.url);
 const pageTitle = `${title} — ${siteName}`;
 const absImage = image.startsWith('http') ? image : `${siteUrl}${image}`;
@@ -101,7 +103,11 @@ const absImage = image.startsWith('http') ? image : `${siteUrl}${image}`;
     <meta name="twitter:image" content={absImage} />
 
     <!-- ── Favicon (`astro/public/favicon.svg`; `/favicon.ico` → rewrite en `astro/vercel.json`) ─ -->
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link
+      rel="icon"
+      href={brandFavicon}
+      type={faviconIsSvg ? 'image/svg+xml' : undefined}
+    />
 
     <!-- ── Typography (público) ─────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

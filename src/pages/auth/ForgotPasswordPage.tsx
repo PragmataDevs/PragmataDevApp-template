@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 import { authRedirectUrl } from '@/lib/auth/authRedirect';
 import { BrandIcon } from '@/components/brand/BrandIcon';
+import { getPublicBrandName } from '@/lib/brandEnv';
 
 export default function ForgotPasswordPage() {
+  const brandName = getPublicBrandName();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="px-8 pt-8 pb-6 text-center">
           <div className="mx-auto mb-6 flex justify-center">
-            <BrandIcon className="h-16 w-16" alt="PragmataDevs" />
+            <BrandIcon className="h-16 w-16" alt={brandName} />
           </div>
           {sent ? (
             <>

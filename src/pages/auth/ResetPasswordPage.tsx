@@ -4,8 +4,10 @@ import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 import { BrandIcon } from '@/components/brand/BrandIcon';
+import { getPublicBrandName } from '@/lib/brandEnv';
 
 export default function ResetPasswordPage() {
+  const brandName = getPublicBrandName();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -139,7 +141,7 @@ export default function ResetPasswordPage() {
         {/* Header */}
         <div className="px-8 pt-8 pb-6 text-center">
           <div className="mx-auto mb-6 flex justify-center">
-            <BrandIcon className="h-16 w-16" alt="PragmataDevs" />
+            <BrandIcon className="h-16 w-16" alt={brandName} />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Establece tu contraseña</h1>
           <p className="text-slate-500 mt-2 text-sm">

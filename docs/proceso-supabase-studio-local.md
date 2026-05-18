@@ -6,6 +6,8 @@ Guía operativa para levantar Supabase en Docker, abrir **Studio**, crear el usu
 
 > **Varias copias del template en un mismo PC:** cada carpeta tiene **su propia base** Docker, pero los puertos **no** cambian solos. Por defecto solo una copia puede usar `supabase start` a la vez (54321–54324). Para varias en paralelo y la tabla de **Studio por cliente**, lee [**supabase-local-copias-y-studio.md**](./supabase-local-copias-y-studio.md).
 
+Si generás el repo con **Pragmata Factory** (`instantiate-stack.sh` / UI `serve-stack.mjs`), el servidor puede crear el usuario en **Auth** vía API admin local, aplicar el **seed del perfil god** con el mismo UUID y ajustar **puertos libres** en `config.toml` antes de `supabase start`. Credenciales por defecto: las de abajo (`ltorres@…` / `ltorres15`), o `PRAGMATA_LOCAL_GOD_EMAIL` / `PRAGMATA_LOCAL_GOD_PASSWORD`. Sigue aplicando el checklist de migraciones en base **vacía o antigua**; en una copia nueva del template, el script **`04_realtime_publication.sql`** (Realtime) suele ir ya integrado al final de `supabase/migrations/…_pragmata_schema.sql` (paso manual 7 de la tabla ya no hace falta). Detalle: README de `pragmata-factory`.
+
 **Documentos relacionados:** [SETUP.md](./SETUP.md) (secciones 1.2 y 3.1), [PARA-INICIAR.md](./PARA-INICIAR.md), scripts en [`docs/database/`](../docs/database/).
 
 ---

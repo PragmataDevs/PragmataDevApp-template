@@ -1,18 +1,28 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 import { authRedirectUrl } from '@/lib/auth/authRedirect';
 import { BrandIcon } from '@/components/brand/BrandIcon';
+import { getPublicBrandName, hasCustomBrandIcon } from '@/lib/brandEnv';
+import { getConfiguredPublicSiteUrl, isSafeReturnToUrl } from '@/lib/publicSiteUrl';
 
 export default function LoginPage() {
+  const brandName = getPublicBrandName();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const backToSiteHref = useMemo(() => {
+    const raw = searchParams.get('return_to')?.trim();
+    if (raw && isSafeReturnToUrl(raw)) return raw;
+    const site = getConfiguredPublicSiteUrl();
+    return site ? `${site}/` : '/';
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,11 +64,14 @@ export default function LoginPage() {
         
         {/* Cabecera de la tarjeta */}
         <div className="px-8 pt-8 pb-6 text-center">
-            <div className="mx-auto mb-6 flex justify-center">
-                <BrandIcon className="h-16 w-16" alt="PragmataDevs" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900">Welcome Back</h1>
-            <p className="text-slate-500 mt-2 text-sm">Enter your credentials to access your account</p>
+            {hasCustomBrandIcon() ? (
+              <div className="mx-auto mb-6 flex justify-center">
+                <BrandIcon className="h-16 w-16" alt={brandName} />
+              </div>
+            ) : null}
+            <h1 className="text-2xl font-bold text-slate-900">Bienvenido</h1>
+            <p className="text-base font-semibold text-slate-800 mt-1">{brandName}</p>
+            <p className="text-slate-500 mt-2 text-sm">Iniciá sesión para acceder al panel</p>
         </div>
 
         {/* Formulario */}
@@ -173,9 +186,12 @@ export default function LoginPage() {
             </div>
 
             <div className="mt-8 text-center text-sm text-slate-500">
-                <Link to="/" className="font-medium text-slate-400 hover:text-white transition-colors">
-                    &larr; Back to website
-                </Link>
+                <a
+                  href={backToSiteHref}
+                  className="font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                >
+                  &larr; Volver al sitio
+                </a>
             </div>
         </div>
       </div>

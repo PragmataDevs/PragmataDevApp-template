@@ -114,7 +114,7 @@ const lowStockQty =
   schema={schema}
 >
   <div class="ps-mesh flex min-h-screen flex-col">
-    <PublicNav brand={brand} appUrl={appUrl} ecommerceEnabled={ecommerceEnabled} pathname={pathname} />
+    <PublicNav brand={brand} appUrl={appUrl} siteOrigin={origin} ecommerceEnabled={ecommerceEnabled} pathname={pathname} />
 
     <main class="flex-1">
       <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -272,6 +272,7 @@ const lowStockQty =
       brand={brand}
       note={tagline || `${brand} · Tienda pública`}
       appUrl={appUrl}
+      siteOrigin={origin}
       ecommerceEnabled={ecommerceEnabled}
     />
   </div>

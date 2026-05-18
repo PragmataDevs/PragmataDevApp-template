@@ -4,7 +4,7 @@
 # Documentación: https://supabase.com/docs/reference/cli/config
 #
 # Múltiples copias en la misma máquina: cada repo puede usar otros puertos
-# (API, Studio, DB, Inbucket). Guía + tabla Studio por cliente:
+# (API, DB, shadow, Studio, Inbucket, analytics, db.pooler). Guía + tabla Studio por cliente:
 #   docs/supabase-local-copias-y-studio.md
 #
 # SETUP INICIAL:
@@ -31,6 +31,16 @@ port = 54323
 
 [inbucket]
 port = 54324
+
+# Logflare/analytics: disabled por defecto en local (menos contenedores y health checks más estables).
+# Con varios proyectos en la misma máquina, fijá port = API+6 si lo habilitás (allocator de Factory lo mantiene).
+[analytics]
+enabled = false
+port = 54327
+
+[db.pooler]
+enabled = false
+port = 54329
 
 [storage]
 file_size_limit = "50MiB"

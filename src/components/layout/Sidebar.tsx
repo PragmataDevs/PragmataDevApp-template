@@ -2,6 +2,7 @@ import { forwardRef, useState } from 'react';
 import { NavLink, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { ChevronDown, Settings, Layers, ShoppingCart, Globe } from 'lucide-react';
 import { BrandIcon } from '@/components/brand/BrandIcon';
+import { getPublicBrandName } from '@/lib/brandEnv';
 import { APP_ROUTES, WORKSPACE_ROUTES } from '@/app/routes.config';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import { useActiveEntity } from '@/features/entities/hooks/useActiveEntity';
@@ -196,9 +197,11 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(function Sidebar(
           className={`h-16 flex items-center gap-3 border-b border-[color:var(--pragmata-border)] transition-all hover:bg-[color:var(--pragmata-surface-2)] ${isCollapsed ? 'px-4 justify-center' : 'px-6'}`}
           title="Ocultar/Mostrar Sidebar"
         >
-          <BrandIcon className="h-8 w-8 rounded-pragmata" alt="Pragmata" />
+          <BrandIcon className="h-8 w-8 rounded-pragmata" onlyIfCustom />
           {!isCollapsed && (
-            <span className="font-bold text-lg tracking-tight text-[color:var(--pragmata-fg)]">Pragmata</span>
+            <span className="font-bold text-lg tracking-tight text-[color:var(--pragmata-fg)]">
+              {getPublicBrandName()}
+            </span>
           )}
         </button>
 
@@ -311,7 +314,19 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(function Sidebar(
 
         {/* Bottom Area */}
         <div className={`text-xs text-center text-[color:var(--pragmata-muted)] border-t border-[color:var(--pragmata-border)] ${isCollapsed ? 'p-2' : 'p-4'}`}>
-          {!isCollapsed && <span>&copy; 2026 PragmataDevs</span>}
+          {!isCollapsed && (
+            <span className="block leading-relaxed">
+              &copy; {new Date().getFullYear()} {getPublicBrandName()}.{' '}
+              <a
+                href="https://www.pragmatadevs.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-[color:var(--pragmata-accent)] hover:underline"
+              >
+                PragmataDevs
+              </a>
+            </span>
+          )}
         </div>
       </aside>
     </>

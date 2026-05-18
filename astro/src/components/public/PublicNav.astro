@@ -2,15 +2,20 @@
 export interface Props {
   brand: string;
   appUrl: string;
+  /** Origen del sitio Astro (p. ej. `resolveSiteOrigin`) para `return_to` en el login del ERP. */
+  siteOrigin?: string;
   ecommerceEnabled: boolean;
   /** Ruta activa para resaltar enlaces (ej. Astro.url.pathname) */
   pathname?: string;
 }
 
 import ThemeToggle from '../islands/ThemeToggle';
+import { erpLoginUrl } from '../../lib/public-urls';
 
-const { brand, appUrl, ecommerceEnabled, pathname = '/' } = Astro.props;
-const loginHref = `${appUrl.replace(/\/+$/, '')}/login`;
+const { brand, appUrl, siteOrigin = '', ecommerceEnabled, pathname = '/' } = Astro.props;
+const brandIconRaw = import.meta.env.PUBLIC_BRAND_ICON_URL;
+const brandIcon = typeof brandIconRaw === 'string' && brandIconRaw.trim() ? brandIconRaw.trim() : '';
+const loginHref = erpLoginUrl(appUrl, siteOrigin.trim() || undefined);
 ---
 
 <nav
@@ -22,7 +27,9 @@ const loginHref = `${appUrl.replace(/\/+$/, '')}/login`;
       href="/"
       class="flex items-center gap-2.5 font-extrabold tracking-tight text-brand-dark transition-opacity hover:opacity-90"
     >
-      <img src="/favicon.svg" alt="" width="32" height="32" class="h-8 w-8 rounded-pragmata" />
+      {brandIcon ? (
+        <img src={brandIcon} alt="" width="32" height="32" class="h-8 w-8 rounded-pragmata" />
+      ) : null}
       <span>{brand}</span>
     </a>
 

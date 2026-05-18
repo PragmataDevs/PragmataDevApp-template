@@ -154,7 +154,6 @@ export default function DashboardPage() {
           <div className="relative z-10 flex items-center gap-4">
             <BrandIcon
               className="h-10 w-10 rounded-xl flex-shrink-0"
-              alt="Pragmata"
             />
             <div>
               <h1 className="text-xl font-bold text-[color:var(--pragmata-fg)]">

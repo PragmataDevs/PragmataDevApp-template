@@ -1,16 +1,19 @@
-/** Icono de marca canónico (mismo SVG que `astro/public/favicon.svg`). */
-export const BRAND_ICON_SRC = '/favicon.svg';
+import { getPublicBrandIconUrl, getPublicBrandName, hasCustomBrandIcon } from '@/lib/brandEnv';
 
 type BrandIconProps = {
   className?: string;
   alt?: string;
+  /** Si es true, no renderiza nada cuando no hay `PUBLIC_BRAND_ICON_URL`. */
+  onlyIfCustom?: boolean;
 };
 
-export function BrandIcon({ className = 'h-8 w-8', alt = 'Pragmata' }: BrandIconProps) {
+export function BrandIcon({ className = 'h-8 w-8', alt, onlyIfCustom = false }: BrandIconProps) {
+  if (onlyIfCustom && !hasCustomBrandIcon()) return null;
+  const src = getPublicBrandIconUrl();
   return (
     <img
-      src={BRAND_ICON_SRC}
-      alt={alt}
+      src={src}
+      alt={alt ?? getPublicBrandName()}
       className={className}
       width={32}
       height={32}

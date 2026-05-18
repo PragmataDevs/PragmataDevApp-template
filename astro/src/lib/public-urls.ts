@@ -5,8 +5,6 @@
  * Prod: `PUBLIC_APP_URL` / `PUBLIC_SITE_URL` reales en Vercel.
  */
 
-const ERP_DEV_PORT = 7070;
-
 const PLACEHOLDER_HOST =
   /(?:^|\.)tucliente\.com$|(?:^|\.)tudominio\.com$|your-project-ref|example\.com/i;
 
@@ -41,9 +39,30 @@ export function isUsablePublicUrl(url: string): boolean {
   return true;
 }
 
+function portFromConfiguredUrl(raw: string | undefined, fallback: number): number {
+  const t = typeof raw === 'string' ? raw.trim() : '';
+  if (!t) return fallback;
+  try {
+    const withProto = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+    const u = new URL(withProto);
+    if (u.port) return parseInt(u.port, 10);
+    return u.protocol === 'https:' ? 443 : 80;
+  } catch {
+    return fallback;
+  }
+}
+
+function erpDevPort(): number {
+  return portFromConfiguredUrl(import.meta.env.PUBLIC_APP_URL, 7070);
+}
+
+function siteDevPort(): number {
+  return portFromConfiguredUrl(import.meta.env.PUBLIC_SITE_URL, 4321);
+}
+
 function appOriginFromPage(pageUrl: URL): string {
   const { protocol, hostname } = pageUrl;
-  return normalizeOrigin(`${protocol}//${hostname}:${ERP_DEV_PORT}`);
+  return normalizeOrigin(`${protocol}//${hostname}:${erpDevPort()}`);
 }
 
 function siteOriginFromPage(pageUrl: URL): string {
@@ -65,7 +84,7 @@ export function resolveAppOrigin(pageUrl?: URL): string {
 
   if (import.meta.env.DEV) {
     if (pageUrl?.hostname) return appOriginFromPage(pageUrl);
-    return 'http://localhost:7070';
+    return `http://localhost:${erpDevPort()}`;
   }
 
   return '';
@@ -96,7 +115,7 @@ export function resolveSiteOrigin(site?: URL, pageUrl?: URL): string {
 
   if (import.meta.env.DEV) {
     if (pageUrl?.hostname) return siteOriginFromPage(pageUrl);
-    return 'http://localhost:4321';
+    return `http://localhost:${siteDevPort()}`;
   }
 
   return '';
@@ -105,4 +124,14 @@ export function resolveSiteOrigin(site?: URL, pageUrl?: URL): string {
 export function loginPath(appOrigin: string): string {
   const base = appOrigin ? normalizeOrigin(appOrigin) : '';
   return base ? `${base}/login` : '/login';
+}
+
+/** Enlace al login del ERP; opcionalmente añade `return_to` al sitio Astro (mismo host/LAN que la petición). */
+export function erpLoginUrl(appOrigin: string, siteOrigin?: string): string {
+  const login = loginPath(appOrigin);
+  const ret = siteOrigin ? normalizeOrigin(siteOrigin) : '';
+  if (!ret) return login;
+  const home = ret.endsWith('/') ? ret : `${ret}/`;
+  const sep = login.includes('?') ? '&' : '?';
+  return `${login}${sep}return_to=${encodeURIComponent(home)}`;
 }

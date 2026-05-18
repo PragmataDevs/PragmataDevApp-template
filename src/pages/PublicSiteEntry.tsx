@@ -1,15 +1,5 @@
 import { useEffect, useState } from 'react';
-
-/** Origen del sitio público (Astro), alineado con documentación. */
-function publicSiteOrigin(): string {
-  const raw =
-    typeof import.meta.env.VITE_PUBLIC_SITE_URL === 'string'
-      ? import.meta.env.VITE_PUBLIC_SITE_URL.trim().replace(/\/+$/, '')
-      : '';
-  if (raw) return raw;
-  if (import.meta.env.DEV) return 'http://localhost:4321';
-  return '';
-}
+import { getConfiguredPublicSiteUrl } from '@/lib/publicSiteUrl';
 
 function originOf(url: string): string | null {
   const trimmed = url.trim();
@@ -30,7 +20,7 @@ export default function PublicSiteEntry() {
   const [sameHostMisconfig, setSameHostMisconfig] = useState(false);
 
   useEffect(() => {
-    const base = publicSiteOrigin();
+    const base = getConfiguredPublicSiteUrl();
     const baseOrigin = base ? originOf(base) : null;
     const here = window.location.origin;
 

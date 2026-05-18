@@ -4,11 +4,12 @@ export const prerender = false;
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PublicNav from '../components/public/PublicNav.astro';
 import { PublicIcon } from '../components/icons/PublicIcon';
-import { resolveAppOrigin } from '../lib/public-urls';
+import { resolveAppOrigin, resolveSiteOrigin } from '../lib/public-urls';
 
 const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
 
 const appUrl = resolveAppOrigin(Astro.url);
+const siteUrl = resolveSiteOrigin(Astro.site, Astro.url);
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 const pathname = Astro.url.pathname;
 
@@ -22,7 +23,7 @@ const sessionId = Astro.url.searchParams.get('session_id') ?? '';
   hideCart={true}
 >
   <div class="ps-mesh flex min-h-screen flex-col">
-    <PublicNav brand={brand} appUrl={appUrl} ecommerceEnabled={ecommerceEnabled} pathname={pathname} />
+    <PublicNav brand={brand} appUrl={appUrl} siteOrigin={siteUrl} ecommerceEnabled={ecommerceEnabled} pathname={pathname} />
 
     <main class="flex flex-1 items-center justify-center px-4 py-16 sm:px-6">
       <div class="w-full max-w-lg rounded-pragmata border border-brand-border bg-white/90 p-8 text-center shadow-psy-soft backdrop-blur-md sm:p-10 dark:bg-slate-900/88">

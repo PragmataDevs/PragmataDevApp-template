@@ -11,7 +11,7 @@ import PublicFooter from '../components/public/PublicFooter.astro';
 import { PublicIcon } from '../components/icons/PublicIcon';
 import { supabase } from '../lib/supabase';
 import { mergeLandingFromCms } from '../lib/cms-defaults';
-import { loginPath, resolveAppOrigin, resolveSiteOrigin } from '../lib/public-urls';
+import { erpLoginUrl, resolveAppOrigin, resolveSiteOrigin } from '../lib/public-urls';
 import { marked } from 'marked';
 
 function landingMdToHtml(md: string): string {
@@ -23,9 +23,10 @@ function landingMdToHtml(md: string): string {
 
 const brandEnv = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
 const taglineEnv = import.meta.env.PUBLIC_BRAND_TAGLINE ?? 'Tu solución de negocio';
+const brandIconEnv = typeof import.meta.env.PUBLIC_BRAND_ICON_URL === 'string' ? import.meta.env.PUBLIC_BRAND_ICON_URL.trim() : '';
 const appUrl = resolveAppOrigin(Astro.url);
 const siteUrl = resolveSiteOrigin(Astro.site, Astro.url);
-const loginUrl = loginPath(appUrl);
+const loginUrl = erpLoginUrl(appUrl, siteUrl);
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 const pathname = Astro.url.pathname;
 
@@ -92,7 +93,11 @@ const schema = {
       '@id': `${siteUrl}/#organization`,
       name: merged.brand,
       url: siteUrl,
-      logo: `${siteUrl}/favicon.svg`,
+      ...(brandIconEnv
+        ? {
+            logo: `${siteUrl}${brandIconEnv.startsWith('/') ? brandIconEnv : `/${brandIconEnv}`}`,
+          }
+        : {}),
       sameAs: [],
     },
   ],
@@ -115,6 +120,7 @@ const featTotal = features.length;
     <PublicNav
       brand={merged.brand}
       appUrl={appUrl}
+      siteOrigin={siteUrl}
       ecommerceEnabled={ecommerceEnabled}
       pathname={pathname}
     />
@@ -253,6 +259,7 @@ const featTotal = features.length;
       brand={merged.brand}
       note={merged.footerNote}
       appUrl={appUrl}
+      siteOrigin={siteUrl}
       ecommerceEnabled={ecommerceEnabled}
     />
   </div>
