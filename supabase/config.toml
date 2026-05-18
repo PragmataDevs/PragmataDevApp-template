@@ -3,6 +3,10 @@
 # Referencia del proyecto Supabase para el CLI local y deploy.
 # Documentación: https://supabase.com/docs/reference/cli/config
 #
+# Múltiples copias en la misma máquina: cada repo puede usar otros puertos
+# (API, Studio, DB, Inbucket). Guía + tabla Studio por cliente:
+#   docs/supabase-local-copias-y-studio.md
+#
 # SETUP INICIAL:
 #   1. supabase login
 #   2. supabase link --project-ref <tu_project_ref>

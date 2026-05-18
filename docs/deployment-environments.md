@@ -2,7 +2,7 @@
 
 Guía reutilizable para cada proyecto: qué URL va dónde, cómo separar datos de clientes de las pruebas, y cómo ordenar Vercel sin duplicar mentalmente las variables.
 
-**Relacionado:** flujo operativo completo (Studio :54323, usuario god, sesión nube/local) en [SETUP.md](./SETUP.md) sección **1.2**. Pilar público y variables de build en [SETUP.md](./SETUP.md) (sección 8). PowerSync: [deployment.md](./deployment.md).
+**Relacionado:** flujo operativo completo (Studio :54323, usuario god, sesión nube/local) en [SETUP.md](./SETUP.md) sección **1.2**. **Varias copias locales** (puertos + Studio por repo): [supabase-local-copias-y-studio.md](./supabase-local-copias-y-studio.md). Pilar público: [SETUP.md](./SETUP.md) §8. PowerSync: [deployment.md](./deployment.md).
 
 ---
 

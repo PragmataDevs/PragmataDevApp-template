@@ -65,7 +65,7 @@ PragmataDevs opera como una **fábrica de software modular**. No construimos apl
 
 #### Supabase local (CLI + Docker)
 
-Para desarrollo **sin tocar la nube**, el mismo contrato de API (`/rest/v1`, `/auth/v1`, Storage…) corre en Docker (`supabase start`). **Studio local** (`http://127.0.0.1:54323`) sustituye al Dashboard web para crear usuarios y ejecutar SQL (p. ej. `docs/database/02_seed_god_user.sql`). **No** mezcles sesión del navegador entre instancias: al cambiar `VITE_SUPABASE_URL` entre nube y `127.0.0.1:54321`, limpia `localStorage` del origen del ERP o cierra sesión.
+Para desarrollo **sin tocar la nube**, el mismo contrato de API (`/rest/v1`, `/auth/v1`, Storage…) corre en Docker (`supabase start`). **Studio local** (`supabase status` → Studio URL; default `http://127.0.0.1:54323`) sustituye al Dashboard web para crear usuarios y ejecutar SQL (p. ej. `docs/database/02_seed_god_user.sql`). Cada **copia** del repo es un proyecto CLI con **base aislada**; puertos distintos si corres varias copias a la vez: [supabase-local-copias-y-studio.md](./supabase-local-copias-y-studio.md). **No** mezcles sesión del navegador entre instancias: al cambiar `VITE_SUPABASE_URL` entre nube y local (o entre dos copias), limpia `localStorage` del origen del ERP o cierra sesión.
 
 Procedimiento canónico (puertos, `.env`, god user, troubleshooting Storage): **`docs/SETUP.md`** secciones **1.1** y **1.2**. Matriz de dominios y Vercel: **`docs/deployment-environments.md`**.
 

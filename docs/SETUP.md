@@ -66,6 +66,8 @@ Para parar los contenedores: `supabase stop`. Más contexto (URLs, Vercel, no me
 
 Objetivo: misma **API** (PostgREST, Auth, Storage…) que en la nube, pero **solo en tu máquina** — ideal para migraciones y pruebas sin tocar datos de clientes. Detalle de variables y Vercel: [**deployment-environments.md**](./deployment-environments.md).
 
+> **Varias copias / clientes en el mismo equipo:** cada clon tiene **base local propia**, pero debes asignar **puertos distintos** si levantas más de un `supabase start` a la vez. Tabla de Studio y puertos: [**supabase-local-copias-y-studio.md**](./supabase-local-copias-y-studio.md).
+
 > **Paso a paso completo (Studio → usuario → migraciones 01 y 02):** [**proceso-supabase-studio-local.md**](./proceso-supabase-studio-local.md)
 
 | Comando | Uso |

@@ -4,6 +4,8 @@ Guía operativa para levantar Supabase en Docker, abrir **Studio**, crear el usu
 
 > **Solo desarrollo local.** La contraseña documentada aquí es fija para la plantilla en tu máquina; no la uses en producción ni la subas a repositorios públicos de clientes.
 
+> **Varias copias del template en un mismo PC:** cada carpeta tiene **su propia base** Docker, pero los puertos **no** cambian solos. Por defecto solo una copia puede usar `supabase start` a la vez (54321–54324). Para varias en paralelo y la tabla de **Studio por cliente**, lee [**supabase-local-copias-y-studio.md**](./supabase-local-copias-y-studio.md).
+
 **Documentos relacionados:** [SETUP.md](./SETUP.md) (secciones 1.2 y 3.1), [PARA-INICIAR.md](./PARA-INICIAR.md), scripts en [`docs/database/`](../docs/database/).
 
 ---
@@ -30,7 +32,7 @@ flowchart TD
 | Paso | Qué | Archivo / URL |
 |------|-----|----------------|
 | 1 | Levantar stack local | `supabase start` |
-| 2 | Abrir Studio | http://127.0.0.1:54323 |
+| 2 | Abrir Studio | `supabase status` → **Studio URL** (default http://127.0.0.1:54323) |
 | 3 | Crear usuario en Auth | email y contraseña fijos (abajo) |
 | 4 | Copiar **User UID** | Authentication → Users |
 | 5 | Migración 1 — schema | `docs/database/01_security_engine.sql` |

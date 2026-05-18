@@ -64,6 +64,8 @@ Abre **`.env`** y mira los bloques:
 
 **Supabase local — guía paso a paso** (Studio, usuario `ltorres@pragmatadevs.com`, migraciones `01` y `02`): [**`docs/proceso-supabase-studio-local.md`**](./proceso-supabase-studio-local.md).
 
+**Varias copias en un PC** (base nueva por carpeta, puertos y enlace Studio por cliente): [**`docs/supabase-local-copias-y-studio.md`**](./supabase-local-copias-y-studio.md).
+
 **Correo «olvidé contraseña» en local:** plantillas en `supabase/templates/` (se cargan al `supabase start`); prueba en Mailpit → [**`docs/auth-email-templates-local.md`**](./auth-email-templates-local.md).
 
 3. **Scripts y Edge Functions en local** (tras SQL 01–03): `pnpm db:sync`, `supabase functions serve` → [**`docs/proceso-post-migraciones-scripts-y-funciones-local.md`**](./proceso-post-migraciones-scripts-y-funciones-local.md). Nube: [SETUP.md §7](./SETUP.md#7-edge-functions--deploy).
