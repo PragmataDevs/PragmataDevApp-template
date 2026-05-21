@@ -100,6 +100,7 @@ function EditorToolbar({ editor }: { editor: Editor | null }) {
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
+  
   return (
     <div
       role="toolbar"
