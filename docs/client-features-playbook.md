@@ -11,6 +11,8 @@ Guía para **clonar la template**, mapear el negocio del cliente y digitalizarlo
 | [**playbook-new-module.md**](./playbook-new-module.md) | Después del workshop: SQL, hook, RBAC, sidebar (por pantalla) |
 | [**architecture.md**](./architecture.md) §2 | Pilares y directorios del monorepo |
 | [**database/README.md**](./database/README.md) | Scripts SQL e índice de migraciones |
+| [**client-feature-mapping-guide.md**](./client-feature-mapping-guide.md) | **Mapeo paso a paso (IA):** preguntas, ficha YAML, manifiesto `types/hooks/pages` |
+| [**feature-specs/MAPPING_RECORD.example.yaml**](./feature-specs/MAPPING_RECORD.example.yaml) | Plantilla de mapeo rellenable |
 | [**feature-specs/FEATURE_SPEC_TEMPLATE.md**](./feature-specs/FEATURE_SPEC_TEMPLATE.md) | Spec escrita antes de módulos grandes |
 
 **Convención de código:** pantallas en `src/features/<dominio>/pages/` · URLs en `src/app/routes.config.ts` · **no existe** `src/pages/` en el ERP.
@@ -210,9 +212,13 @@ flowchart LR
 
 ---
 
-## 11. Spec antes de codear (opcional)
+## 11. Mapeo antes de codear (recomendado con IA)
 
-Para módulos grandes, rellena **`docs/feature-specs/FEATURE_SPEC_TEMPLATE.md`** (alcance, RBAC, rutas, campos) y enlázala en el PR.
+Usa **`docs/client-feature-mapping-guide.md`**: fases de preguntas, árbol `finanzas/egresos/contratos`, manifiesto de archivos y plantilla YAML.
+
+Copia `docs/feature-specs/MAPPING_RECORD.example.yaml` → `docs/feature-specs/<cliente>-mapping.yaml` y rellénala en la conversación.
+
+Para módulos grandes, además puedes usar **`FEATURE_SPEC_TEMPLATE.md`** (spec narrativa por feature).
 
 ---
 

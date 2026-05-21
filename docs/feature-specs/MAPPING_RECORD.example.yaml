@@ -1,0 +1,82 @@
+# Plantilla de mapeo — copiar a <cliente>-mapping.yaml
+# Guía de preguntas: docs/client-feature-mapping-guide.md
+
+cliente: "Nombre del cliente"
+entity_label: "Proyecto"  # → VITE_ENTITY_LABEL en .env
+
+# Módulos del chasis que permanecen activos
+chasis_activo:
+  usuarios: true
+  roles: true
+  entidades: true
+  workspace_tareas: true
+  ecommerce: false
+
+dominios:
+  - id: finanzas
+    label_ui: Finanzas
+    carpeta: src/features/finanzas
+    tiene_dashboard: true
+    navigation_file: src/features/finanzas/navigation.ts  # opcional
+
+    subfeatures:
+      - id: ingresos
+        path: ingresos
+        label_ui: Ingresos
+        ambito: workspace  # workspace | global
+        ruta_url: ingresos
+        layout: workspace
+        grupo_sidebar: workspace
+        patron_ui: datatable_crud
+        entidad: Ingreso
+        tabla_sql: ingresos
+        resource_code: page_workspace_ingresos
+        categoria_rbac: Finanzas
+        campos: []
+        archivos_a_crear: []
+        chasis_touches: []
+
+      - id: contratos
+        path: egresos/contratos
+        label_ui: Contratos
+        ambito: workspace
+        ruta_url: contratos
+        layout: workspace
+        grupo_sidebar: workspace
+        patron_ui: datatable_crud
+        entidad: Contrato
+        tabla_sql: contratos
+        resource_code: page_workspace_contratos
+        categoria_rbac: Finanzas
+        campos:
+          - name: numero
+            type: string
+            required: true
+            listado: true
+            formulario: true
+          - name: monto_total
+            type: number
+            required: true
+            listado: true
+            formulario: true
+          - name: proveedor_nombre
+            type: string
+            required: false
+            listado: true
+            formulario: true
+        archivos_a_crear:
+          - src/features/finanzas/egresos/contratos/types/contrato.ts
+          - src/features/finanzas/egresos/contratos/types/contrato.schema.ts
+          - src/features/finanzas/egresos/contratos/hooks/useContratos.ts
+          - src/features/finanzas/egresos/contratos/components/ContratoFormModal.tsx
+          - src/features/finanzas/egresos/contratos/pages/ContratosPage.tsx
+        chasis_touches:
+          - src/app/routes.config.ts
+          - src/config/security/resources.ts
+          - supabase/migrations/TIMESTAMP_contratos.sql
+
+# Estado del mapeo (para el agente)
+estado:
+  fase_actual: 3
+  subfeature_en_curso: contratos
+  aprobado_por_usuario: false
