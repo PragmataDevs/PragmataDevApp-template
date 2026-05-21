@@ -20,12 +20,23 @@ Kit para que una **IA haga preguntas**, proponga el árbol `src/features/` y gen
 
 ---
 
+## Comandos en el repo
+
+```bash
+pnpm mapping:init <cliente>    # brief desde plantilla
+pnpm mapping:prompt <cliente>  # prompts en docs/feature-specs/generated/<cliente>/
+```
+
+Detalle: [PROMPT_COMPOSER.md](./PROMPT_COMPOSER.md).
+
+---
+
 ## Flujo en 3 minutos
 
 ```
-CLIENT_BRIEF (tú rellenas)
+CLIENT_BRIEF (tú rellenas o mapping:init)
        ↓
-PROMPT_COMPOSER (pegas brief + system prompt en la IA)
+PROMPT_COMPOSER / mapping:prompt (pegas en la IA)
        ↓
 IA pregunta por Fases 1→4 (tú respondes / corriges)
        ↓

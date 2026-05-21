@@ -1,6 +1,6 @@
 # Brief del cliente — plantilla
 
-Copia este archivo a `docs/feature-specs/<cliente>-brief.md`, rellena y úsalo en [PROMPT_COMPOSER.md](./PROMPT_COMPOSER.md).
+Crea el brief con `pnpm mapping:init <cliente>` (o copia manual a `docs/feature-specs/<cliente>-brief.md`). Luego `pnpm mapping:prompt <cliente>`. Ver [PROMPT_COMPOSER.md](./PROMPT_COMPOSER.md).
 
 ---
 

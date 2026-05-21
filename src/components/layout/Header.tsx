@@ -7,7 +7,7 @@ import { resolveSignedUrl } from '@/lib/storage';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { ChatIcon } from '@/features/chat/components/ChatPanel';
 import EntitySelector from '@/features/entities/components/EntitySelector';
-import { MULTI_ENTITY_ENABLED } from '@/types/entities/entity';
+import { MULTI_ENTITY_ENABLED } from '@/features/entities/types/entity';
 import { OverlayPortal } from '@/lib/ui/OverlayPortal';
 import { useAnchoredPosition } from '@/lib/ui/useAnchoredPosition';
 

@@ -4,7 +4,28 @@ Arma el **prompt completo** para tu IA: system + contexto del cliente.
 
 ---
 
-## Paso 1 — Rellena el brief
+## Atajo (recomendado) — desde la raíz del repo
+
+```bash
+pnpm mapping:init mi-cliente      # crea docs/feature-specs/mi-cliente-brief.md
+# Edita el brief
+pnpm mapping:prompt mi-cliente  # genera docs/feature-specs/generated/mi-cliente/
+```
+
+Archivos generados:
+
+| Archivo | Uso |
+|---------|-----|
+| `system-prompt.txt` | System prompt de la IA |
+| `user-context.md` | Primer mensaje de usuario |
+| `kickoff.txt` | Segundo mensaje (arranque FASE 1) |
+| `combined-prompt.txt` | Todo en uno si la IA no separa system/user |
+
+Opciones: `--print` (solo terminal), `--short` (system prompt reducido).
+
+---
+
+## Paso 1 — Rellena el brief (manual)
 
 ```bash
 cp docs/feature-specs/agent/CLIENT_BRIEF.template.md docs/feature-specs/mi-cliente-brief.md

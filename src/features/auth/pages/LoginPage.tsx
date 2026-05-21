@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 import { authRedirectUrl } from '@/lib/auth/authRedirect';
 import { BrandIcon } from '@/components/brand/BrandIcon';
-import { getPublicBrandName, hasCustomBrandIcon } from '@/lib/brandEnv';
+import { getPublicBrandName } from '@/lib/brandEnv';
 import { getConfiguredPublicSiteUrl, isSafeReturnToUrl } from '@/lib/publicSiteUrl';
 
 export default function LoginPage() {
@@ -64,11 +64,9 @@ export default function LoginPage() {
         
         {/* Cabecera de la tarjeta */}
         <div className="px-8 pt-8 pb-6 text-center">
-            {hasCustomBrandIcon() ? (
-              <div className="mx-auto mb-6 flex justify-center">
-                <BrandIcon className="h-16 w-16" alt={brandName} />
-              </div>
-            ) : null}
+            <div className="mx-auto mb-6 flex justify-center">
+              <BrandIcon className="h-16 w-16 rounded-pragmata" alt={brandName} />
+            </div>
             <h1 className="text-2xl font-bold text-slate-900">Bienvenido</h1>
             <p className="text-base font-semibold text-slate-800 mt-1">{brandName}</p>
             <p className="text-slate-500 mt-2 text-sm">Iniciá sesión para acceder al panel</p>

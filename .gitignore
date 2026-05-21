@@ -5,3 +5,9 @@ node_modules/
 !.env.example
 dist/
 .vercel/
+
+# Prompts generados por pnpm mapping:prompt (regenerables)
+docs/feature-specs/generated/
+
+# Supabase CLI (local); no versionar — cada copia cliente debe tener estado propio
+.supabase/
