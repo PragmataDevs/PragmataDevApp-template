@@ -1,4 +1,16 @@
-/** @type {import('tailwindcss').Config} */
+/** @type {import('tailwindcss').Config}
+ *
+ *  Paleta y tipografía espejadas desde el hub de marca:
+ *    /home/pragmata-server-station/pragmata-business-info/design/tokens/tokens.json
+ *
+ *  Los nombres `brand.*` se conservan para no romper las ~164 ocurrencias
+ *  en `src/`, pero sus valores ahora apuntan a la paleta dark canónica
+ *  (la del portal vivo de pragmata-factory). El alias `pg.*` está
+ *  disponible para código nuevo.
+ *
+ *  Cualquier cambio empieza en `pragmata-business-info/design/tokens/tokens.json`
+ *  y se espeja aquí — nunca al revés.
+ */
 export default {
   darkMode: 'class',
   content: [
@@ -8,24 +20,50 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-pragmata)', 'Inter', 'sans-serif'],
-        mono: ['var(--font-pragmata-mono)', 'monospace'],
+        // Display / marca / headings · "la letra de Pragmata"
+        sans: ['Syne', 'var(--font-pragmata)', 'Inter', 'sans-serif'],
+        // Datos, métricas, labels técnicos, código
+        mono: ['"JetBrains Mono"', 'var(--font-pragmata-mono)', 'ui-monospace', 'monospace'],
+        display: ['Syne', 'Inter', 'sans-serif'],
       },
       colors: {
+        // ── Marca Pragmata (alias canónicos) ─────────────────────────────
+        pg: {
+          bg:        '#05080f',
+          bg2:       '#080d18',
+          surface:   '#0b1120',
+          card:      '#0d1525',
+          border:    '#162033',
+          border2:   '#1e2f48',
+          fg:        '#ddeaf8',
+          fg2:       '#8badc8',
+          muted:     '#3d5a78',
+          accent:    '#00b8e6',
+          'accent-2':'#7c5cbf',
+          green:     '#00d98b',
+          yellow:    '#f0c040',
+          red:       '#f04060',
+        },
+        // ── Aliases legacy `brand.*` mapeados al sistema dark ────────────
+        // Se conservan los NOMBRES para no romper las 164 ocurrencias en src/.
+        // El significado semántico se mantiene (dark = fondo profundo,
+        // surface = superficie, accent = acción primaria, etc.).
         brand: {
-          dark: '#0F172A',     // Deep Slate
-          steel: '#334155',    // Steel Blue
-          accent: '#0EA5E9',   // Electric Blue
-          'accent-dark': '#0284C7', // Sky 600 - Hover
-          surface: '#F8FAFC',  // Technical Gray
-          border: '#E2E8F0',   // Slate 200
-        }
+          dark:          '#05080f', // antes #0F172A → ahora bg base oscuro
+          steel:         '#8badc8', // antes #334155 → ahora texto secundario
+          accent:        '#00b8e6', // antes #0EA5E9 → cian Pragmata
+          'accent-dark': '#0099c2', // hover del accent
+          surface:       '#0b1120', // antes #F8FAFC → superficie elevada dark
+          border:        '#162033', // antes #E2E8F0 → borde sutil dark
+        },
       },
       borderRadius: {
-        'pragmata': '4px', // Esquinas técnicas, no circulares
+        'pragmata': '4px', // esquinas técnicas, no circulares
       },
       letterSpacing: {
         tighter: '-0.05em',
+        brand:   '0.32em', // wordmark "PRAGMATA"
+        label:   '0.18em', // labels mono uppercase
       },
       zIndex: {
         'sidebar-backdrop': 'var(--z-sidebar-backdrop)',

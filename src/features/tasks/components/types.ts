@@ -1,4 +1,4 @@
-import type { Task, TaskStatus } from '@/types/tasks/task';
+import type { Task, TaskStatus } from '@/features/tasks/types/task';
 
 /** Shape of useTasks return that KanbanBoard needs */
 export interface UseTasks {

@@ -1,3 +1,7 @@
+/** Icono PragmataDevs (template) — versionado en `public/pragmatadevs-icon.svg`. */
+export const PRAGMATA_DEVS_ICON_URL = '/pragmatadevs-icon.svg';
+export const PRAGMATA_DEVS_SITE_URL = 'https://www.pragmatadevs.com';
+
 /** Nombre de marca en sitio público + ERP (Factory → docs/FACTORY_BRAND.env.snippet → .env). */
 export function getPublicBrandName(): string {
   const v = import.meta.env.PUBLIC_BRAND_NAME;
@@ -9,7 +13,7 @@ export function getPublicBrandName(): string {
 export function getPublicBrandIconUrl(): string {
   const v = import.meta.env.PUBLIC_BRAND_ICON_URL;
   if (typeof v === 'string' && v.trim()) return v.trim();
-  return '/favicon.svg';
+  return PRAGMATA_DEVS_ICON_URL;
 }
 
 /** True si Factory / `.env` definieron icono de marca (nav y login no fuerzan favicon genérico). */

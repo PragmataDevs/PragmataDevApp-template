@@ -109,9 +109,16 @@ En **desarrollo**, si abres el sitio o el ERP por **IP de red** (LAN, Tailscale 
 
 ## 2. Estructura de Directorios (Monorepo Feature-Based)
 
-Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
+Seguimos **módulos autocontenidos** en `src/features/<dominio>/`: cada dominio lleva `pages/`, `hooks/`, `components/`, **`types/`** (y opcionalmente `navigation.ts`, `providers/`, subcarpetas hijas = subfeatures con el mismo kit).
 
-Para añadir un módulo nuevo de forma repetible, usar **`docs/playbook-new-module.md`** (10 pasos: SQL → tipo → hook → rutas → RBAC → sidebar).
+| Objetivo | Documento |
+|----------|-----------|
+| Índice de toda la documentación | **`docs/README.md`** |
+| Workshop + dominios de **cliente** | **`docs/client-features-playbook.md`** |
+| Checklist técnico por módulo (SQL → RBAC) | **`docs/playbook-new-module.md`** |
+| Mapa de features del chasis | **`docs/erp-features-structure.md`** |
+
+> **No hay `src/pages/` en el ERP.** Las pantallas viven en `src/features/<dominio>/pages/`. Las URLs se registran en `src/app/routes.config.ts` con `lazy(() => import('@/features/...'))`.
 
 ### Pilar Operativo (`/src`)
 
@@ -119,54 +126,36 @@ Para añadir un módulo nuevo de forma repetible, usar **`docs/playbook-new-modu
 /src
   ├── App.tsx                     # Shell principal (Providers + Router)
   ├── main.tsx                    # Entry point de React
-  ├── app/                        # Navegación y routing
-  │   ├── navigation.ts           # Tipos de rutas y contratos de navegación
-  │   ├── routes.config.ts        # Catálogo de rutas (globales y de proyecto)
-  │   └── router.tsx              # Definición del árbol de rutas
+  ├── app/                        # Navegación (catálogo de rutas, sin UI de negocio)
+  │   ├── navigation.ts           # Tipos de rutas
+  │   ├── routes.config.ts        # Rutas + lazy imports desde features/*/pages/
+  │   └── router.tsx              # Árbol PublicLayout / AppLayout / WorkspaceLayout
   │
-  ├── components/                 # UI "Tonta" (Reutilizable y Genérica)
-  │   ├── ui/                     # Shadcn primitives (Button, Card, Input)
-  │   └── layout/                 # Estructuras (Sidebar, Header, AppLayout)
+  ├── components/                 # UI reutilizable (chasis)
+  │   ├── ui/                     # DataTable, shadcn primitives
+  │   └── layout/                 # Sidebar, Header, AppLayout
   │
-  ├── features/                   # Lógica de Negocio (El Núcleo)
-  │   ├── auth/                   # Login, Logout, Recuperación
-  │   │   ├── components/         # RouteGuard (Protección de rutas)
-  │   │   ├── hooks/              # useAuth, usePermission
-  │   │   └── providers/          # AuthProvider (Context global)
-  │   ├── entities/               # Gestión de entidades (CRUD, miembros, EntitySelector)
-  │   │   ├── hooks/useEntities.ts
-  │   │   └── components/EntitySelector.tsx
-  │   ├── tasks/                  # Kanban (Workspace module)
-  │   ├── roles/                  # Gestión de roles y permisos
-  │   ├── users/                  # Gestión de usuarios y asignaciones
-  │   ├── settings/               # Componentes compartidos de configuración
-  │   └── ai/                     # [VITE_ENABLE_AI] Módulo de IA
-  │       ├── components/         # AISearch, AISummaryPanel, AIAssistant
-  │       └── hooks/              # useAISearch, useAISummarize
+  ├── features/                   # Negocio + demos (vertical slices)
+  │   ├── shell/pages/            # PublicSiteEntry (redirección a Astro)
+  │   ├── auth/                   # types/rbac, pages/, hooks/, providers/
+  │   ├── entities/               # types/entity, pages/, EntitySelector
+  │   ├── users/                  # types/profile, pages/
+  │   ├── roles/                  # types/role, pages/
+  │   ├── tasks/                  # types/task, pages/ (Kanban)
+  │   ├── documents/              # types/document, pages/
+  │   ├── ecommerce/              # types/order, pages/ [flag]
+  │   ├── cms/                    # types/cms-page, pages/ [flag]
+  │   ├── dashboard/, profile/, workspace/, shell/, products/
+  │   ├── chat/, notifications/, preferences/
+  │   └── <dominio-cliente>/      # ej. finanzas/ + subfeatures (cada una con types/)
   │
-  ├── lib/                        # Infraestructura y Motores
-  │   ├── db/                     # Configuración PowerSync + Schema Local
-  │   │   ├── index.ts            # Inicialización de PowerSync
-  │   │   ├── schema.ts           # Definición de tablas SQLite
-  │   │   ├── connector.ts        # Integración con Supabase
-  │   │   └── PowerSyncProvider.tsx # React Context Provider (con feature flag)
-  │   ├── supabase/               # Cliente Supabase (Auth/Storage)
-  │   │   └── index.ts            # Cliente configurado con env vars
-  │   └── auth/                   # Helpers de autorización/autenticación
-  │
-  ├── pages/                      # El Pegamento (Rutas)
-  │   ├── auth/                   # Login, callback, reset password
-  │   ├── dashboard/              # Dashboard global
-  │   ├── profile/                # Perfil de usuario
-  │   ├── settings/               # Roles, Usuarios, Entidades
-  │   ├── workspace/              # Contexto Entity: resumen, tareas, documentos, config
-  │   └── ecommerce/             # [VITE_ENABLE_ECOMMERCE] Resumen, productos, ventas
-  │
-  └── types/                      # Definiciones de TypeScript (DB Interfaces)
-      ├── core/base.ts            # AuditBase — la raíz de todo modelo
-      ├── entities/entity.ts      # Entity (canon). VITE_ENTITY_LABEL define el label en UI
-      └── <dominio>/              # Un archivo por entidad de negocio
+  ├── lib/                        # Infraestructura (chasis)
+  ├── config/security/            # APP_RESOURCES
+  └── types/                      # Solo núcleo: core/base (AuditBase + AppRoute)
+      └── core/base.ts
 ```
+
+**Subfeatures:** carpeta hija con el mismo kit (`finanzas/egresos/contratos/`). No hace falta un directorio literal `subfeatures/`.
 
 ---
 
@@ -231,6 +220,7 @@ Para añadir un módulo nuevo de forma repetible, usar **`docs/playbook-new-modu
   /workspace/:entityId  (WorkspaceLayout — Outlet only)
     /dashboard
     /tasks
+    /documents
     /config            (hideInMenu: true)
 
   /workspace/none/:ruta  ← fallback cuando entityId aún no está resuelto.
@@ -431,7 +421,7 @@ Todas las tablas del sistema seguirán un diseño **Relacional Normalizado (3NF)
 Cada entidad nueva se define así y nada más:
 
 ```ts
-// src/types/contratos/contrato.ts
+// src/features/finanzas/egresos/contratos/types/contrato.ts
 import type { AuditBase } from '@/types/core/base';
 
 export interface Contrato extends AuditBase {
@@ -448,7 +438,7 @@ export interface Contrato extends AuditBase {
 
 Eso es todo. No hay `ContratoCreatePayload`, no hay `ContratoFormState`, no hay `ContratoDTO`. **Un solo tipo.**
 
-- La definición vive en `src/types/<dominio>/<entidad>.ts` y **siempre** extiende `AuditBase`.
+- La definición vive en **`src/features/<dominio>/types/<entidad>.ts`** (o subfeature) y **siempre** extiende `AuditBase` desde `@/types/core/base`.
 - **PROHIBIDO** redeclarar el modelo en hooks, componentes, páginas o servicios. Quien lo necesite lo importa.
 - **PROHIBIDO** mantener "casi-copias" con campos sueltos para "lo que necesita esa pantalla".
 - Cuando hay desfase entre lo que devuelve la query y el modelo, **se ajusta la query**, no se inventa un tipo paralelo.
@@ -460,7 +450,7 @@ Cuando el formulario usa **`react-hook-form`** y **`@hookform/resolvers/zod`**:
 - El schema valida **solo los campos editables** que existen en el modelo y en Postgres (mismos nombres; tipos finales coherentes con el tipo canónico: `number`, `boolean`, etc.). Campos de auditoría (`id`, `version`, `created_by`, …) y derivados (p. ej. `image_url` tras subir archivo) se **fusionan en el payload** al guardar; no hace falta duplicarlos en Zod si no hay input directo.
 - Los `<input type="number">` llegan como **string** al resolver: preferir **`register('campo', { setValueAs })`** para producir `number` o `number | null` antes de validar. Evitar **`z.coerce.number()`** cuando fuerce casts (`as Resolver<…>`) en el resolver; el objetivo es que **`zodResolver(schema)`** tipé solo contra **`z.output<typeof schema>`** y **`defaultValues`** de RHF.
 - Si el schema usa **`.default()`** en Zod, el tipo de *entrada* del resolver puede marcar campos como opcionales y chocar con `useForm<T>`; suele bastar con defaults solo en **`defaultValues`** y campos requeridos explícitos en Zod (p. ej. `currency`, `in_stock`).
-- Referencia canónica en esta plantilla: **`src/pages/ecommerce/ProductsPage.tsx`** (`productSchema`, helpers `parseRequiredMoney` / `parseOptionalMoney` / `parseOptionalInt`).
+- Referencia canónica en esta plantilla: **`src/features/ecommerce/pages/ProductsPage.tsx`** (`productSchema`, helpers `parseRequiredMoney` / `parseOptionalMoney` / `parseOptionalInt`).
 
 #### Hook genérico `useCrudResource`
 
@@ -475,7 +465,7 @@ Ubicación: **`src/lib/hooks/useCrudResource.ts`**. Lista + `upsert` + `softDele
 Para crear una instancia en blanco se usa un helper que vive junto al tipo:
 
 ```ts
-// src/types/contratos/contrato.ts  (mismo archivo)
+// src/features/finanzas/egresos/contratos/types/contrato.ts  (mismo archivo)
 export function createEmptyContrato(userId: string): Contrato {
   return {
     id:           crypto.randomUUID(),
@@ -577,7 +567,7 @@ const payload: ContratoPayload = { numero: '001', nombre: '...', ... };
 await supabase.from('contratos').insert(payload); // pierde toda la trazabilidad
 
 // ❌ Prohibido: redeclarar el modelo dentro de un hook o componente
-interface Contrato { nombre: string; monto: number; } // NO — va en src/types/
+interface Contrato { nombre: string; monto: number; } // NO — va en features/.../types/
 ```
 
 #### Por qué AuditBase NUNCA se omite al persistir

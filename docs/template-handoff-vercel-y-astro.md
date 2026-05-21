@@ -118,7 +118,7 @@ Si los orígenes difieren y hay base configurada → `replace` a `${base}/`. Si 
 | `astro/src/lib/supabase.ts` | Cliente nullable + env mixtos |
 | `astro/src/pages/index.astro`, `productos/*`, `[slug].astro` | Guards `supabase` |
 | `astro/src/layouts/BaseLayout.astro` | Favicon solo SVG |
-| `src/pages/PublicSiteEntry.tsx` | Mismo host → mensaje + `/login` |
+| `src/features/shell/pages/PublicSiteEntry.tsx` | Mismo host → mensaje + `/login` |
 
 ---
 

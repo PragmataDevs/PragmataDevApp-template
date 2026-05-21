@@ -13,7 +13,7 @@
  */
 
 import { PrintButton, buildPrintTable } from '@/components/ui/PrintButton';
-import type { Task } from '@/types/tasks/task';
+import type { Task } from '@/features/tasks/types/task';
 
 const PRIORITY_LABELS: Record<string, string> = {
   critical: 'Crítica',

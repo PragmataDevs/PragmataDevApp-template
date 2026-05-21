@@ -14,7 +14,10 @@ import { erpLoginUrl } from '../../lib/public-urls';
 
 const { brand, appUrl, siteOrigin = '', ecommerceEnabled, pathname = '/' } = Astro.props;
 const brandIconRaw = import.meta.env.PUBLIC_BRAND_ICON_URL;
-const brandIcon = typeof brandIconRaw === 'string' && brandIconRaw.trim() ? brandIconRaw.trim() : '';
+const brandIcon =
+  typeof brandIconRaw === 'string' && brandIconRaw.trim()
+    ? brandIconRaw.trim()
+    : '/pragmatadevs-icon.svg';
 const loginHref = erpLoginUrl(appUrl, siteOrigin.trim() || undefined);
 ---
 
@@ -27,9 +30,7 @@ const loginHref = erpLoginUrl(appUrl, siteOrigin.trim() || undefined);
       href="/"
       class="flex items-center gap-2.5 font-extrabold tracking-tight text-brand-dark transition-opacity hover:opacity-90"
     >
-      {brandIcon ? (
-        <img src={brandIcon} alt="" width="32" height="32" class="h-8 w-8 rounded-pragmata" />
-      ) : null}
+      <img src={brandIcon} alt="" width="32" height="32" class="h-8 w-8 rounded-pragmata" />
       <span>{brand}</span>
     </a>
 

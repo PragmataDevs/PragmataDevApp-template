@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
-import type { Task, TaskInput, TaskUpdateInput, TaskStatus } from '@/types/tasks/task';
+import type { Task, TaskInput, TaskUpdateInput, TaskStatus } from '@/features/tasks/types/task';
 
 // ---------------------------------------------------------------------------
 // Fractional index helpers (midpoint algorithm)

@@ -1,4 +1,4 @@
-import type { Profile } from '@/types/users/profile';
+import type { Profile } from '@/features/users/types/profile';
 
 /**
  * Espejo de `public.is_god()` en Postgres.

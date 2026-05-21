@@ -44,7 +44,7 @@ const {
 const ecommerceEnabled = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 
 const siteName = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
-const brandFavicon = import.meta.env.PUBLIC_BRAND_ICON_URL ?? '/favicon.svg';
+const brandFavicon = import.meta.env.PUBLIC_BRAND_ICON_URL ?? '/pragmatadevs-icon.svg';
 const faviconIsSvg = brandFavicon.endsWith('.svg');
 const siteUrl = resolveSiteOrigin(Astro.site, Astro.url);
 const pageTitle = `${title} — ${siteName}`;

@@ -14,7 +14,9 @@
     "db:seed": "tsx scripts/seed-resources.ts",
     "db:sync": "tsx scripts/sync-resources.ts",
     "ai:sync-prompts": "node scripts/sync-ai-prompts.mjs",
-    "brand:sync": "cp astro/public/favicon.svg public/favicon.svg && cp astro/public/favicon.svg src/assets/brand-icon.svg"
+    "mapping:init": "node scripts/compose-mapping-prompt.mjs init",
+    "mapping:prompt": "node scripts/compose-mapping-prompt.mjs prompt",
+    "brand:sync": "cp public/pragmatadevs-icon.svg astro/public/pragmatadevs-icon.svg && cp public/pragmatadevs-icon.svg src/assets/brand-icon.svg && cp public/pragmatadevs-icon.svg public/favicon.svg && cp public/pragmatadevs-icon.svg astro/public/favicon.svg"
   },
   "dependencies": {
     "@pragmata/core": "workspace:*",

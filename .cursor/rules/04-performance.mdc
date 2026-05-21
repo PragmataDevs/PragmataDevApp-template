@@ -34,11 +34,11 @@ manualChunks: {
 
 ```tsx
 // ✅ CORRECTO — routes.config.ts
-const DashboardPage = React.lazy(() => import('@/pages/dashboard/DashboardPage'));
-const ContratosPage = React.lazy(() => import('@/pages/contratos/ContratosPage'));
+const DashboardPage = React.lazy(() => import('@/features/dashboard/pages/DashboardPage'));
+const ContratosPage = React.lazy(() => import('@/features/finanzas/egresos/contratos/pages/ContratosPage'));
 
 // ❌ PROHIBIDO — import estático de páginas
-import DashboardPage from '@/pages/dashboard/DashboardPage';
+import DashboardPage from '@/features/dashboard/pages/DashboardPage';
 ```
 
 ## Carga Condicional de Módulos Pesados

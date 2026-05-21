@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Shield, Loader2, Lock, FolderKanban } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import PermissionsPanel from '@/features/settings/components/PermissionsPanel';
-import type { GrantedPermissions } from '@/features/settings/components/PermissionsPanel';
-import type { AccessLevel } from '@/types/users/profile';
+import PermissionsPanel from '@/features/roles/components/PermissionsPanel';
+import type { GrantedPermissions } from '@/features/roles/components/PermissionsPanel';
+import type { AccessLevel } from '@/features/users/types/profile';
 import type {
   UserCreateInput,
   UserUpdateInput,
@@ -11,7 +11,7 @@ import type {
   UserWithRole,
   EntityOption,
 } from '../hooks/useUsers';
-import { ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
+import { ENTITY_LABEL_PLURAL } from '@/features/entities/types/entity';
 
 export interface UserFormProps {
   user?: UserWithRole | null;

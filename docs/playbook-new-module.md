@@ -1,7 +1,16 @@
 # Playbook: nuevo módulo ERP (10 pasos)
 
-Guía única para añadir una feature de negocio al **pilar operativo** sin romper el ADN Pragmata.  
-Antecedentes: reglas en `.cursor/rules/`, detalle en `docs/architecture.md` y setup en `docs/SETUP.md`.
+Checklist **técnico** para implementar un módulo en el pilar operativo sin romper el ADN Pragmata.
+
+| Si necesitas… | Lee |
+|---------------|-----|
+| Workshop con el cliente, dominios, subfeatures, qué va en `src/features/` | [**client-features-playbook.md**](./client-features-playbook.md) |
+| Este checklist (SQL → hook → page → RBAC) | Este documento |
+| Índice de toda la doc | [**README.md**](./README.md) |
+
+Antecedentes: `.cursor/rules/`, **`docs/architecture.md`** §2, **`docs/SETUP.md`**.
+
+> Las pantallas van en **`src/features/<modulo>/pages/`** (no en `src/pages/`). El lazy load se declara en **`src/app/routes.config.ts`**.
 
 ---
 
@@ -24,8 +33,11 @@ Antecedentes: reglas en `.cursor/rules/`, detalle en `docs/architecture.md` y se
 
 ## 2. Modelo TypeScript canónico
 
-- Un archivo en `src/types/<dominio>/<entidad>.ts`.
-- `export interface MiEntidad extends AuditBase { … }` (u omitir campos que la tabla no tenga, pero sin inventar DTOs paralelos).
+- Un archivo en **`src/features/<modulo>/types/<entidad>.ts`** (o `.../<subfeature>/types/` si solo aplica ahí).
+- `import type { AuditBase } from '@/types/core/base'`.
+- `export interface MiEntidad extends AuditBase { … }` + `createEmptyMiEntidad()` en el mismo archivo.
+- Schema Zod al lado: `<entidad>.schema.ts` en la misma carpeta `types/`.
+- Sin DTOs paralelos. **`src/types/`** solo para núcleo (`core/base`) — ver `src/types/README.md`.
 
 ---
 
@@ -42,27 +54,43 @@ Antecedentes: reglas en `.cursor/rules/`, detalle en `docs/architecture.md` y se
 
 ```
 src/features/<modulo>/
+  navigation.ts  # opcional
+  pages/
   hooks/
-  components/    # opcional — modales, sub-vistas
+  components/
+  types/         # modelos + schemas Zod del módulo
+  providers/     # opcional
+  <subfeature>/  # mismo kit (pages, hooks, components, types)
 ```
 
-Mantén la lógica de negocio aquí; las páginas solo componen.
+Mantén la lógica de negocio en `hooks/`; las páginas solo componen.  
+**Guía de dominios de cliente:** `docs/client-features-playbook.md` · mapa de carpetas: `docs/erp-features-structure.md`.
 
 ---
 
 ## 5. Página(s)
 
-- `src/pages/...` — suele ser `workspace/` si depende de `:entityId`, o `settings/` / `ecommerce/` según el caso.
+- `src/features/<modulo>/pages/...` — workspace si depende de `:entityId`; global si es settings o dominio de equipo.
 - UI: `Button`, tokens `--pragmata-*`, bordes `rounded-pragmata`.
 - **Listados tabulares:** obligatorio **`DataTable`** (`@/components/ui/DataTable`). No montar `<table>` manual en páginas. Solo puedes usar otro patrón si el product owner lo indica **explícitamente** (Kanban, calendario, grid tipo spreadsheet, HTML solo para impresión/PDF). Ver `.cursor/rules/02-ui-components.mdc`. Genérico **`T extends object`** y CSV: **`docs/architecture.md`** §13.7 (*Listas tabulares*).
 - CSV masivo: prop opcional **`csv`**. Mínimo **`filename`** + **`fields`** para export / plantilla; **`onImport`** solo donde el dominio lo permita (ej. catálogo). *Por defecto en esta plantilla, usuarios / roles / entidades son solo export — sin carga CSV hasta que se defina.*
-- **Formularios + Zod:** schema alineado al modelo (campos editables = mismos nombres que en `src/types` y columnas expuestas); números desde el DOM con **`setValueAs`**, no **`z.coerce`** si rompe el tipado del resolver; tipo del formulario validado → **`z.output<typeof schema>`** cuando aplique. Detalle y ejemplo: **`docs/architecture.md`** (§ modelo canónico → *Validación con Zod + react-hook-form*) y **`src/pages/ecommerce/ProductsPage.tsx`**.
+- **Formularios + Zod:** schema alineado al modelo (campos editables = mismos nombres que en `src/types` y columnas expuestas); números desde el DOM con **`setValueAs`**, no **`z.coerce`** si rompe el tipado del resolver; tipo del formulario validado → **`z.output<typeof schema>`** cuando aplique. Detalle y ejemplo: **`docs/architecture.md`** (§ modelo canónico → *Validación con Zod + react-hook-form*) y **`src/features/ecommerce/pages/ProductsPage.tsx`**.
 
 ---
 
 ## 6. Rutas
 
 - `src/app/routes.config.ts`: registra `path`, `layout`, `resourceCode`, `group` (`settings` | sidebar global | `workspace` | `ecommerce`).
+- Lazy import desde la feature, por página:
+
+```ts
+const MiPage = lazy(() => import('@/features/<modulo>/pages/MiPage'));
+// Subfeature anidada:
+const ContratosPage = lazy(() =>
+  import('@/features/finanzas/egresos/contratos/pages/ContratosPage'),
+);
+```
+
 - Feature flag: constante `import.meta.env.VITE_ENABLE_*` y rama condicional del árbol de rutas (patrón ecommerce / IA).
 
 ---
@@ -105,7 +133,10 @@ Mantén la lógica de negocio aquí; las páginas solo componen.
 | Navegación / Workspace | `.cursor/rules/06-navigation-layout.mdc` |
 | Hooks + sesión | `.cursor/rules/05-secure-hooks.mdc` |
 | UI tabla | `.cursor/rules/02-ui-components.mdc` |
-| Formulario + Zod + RHF | `docs/architecture.md` (validación Zod), `src/pages/ecommerce/ProductsPage.tsx` |
+| Formulario + Zod + RHF | `docs/architecture.md` (validación Zod), `src/features/ecommerce/pages/ProductsPage.tsx` |
+| Features de cliente (workshop, subfeatures) | `docs/client-features-playbook.md` |
+| Mapa carpetas `src/features/` | `docs/erp-features-structure.md` |
+| Índice toda la documentación | `docs/README.md` |
 | `useCrudResource` (AuditRecord, filter, upsert) | `docs/architecture.md` → *Hook genérico useCrudResource* |
 | `DataTable` genérico + CSV | `docs/architecture.md` §13.7 |
 | Publicación PowerSync | `docs/database/03_powersync_publication.sql`, `docs/powersync/sync-rules.yaml` |

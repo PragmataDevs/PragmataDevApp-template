@@ -2,19 +2,19 @@
 
 ## Fuente canónica
 
-El icono oficial del monorepo es el SVG:
+El icono oficial PragmataDevs (template y réplicas) es el SVG:
 
-- **Astro (origen):** [`astro/public/favicon.svg`](../astro/public/favicon.svg)
-- **ERP (Vite):** [`public/favicon.svg`](../public/favicon.svg) (copia sincronizada)
+- **ERP (origen versionado):** [`public/pragmatadevs-icon.svg`](../public/pragmatadevs-icon.svg)
+- **Astro / favicon:** copias sincronizadas con `pnpm brand:sync`
 
-Diseño: fondo `#0f172a`, acento `#0ea5e9` (alineado con `brand-accent`).
+Por defecto el ERP usa `/pragmatadevs-icon.svg` (sidebar, login, dashboard). Los clientes pueden sobrescribir con `PUBLIC_BRAND_ICON_URL` en `.env`.
 
 ## Uso en código
 
 | Pilar | Cómo |
 |-------|------|
-| ERP React | `import { BrandIcon } from '@/components/brand/BrandIcon'` o `src="/favicon.svg"` |
-| Astro | `<img src="/favicon.svg" … />` en `PublicNav`, `BaseLayout` ya enlaza favicon |
+| ERP React | `import { BrandIcon } from '@/components/brand/BrandIcon'` o `PRAGMATA_DEVS_ICON_URL` desde `@/lib/brandEnv` |
+| Astro | `<img src="/pragmatadevs-icon.svg" … />` o `PUBLIC_BRAND_ICON_URL` |
 
 Componente compartido ERP: [`src/components/brand/BrandIcon.tsx`](../src/components/brand/BrandIcon.tsx).
 
@@ -28,13 +28,13 @@ Componente compartido ERP: [`src/components/brand/BrandIcon.tsx`](../src/compone
 
 ## Sincronizar icono tras cambiar el SVG
 
-Fuente única: `astro/public/favicon.svg`. Desde la raíz del monorepo:
+Fuente única: `public/pragmatadevs-icon.svg`. Desde la raíz del monorepo:
 
 ```bash
 pnpm brand:sync
 ```
 
-Copia a `public/favicon.svg` (Vite) y `src/assets/brand-icon.svg` (import opcional).
+Copia a `astro/public/`, `public/favicon.svg`, `astro/public/favicon.svg` y `src/assets/brand-icon.svg`.
 
 ## Emails Auth
 

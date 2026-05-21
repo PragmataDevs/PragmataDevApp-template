@@ -11,7 +11,7 @@ alwaysApply: true
 
 Ruta: `src/` (este repositorio). El chasis principal.
 
-- Todos los módulos ERP viven en `src/features/<modulo>/`.
+- Todos los módulos ERP viven en `src/features/<modulo>/` (`pages/`, `hooks/`, `components/`; subfeatures anidadas). Rutas lazy en `src/app/routes.config.ts`. **No** `src/pages/` en el ERP. Guías: `docs/README.md`, `docs/erp-features-structure.md`, `docs/client-features-playbook.md`, `docs/playbook-new-module.md`.
 - Acceso protegido: `RouteGuard` + `RBAC` con `check_permission()`.
 - Lectura offline-ready: PowerSync → SQLite cuando `VITE_ENABLE_POWERSYNC=true`.
 - Feature flag: siempre activo (es el core).
@@ -24,7 +24,7 @@ Ruta: **`astro/`** (dentro del mismo monorepo). Proyecto Astro independiente con
 - NO importa hooks React del pilar Operativo. Solo tipos puros si fuera necesario.
 - Comunicación con Supabase: solo lectura pública (anon key del mismo `.env` raíz: `VITE_SUPABASE_*` inyectadas como públicas en build, u opcionalmente `PUBLIC_SUPABASE_*`).
 - Activar ecommerce público: `PUBLIC_ENABLE_ECOMMERCE=true` en el `.env` raíz o en `astro/.env` (capa opcional).
-- **Landings:** la portada **SEO** canónica es `astro/src/pages/index.astro`. La ruta `/` del ERP (`src/pages/PublicSiteEntry.tsx`) **redirige** al sitio Astro (`VITE_PUBLIC_SITE_URL` o `http://localhost:4321` en dev), sin duplicar landing en React. CTAs «Iniciar sesión» usan `resolveAppOrigin()` (`astro/src/lib/public-urls.ts`): prod → `PUBLIC_APP_URL`; dev → mismo host de la petición (`:7070` en LAN/móvil).
+- **Landings:** la portada **SEO** canónica es `astro/src/pages/index.astro`. La ruta `/` del ERP (`src/features/shell/pages/PublicSiteEntry.tsx`) **redirige** al sitio Astro (`VITE_PUBLIC_SITE_URL` o `http://localhost:4321` en dev), sin duplicar landing en React. CTAs «Iniciar sesión» usan `resolveAppOrigin()` (`astro/src/lib/public-urls.ts`): prod → `PUBLIC_APP_URL`; dev → mismo host de la petición (`:7070` en LAN/móvil).
 - SEO: `BaseLayout.astro` con `title`, `description`, OG tags, Schema.org JSON-LD.
 - Estructura real del proyecto:
 

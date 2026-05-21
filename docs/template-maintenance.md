@@ -2,7 +2,33 @@
 
 Registro de endurecimientos aplicados al chasis Pragmata. Útil al clonar el repo o al revisar PRs de infraestructura.
 
-## 1. Limpieza legacy `project/`
+**Índice de documentación:** [`docs/README.md`](./README.md).
+
+## 1. Features autocontenidas (`pages/` + `types/`)
+
+### Pantallas
+
+Las pantallas del ERP **ya no** viven en `src/pages/`. Cada dominio lleva su vertical slice:
+
+```
+src/features/<dominio>/
+  navigation.ts   # opcional
+  pages/ hooks/ components/ types/
+  <subfeature>/   # mismo kit
+```
+
+### Modelos
+
+Los tipos de negocio **ya no** viven en `src/types/<dominio>/`. Están en **`src/features/<dominio>/types/`**.
+
+Queda solo **`src/types/core/base.ts`** (`AuditBase` re-export + `AppRoute`). Ver `src/types/README.md`.
+
+Ejemplos: `features/entities/types/entity.ts`, `features/tasks/types/task.ts`, `features/auth/types/rbac.ts`.
+
+- Rutas lazy: `src/app/routes.config.ts`
+- Guías: [`client-features-playbook.md`](./client-features-playbook.md), [`erp-features-structure.md`](./erp-features-structure.md)
+
+## 2. Limpieza legacy `project/`
 
 Antes existía un layout y rutas bajo terminología **Proyecto** (`ProjectLayout`, `/projects/:projectId`). La navegación canónica es **Workspace** + `:entityId` (`AppLayout` + `WorkspaceLayout`).
 
@@ -11,7 +37,7 @@ Antes existía un layout y rutas bajo terminología **Proyecto** (`ProjectLayout
 | Archivo | Motivo |
 |---------|--------|
 | `src/components/layout/ProjectLayout.tsx` | Sidebar propio duplicado; no referenciado en `router.tsx` |
-| `src/pages/project/TasksPage.tsx` | Duplicado de `src/pages/workspace/TasksPage.tsx` |
+| *(histórico)* `src/pages/project/TasksPage.tsx` | Eliminado; Kanban en `src/features/tasks/pages/TasksPage.tsx` |
 | `src/types/projects/project.schema.ts` | Sin imports en el codebase |
 | `PROJECT_ROUTES` en `routes.config.ts` | Alias obsoleto de `WORKSPACE_ROUTES` |
 
@@ -25,7 +51,7 @@ Reglas: `.cursor/rules/06-navigation-layout.mdc`
 
 ---
 
-## 2. Usuario dios en frontend
+## 3. Usuario dios en frontend
 
 `usePermission` antes concedía bypass con solo `access_level === 'god'`, sin validar `teams.is_platform_owner`.
 
@@ -39,7 +65,7 @@ Archivos tocados:
 
 ---
 
-## 3. Astro y Vite en red local (`host: true`)
+## 4. Astro y Vite en red local (`host: true`)
 
 Para paridad con Vite (`vite.config.ts` → `server.host: true`), Astro expone **Local** y **Network** al ejecutar `pnpm dev:astro` o `pnpm dev:all`:
 

@@ -7,6 +7,8 @@ Prioridad: P0 | P1 | P2
 Tipo: Nueva feature | Mejora | Bugfix | Refactor  
 Flag: <VITE_ENABLE_...> (si aplica) | none  
 
+**Playbooks:** workshop → [`client-features-playbook.md`](../client-features-playbook.md) · implementación → [`playbook-new-module.md`](../playbook-new-module.md)
+
 ---
 
 ## 0) Contexto (1-2 párrafos)
@@ -39,12 +41,15 @@ Flag: <VITE_ENABLE_...> (si aplica) | none
 
 ## 3) Navegación
 
-- **Ubicación en sidebar**: settings | workspace | ecommerce | global
-- **Ruta(s)**:
+- **Ubicación en sidebar**: settings | workspace | ecommerce | seo | global | grupo nuevo (ej. `finanzas`)
+- **Ruta(s)** (URL pública):
   - `/workspace/:entityId/...`
   - `/settings/...`
+  - `/finanzas/...` (dominio cliente)
 - **Layout**: AppLayout | WorkspaceLayout | PublicLayout
 - **Multi-entity**: ¿depende de entity? sí/no
+- **Carpeta de código**: `src/features/<dominio>/pages/<NombrePage>.tsx` (subfeature: `.../<subfeature>/pages/`)
+- **Registro lazy**: `src/app/routes.config.ts` → `lazy(() => import('@/features/...'))`
 
 ---
 
@@ -53,7 +58,7 @@ Flag: <VITE_ENABLE_...> (si aplica) | none
 ### Entidad principal
 
 - **Nombre**: `PaymentSchedule` (ejemplo)
-- **Archivo**: `src/types/<dominio>/<entidad>.ts`
+- **Archivo tipo**: `src/features/<dominio>/types/<entidad>.ts` (o `.../<subfeature>/types/`). `AuditBase` desde `@/types/core/base`. Ver `docs/client-features-playbook.md` §5.
 - **Tabla**: `public.<tabla>`
 - **Extiende AuditBase**: sí/no (si no, justificar)
 

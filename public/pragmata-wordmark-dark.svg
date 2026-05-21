@@ -1,0 +1,11 @@
+<!-- Pragmata wordmark · variante para fondos claros -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 32" fill="none" role="img" aria-label="Pragmata">
+  <rect width="32" height="32" rx="6" fill="#0f172a"/>
+  <path d="M8 12h16v2H8zm0 6h10v2H8z" fill="#0ea5e9"/>
+  <text x="46" y="21"
+        font-family="'Syne', 'Inter', system-ui, sans-serif"
+        font-size="13"
+        font-weight="700"
+        letter-spacing="4.2"
+        fill="#0f172a">PRAGMATA</text>
+</svg>

@@ -2,7 +2,7 @@ import { forwardRef, useState } from 'react';
 import { NavLink, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { ChevronDown, Settings, Layers, ShoppingCart, Globe } from 'lucide-react';
 import { BrandIcon } from '@/components/brand/BrandIcon';
-import { getPublicBrandName } from '@/lib/brandEnv';
+import { getPublicBrandName, PRAGMATA_DEVS_ICON_URL, PRAGMATA_DEVS_SITE_URL } from '@/lib/brandEnv';
 import { APP_ROUTES, WORKSPACE_ROUTES } from '@/app/routes.config';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import { useActiveEntity } from '@/features/entities/hooks/useActiveEntity';
@@ -197,7 +197,7 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(function Sidebar(
           className={`h-16 flex items-center gap-3 border-b border-[color:var(--pragmata-border)] transition-all hover:bg-[color:var(--pragmata-surface-2)] ${isCollapsed ? 'px-4 justify-center' : 'px-6'}`}
           title="Ocultar/Mostrar Sidebar"
         >
-          <BrandIcon className="h-8 w-8 rounded-pragmata" onlyIfCustom />
+          <BrandIcon className="h-8 w-8 rounded-pragmata flex-shrink-0" />
           {!isCollapsed && (
             <span className="font-bold text-lg tracking-tight text-[color:var(--pragmata-fg)]">
               {getPublicBrandName()}
@@ -313,20 +313,31 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(function Sidebar(
         </nav>
 
         {/* Bottom Area */}
-        <div className={`text-xs text-center text-[color:var(--pragmata-muted)] border-t border-[color:var(--pragmata-border)] ${isCollapsed ? 'p-2' : 'p-4'}`}>
-          {!isCollapsed && (
-            <span className="block leading-relaxed">
-              &copy; {new Date().getFullYear()} {getPublicBrandName()}.{' '}
-              <a
-                href="https://www.pragmatadevs.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-[color:var(--pragmata-accent)] hover:underline"
-              >
-                PragmataDevs
-              </a>
-            </span>
-          )}
+        <div
+          className={`text-xs text-center text-[color:var(--pragmata-muted)] border-t border-[color:var(--pragmata-border)] ${isCollapsed ? 'p-2' : 'p-4'}`}
+        >
+          <a
+            href={PRAGMATA_DEVS_SITE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-flex items-center text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] transition-colors ${isCollapsed ? 'justify-center' : 'gap-2'}`}
+            title="PragmataDevs"
+          >
+            <img
+              src={PRAGMATA_DEVS_ICON_URL}
+              alt="PragmataDevs"
+              width={24}
+              height={24}
+              className="h-6 w-6 rounded-pragmata flex-shrink-0"
+              decoding="async"
+            />
+            {!isCollapsed && (
+              <span className="leading-relaxed text-left">
+                &copy; {new Date().getFullYear()} {getPublicBrandName()}
+                <span className="block font-medium text-[color:var(--pragmata-accent)]">PragmataDevs</span>
+              </span>
+            )}
+          </a>
         </div>
       </aside>
     </>

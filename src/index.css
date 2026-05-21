@@ -1,42 +1,52 @@
-@import url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css');
-@import url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-mono/style.css');
+/*
+ * Variables de marca espejadas desde:
+ *   /home/pragmata-server-station/pragmata-business-info/design/tokens/tokens.json
+ *
+ * Los nombres `--pragmata-*` se conservan (775 ocurrencias en src/) pero
+ * sus valores ahora apuntan a la paleta canónica del portal vivo
+ * (pragmata-factory/web/portal.html). El sistema es dark-first.
+ *
+ * Tipografía: Syne (display/marca) + JetBrains Mono (datos/código).
+ */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-pragmata: 'Geist Sans', sans-serif;
-  --font-pragmata-mono: 'Geist Mono', monospace;
+  /* ── Tipografía (Pragmata canónica) ──────────────────────────────────── */
+  --font-pragmata:      'Syne', 'Inter', system-ui, sans-serif;
+  --font-pragmata-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
-  /* --- BASE (Neutrals) --- */
-  --pragmata-bg: #F7F8FB;           /* Soft neutral background */
-  --pragmata-fg: #0B1220;           /* Ink */
-  --pragmata-muted: #5A6B85;        /* Muted text */
-  --pragmata-muted-2: #8A9AB1;      /* Secondary muted */
+  /* ── BASE (dark-first, espejado del portal) ──────────────────────────── */
+  --pragmata-bg:         #05080f;  /* fondo base */
+  --pragmata-fg:         #ddeaf8;  /* texto principal */
+  --pragmata-muted:      #8badc8;  /* texto secundario */
+  --pragmata-muted-2:    #3d5a78;  /* labels / disabled */
 
-  /* --- BRAND (Pragmata) --- */
-  --pragmata-primary: #1A2740;      /* Deep navy */
-  --pragmata-primary-2: #23365C;    /* Navy hover */
-  --pragmata-accent: #1A7FF0;       /* Electric blue */
-  --pragmata-accent-dark: #1365C0;  /* Accent hover */
-  --pragmata-accent-soft: #E6F0FF;  /* Accent background */
+  /* ── BRAND (Pragmata) ────────────────────────────────────────────────── */
+  --pragmata-primary:      #ddeaf8;  /* texto/elemento primario sobre oscuro */
+  --pragmata-primary-2:    #8badc8;
+  --pragmata-accent:       #00b8e6;  /* cian Pragmata · CTA primaria */
+  --pragmata-accent-dark:  #0099c2;  /* hover */
+  --pragmata-accent-soft:  #0b1f2a;  /* fondo suave del accent (sobre dark) */
 
-  /* --- UI SURFACES --- */
-  --pragmata-surface: #FFFFFF;     /* Cards */
-  --pragmata-surface-2: #F2F5FA;   /* Subtle surface */
-  --pragmata-border: #E3E8F2;      /* Borders */
-  --pragmata-border-strong: #D5DDEB;
+  /* ── UI SURFACES ─────────────────────────────────────────────────────── */
+  --pragmata-surface:        #0b1120;  /* cards / sidebar */
+  --pragmata-surface-2:      #0d1525;  /* superficie alternativa */
+  --pragmata-border:         #162033;  /* borde sutil */
+  --pragmata-border-strong:  #1e2f48;  /* separador acentuado */
 
-  /* --- STATUS --- */
-  --pragmata-success: #10B981;
-  --pragmata-warning: #F59E0B;
-  --pragmata-danger: #EF4444;
+  /* ── STATUS (espejados del portal) ───────────────────────────────────── */
+  --pragmata-success: #00d98b;
+  --pragmata-warning: #f0c040;
+  --pragmata-danger:  #f04060;
 
-  /* --- INTERACTION --- */
-  --pragmata-row-hover: #F1F5F9;   /* Slate 100 for clear hover contrast */
+  /* ── INTERACTION ─────────────────────────────────────────────────────── */
+  --pragmata-row-hover: #101a2e;  /* hover sutil sobre card */
 
-  /* --- Z-INDEX (capas UI) --- */
+  /* ── Z-INDEX (capas UI) ──────────────────────────────────────────────── */
   --z-sidebar-backdrop: 40;
   --z-sidebar: 50;
   --z-header: 60;
@@ -49,25 +59,53 @@
   --z-datatable: 10000;
 }
 
-/* Dark Mode (Controlado por clase .dark en <html>) */
+/*
+ * Light mode (opcional, para sitio público Astro y emails).
+ * Activar con `<html class="light">` o por consumidor específico.
+ * El default es dark — Pragmata es dark-first.
+ */
+.light {
+  --pragmata-bg:         #F7F8FB;
+  --pragmata-fg:         #0B1220;
+  --pragmata-muted:      #5A6B85;
+  --pragmata-muted-2:    #8A9AB1;
+
+  --pragmata-primary:      #0F172A;
+  --pragmata-primary-2:    #23365C;
+  --pragmata-accent:       #0EA5E9;
+  --pragmata-accent-dark:  #0284C7;
+  --pragmata-accent-soft:  #E6F0FF;
+
+  --pragmata-surface:        #FFFFFF;
+  --pragmata-surface-2:      #F2F5FA;
+  --pragmata-border:         #E3E8F2;
+  --pragmata-border-strong:  #D5DDEB;
+
+  --pragmata-row-hover:    #F1F5F9;
+}
+
+/*
+ * Alias `.dark` mantenido por compatibilidad — re-aplica valores base.
+ * Si algún consumidor hacía toggle .dark, sigue funcionando.
+ */
 .dark {
-    --pragmata-bg: #0A0F1B;
-    --pragmata-fg: #E6ECF6;
-    --pragmata-muted: #9AA8BF;
-    --pragmata-muted-2: #7F90AB;
+  --pragmata-bg:         #05080f;
+  --pragmata-fg:         #ddeaf8;
+  --pragmata-muted:      #8badc8;
+  --pragmata-muted-2:    #3d5a78;
 
-    --pragmata-primary: #E6ECF6;
-    --pragmata-primary-2: #C9D6EA;
-    --pragmata-accent: #4EA1FF;
-    --pragmata-accent-dark: #2C7EE0;
-    --pragmata-accent-soft: #0F1B33;
+  --pragmata-primary:      #ddeaf8;
+  --pragmata-primary-2:    #8badc8;
+  --pragmata-accent:       #00b8e6;
+  --pragmata-accent-dark:  #0099c2;
+  --pragmata-accent-soft:  #0b1f2a;
 
-    --pragmata-surface: #0F1526;
-    --pragmata-surface-2: #121A2E;
-    --pragmata-border: #1C2740;
-    --pragmata-border-strong: #273454;
-    
-    --pragmata-row-hover: #1E293B;  /* Slate 800 for dark mode contrast */
+  --pragmata-surface:        #0b1120;
+  --pragmata-surface-2:      #0d1525;
+  --pragmata-border:         #162033;
+  --pragmata-border-strong:  #1e2f48;
+
+  --pragmata-row-hover:    #101a2e;
 }
 
 @layer utilities {
@@ -92,8 +130,8 @@ body {
   font-family: var(--font-pragmata);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.01em; /* El toque sutil de refinamiento */
-  
+  letter-spacing: -0.01em; /* refinamiento sutil */
+
   background-color: var(--pragmata-bg);
   color: var(--pragmata-fg);
 }

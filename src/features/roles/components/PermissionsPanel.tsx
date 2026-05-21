@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Check, ChevronDown, ChevronRight, Layout, Zap, Component } from 'lucide-react';
 import { APP_RESOURCES, type ResourceDefinition } from '@/config/security/resources';
-import type { ResourceAction } from '@/types/auth/rbac';
+import type { ResourceAction } from '@/features/auth/types/rbac';
 
 /**
  * GrantedPermissions: Maps resource codes to their granted actions.

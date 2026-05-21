@@ -17,33 +17,33 @@ import type { AppRoute } from '@/app/navigation';
 
 // --- Lazy Loading de Páginas ---
 /** `/` redirige al sitio público Astro (no hay landing React duplicada). */
-const PublicSiteEntry       = lazy(() => import('@/pages/PublicSiteEntry'));
-const LoginPage             = lazy(() => import('@/pages/auth/LoginPage'));
-const CallbackPage          = lazy(() => import('@/pages/auth/CallbackPage'));
-const ResetPasswordPage     = lazy(() => import('@/pages/auth/ResetPasswordPage'));
-const ForgotPasswordPage    = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
+const PublicSiteEntry       = lazy(() => import('@/features/shell/pages/PublicSiteEntry'));
+const LoginPage             = lazy(() => import('@/features/auth/pages/LoginPage'));
+const CallbackPage          = lazy(() => import('@/features/auth/pages/CallbackPage'));
+const ResetPasswordPage     = lazy(() => import('@/features/auth/pages/ResetPasswordPage'));
+const ForgotPasswordPage    = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'));
 
-const DashboardPage         = lazy(() => import('@/pages/dashboard/DashboardPage'));
-const ProfilePage           = lazy(() => import('@/pages/profile/ProfilePage'));
+const DashboardPage         = lazy(() => import('@/features/dashboard/pages/DashboardPage'));
+const ProfilePage           = lazy(() => import('@/features/profile/pages/ProfilePage'));
 
-// Settings Pages
-const RolesPage             = lazy(() => import('@/pages/settings/RolesPage'));
-const UsuariosPage          = lazy(() => import('@/pages/settings/UsuariosPage'));
-const EntitiesPage          = lazy(() => import('@/pages/settings/EntitiesPage'));
-const UsuarioNewPage        = lazy(() => import('@/pages/settings/UsuarioNewPage'));
-const EntityNewPage         = lazy(() => import('@/pages/settings/EntityNewPage'));
+// Settings (chasis) — páginas en su feature
+const RolesPage             = lazy(() => import('@/features/roles/pages/RolesPage'));
+const UsuariosPage          = lazy(() => import('@/features/users/pages/UsuariosPage'));
+const EntitiesPage          = lazy(() => import('@/features/entities/pages/EntitiesPage'));
+const UsuarioNewPage        = lazy(() => import('@/features/users/pages/UsuarioNewPage'));
+const EntityNewPage         = lazy(() => import('@/features/entities/pages/EntityNewPage'));
 
-// Ecommerce Pages (feature-flagged by VITE_ENABLE_ECOMMERCE)
-const ProductsPage          = lazy(() => import('@/pages/ecommerce/ProductsPage'));
-const EcommerceDashboardPage = lazy(() => import('@/pages/ecommerce/EcommerceDashboardPage'));
-const EcommerceSalesPage     = lazy(() => import('@/pages/ecommerce/EcommerceSalesPage'));
+// Ecommerce (feature-flagged by VITE_ENABLE_ECOMMERCE)
+const ProductsPage          = lazy(() => import('@/features/ecommerce/pages/ProductsPage'));
+const EcommerceDashboardPage = lazy(() => import('@/features/ecommerce/pages/EcommerceDashboardPage'));
+const EcommerceSalesPage     = lazy(() => import('@/features/ecommerce/pages/EcommerceSalesPage'));
 
-const SitePagesPage          = lazy(() => import('@/pages/seo/SitePagesPage'));
+const SitePagesPage          = lazy(() => import('@/features/cms/pages/SitePagesPage'));
 
-// Workspace Pages
-const TasksPage                 = lazy(() => import('@/pages/workspace/TasksPage'));
-const WorkspaceDashboardPage    = lazy(() => import('@/pages/workspace/WorkspaceDashboardPage'));
-const DocumentsPage             = lazy(() => import('@/pages/workspace/DocumentsPage'));
+// Workspace
+const TasksPage                 = lazy(() => import('@/features/tasks/pages/TasksPage'));
+const WorkspaceDashboardPage    = lazy(() => import('@/features/workspace/pages/WorkspaceDashboardPage'));
+const DocumentsPage             = lazy(() => import('@/features/documents/pages/DocumentsPage'));
 
 const ECOMMERCE_ENABLED = import.meta.env.VITE_ENABLE_ECOMMERCE === 'true';
 /** CMS sitio público: activo por defecto; desactivar con `VITE_ENABLE_SITE_CMS=false`. */

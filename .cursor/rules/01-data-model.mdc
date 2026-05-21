@@ -29,7 +29,7 @@ export interface Contrato {
 
 ## Un Modelo — Una Verdad
 
-Ubicación: `src/types/<dominio>/<entidad>.ts`. Un solo tipo, importado donde se necesite.
+Ubicación: **`src/features/<dominio>/types/<entidad>.ts`** (o `.../<subfeature>/types/`). Import `AuditBase` desde `@/types/core/base`. Un solo tipo, importado donde se necesite. Ver `docs/erp-features-structure.md`.
 
 ```ts
 // ❌ PROHIBIDO

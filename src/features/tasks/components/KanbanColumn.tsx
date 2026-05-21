@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
 import { Plus } from 'lucide-react';
-import type { Task, TaskStatus, KanbanColumnDef } from '@/types/tasks/task';
+import type { Task, TaskStatus, KanbanColumnDef } from '@/features/tasks/types/task';
 import { TaskCard } from './TaskCard';
 
 interface KanbanColumnProps {

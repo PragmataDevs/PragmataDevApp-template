@@ -3,7 +3,7 @@ import { CalendarDays, MapPin, FileCode, ImagePlus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button';
 import type { EntityRow, EntityInput } from '@/features/entities/hooks/useEntities';
 import { ENTITY_STATUS_CONFIG } from '@/features/entities/hooks/useEntities';
-import { ENTITY_LABEL } from '@/types/entities/entity';
+import { ENTITY_LABEL } from '@/features/entities/types/entity';
 import { resolveSignedUrls } from '@/lib/storage';
 
 export interface EntityFormProps {

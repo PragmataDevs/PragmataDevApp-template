@@ -1,5 +1,5 @@
 import { useCrudResource } from '@/lib/hooks/useCrudResource';
-import type { CmsPage } from '@/types/cms/cms-page';
+import type { CmsPage } from '@/features/cms/types/cms-page';
 
 export function useCmsPages(enabled = true) {
   return useCrudResource<CmsPage>({

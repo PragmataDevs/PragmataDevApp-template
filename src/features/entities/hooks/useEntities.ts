@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { uploadFile, CHAT_IMAGE_PRESET } from '@/lib/storage';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
-import type { Entity } from '@/types/entities/entity';
-import { ENTITY_STATUS_CONFIG } from '@/types/entities/entity';
+import type { Entity } from '@/features/entities/types/entity';
+import { ENTITY_STATUS_CONFIG } from '@/features/entities/types/entity';
 
 const POWERSYNC_ENABLED = import.meta.env.VITE_ENABLE_POWERSYNC === 'true';
 

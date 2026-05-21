@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import EntityForm, { type EntityFormProps } from '@/features/entities/components/EntityForm';
-import { ENTITY_LABEL } from '@/types/entities/entity';
+import { ENTITY_LABEL } from '@/features/entities/types/entity';
 
 type EntityFormModalProps = Omit<EntityFormProps, 'onCancel'> & {
   onClose: () => void;
