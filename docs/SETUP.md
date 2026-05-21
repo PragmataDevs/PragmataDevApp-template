@@ -23,7 +23,11 @@ Sigue el orden de esta guía la primera vez; después solo activa lo que necesit
 
 - **Lectura corta** después de clonar (orden de pasos + Vercel resumido): [**PARA-INICIAR.md**](./PARA-INICIAR.md)
 
-**Nuevo módulo ERP:** checklist corto en [`docs/playbook-new-module.md`](./playbook-new-module.md).
+**Documentación:** índice en [`docs/README.md`](./README.md).
+
+**Proyecto cliente** (workshop, dominios en `src/features/`): [`docs/client-features-playbook.md`](./client-features-playbook.md).
+
+**Nuevo módulo ERP** (SQL → RBAC): [`docs/playbook-new-module.md`](./playbook-new-module.md).
 
 ---
 

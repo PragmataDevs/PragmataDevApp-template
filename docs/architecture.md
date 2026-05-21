@@ -109,9 +109,16 @@ En **desarrollo**, si abres el sitio o el ERP por **IP de red** (LAN, Tailscale 
 
 ## 2. Estructura de Directorios (Monorepo Feature-Based)
 
-Seguimos el patrón de "módulos autocontenidos" (similar a Django Apps).
+Seguimos **módulos autocontenidos** en `src/features/<dominio>/`: cada dominio lleva `pages/`, `hooks/`, `components/` (y opcionalmente `providers/`, `types/`, subcarpetas hijas = subfeatures).
 
-Para añadir un módulo nuevo de forma repetible, usar **`docs/playbook-new-module.md`** (10 pasos: SQL → tipo → hook → rutas → RBAC → sidebar).
+| Objetivo | Documento |
+|----------|-----------|
+| Índice de toda la documentación | **`docs/README.md`** |
+| Workshop + dominios de **cliente** | **`docs/client-features-playbook.md`** |
+| Checklist técnico por módulo (SQL → RBAC) | **`docs/playbook-new-module.md`** |
+| Mapa de features del chasis | **`src/features/README.md`** |
+
+> **No hay `src/pages/` en el ERP.** Las pantallas viven en `src/features/<dominio>/pages/`. Las URLs se registran en `src/app/routes.config.ts` con `lazy(() => import('@/features/...'))`.
 
 ### Pilar Operativo (`/src`)
 
@@ -119,54 +126,46 @@ Para añadir un módulo nuevo de forma repetible, usar **`docs/playbook-new-modu
 /src
   ├── App.tsx                     # Shell principal (Providers + Router)
   ├── main.tsx                    # Entry point de React
-  ├── app/                        # Navegación y routing
-  │   ├── navigation.ts           # Tipos de rutas y contratos de navegación
-  │   ├── routes.config.ts        # Catálogo de rutas (globales y de proyecto)
-  │   └── router.tsx              # Definición del árbol de rutas
+  ├── app/                        # Navegación (catálogo de rutas, sin UI de negocio)
+  │   ├── navigation.ts           # Tipos de rutas
+  │   ├── routes.config.ts        # Rutas + lazy imports desde features/*/pages/
+  │   └── router.tsx              # Árbol PublicLayout / AppLayout / WorkspaceLayout
   │
-  ├── components/                 # UI "Tonta" (Reutilizable y Genérica)
-  │   ├── ui/                     # Shadcn primitives (Button, Card, Input)
-  │   └── layout/                 # Estructuras (Sidebar, Header, AppLayout)
+  ├── components/                 # UI reutilizable (chasis)
+  │   ├── ui/                     # DataTable, shadcn primitives
+  │   └── layout/                 # Sidebar, Header, AppLayout
   │
-  ├── features/                   # Lógica de Negocio (El Núcleo)
-  │   ├── auth/                   # Login, Logout, Recuperación
-  │   │   ├── components/         # RouteGuard (Protección de rutas)
-  │   │   ├── hooks/              # useAuth, usePermission
-  │   │   └── providers/          # AuthProvider (Context global)
-  │   ├── entities/               # Gestión de entidades (CRUD, miembros, EntitySelector)
-  │   │   ├── hooks/useEntities.ts
-  │   │   └── components/EntitySelector.tsx
-  │   ├── tasks/                  # Kanban (Workspace module)
-  │   ├── roles/                  # Gestión de roles y permisos
-  │   ├── users/                  # Gestión de usuarios y asignaciones
-  │   ├── settings/               # Componentes compartidos de configuración
-  │   └── ai/                     # [VITE_ENABLE_AI] Módulo de IA
-  │       ├── components/         # AISearch, AISummaryPanel, AIAssistant
-  │       └── hooks/              # useAISearch, useAISummarize
+  ├── features/                   # Negocio + demos (vertical slices)
+  │   ├── shell/pages/            # PublicSiteEntry (redirección a Astro)
+  │   ├── auth/                   # pages/, hooks/, providers/, components/
+  │   ├── dashboard/pages/
+  │   ├── profile/pages/
+  │   ├── roles/pages/            # Configuración — /settings/roles
+  │   ├── users/pages/            # /settings/usuarios
+  │   ├── entities/               # pages/, hooks/, components/ (EntitySelector)
+  │   ├── tasks/pages/            # Kanban workspace
+  │   ├── workspace/pages/        # Dashboard por entity
+  │   ├── documents/pages/
+  │   ├── ecommerce/pages/        # [VITE_ENABLE_ECOMMERCE]
+  │   ├── cms/pages/              # [VITE_ENABLE_SITE_CMS]
+  │   ├── chat/, notifications/, preferences/
+  │   └── <dominio-cliente>/      # Lo que añades tras el workshop (ej. finanzas/)
+  │       ├── pages/ hooks/ components/
+  │       └── <subfeature>/         # Mismo kit anidado (ej. egresos/contratos/)
   │
-  ├── lib/                        # Infraestructura y Motores
-  │   ├── db/                     # Configuración PowerSync + Schema Local
-  │   │   ├── index.ts            # Inicialización de PowerSync
-  │   │   ├── schema.ts           # Definición de tablas SQLite
-  │   │   ├── connector.ts        # Integración con Supabase
-  │   │   └── PowerSyncProvider.tsx # React Context Provider (con feature flag)
-  │   ├── supabase/               # Cliente Supabase (Auth/Storage)
-  │   │   └── index.ts            # Cliente configurado con env vars
-  │   └── auth/                   # Helpers de autorización/autenticación
+  ├── lib/                        # Infraestructura (chasis)
+  │   ├── db/                     # PowerSync + SQLite (flag)
+  │   ├── supabase/
+  │   ├── hooks/useCrudResource.ts
+  │   └── auth/                   # isGodUser, sessionRetry
   │
-  ├── pages/                      # El Pegamento (Rutas)
-  │   ├── auth/                   # Login, callback, reset password
-  │   ├── dashboard/              # Dashboard global
-  │   ├── profile/                # Perfil de usuario
-  │   ├── settings/               # Roles, Usuarios, Entidades
-  │   ├── workspace/              # Contexto Entity: resumen, tareas, documentos, config
-  │   └── ecommerce/             # [VITE_ENABLE_ECOMMERCE] Resumen, productos, ventas
-  │
-  └── types/                      # Definiciones de TypeScript (DB Interfaces)
-      ├── core/base.ts            # AuditBase — la raíz de todo modelo
-      ├── entities/entity.ts      # Entity (canon). VITE_ENTITY_LABEL define el label en UI
-      └── <dominio>/              # Un archivo por entidad de negocio
+  ├── config/security/            # APP_RESOURCES (catálogo RBAC en código)
+  └── types/                      # Modelos canónicos compartidos (AuditBase, entidades)
+      ├── core/base.ts
+      └── <dominio>/<entidad>.ts
 ```
+
+**Subfeatures:** carpeta hija con el mismo kit (`finanzas/egresos/contratos/`). No hace falta un directorio literal `subfeatures/`.
 
 ---
 
@@ -231,6 +230,7 @@ Para añadir un módulo nuevo de forma repetible, usar **`docs/playbook-new-modu
   /workspace/:entityId  (WorkspaceLayout — Outlet only)
     /dashboard
     /tasks
+    /documents
     /config            (hideInMenu: true)
 
   /workspace/none/:ruta  ← fallback cuando entityId aún no está resuelto.

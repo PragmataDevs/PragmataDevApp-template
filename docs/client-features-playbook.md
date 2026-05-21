@@ -2,7 +2,17 @@
 
 Guía para **clonar la template**, mapear el negocio del cliente y digitalizarlo sin tocar el motor de seguridad, auth ni layouts.
 
-**Complementa (no reemplaza):** `docs/playbook-new-module.md` (pasos técnicos SQL → RBAC) y las reglas en `.cursor/rules/`.
+## Documentos relacionados
+
+| Documento | Cuándo |
+|-----------|--------|
+| [**README.md**](./README.md) | Índice de toda la documentación |
+| [**playbook-new-module.md**](./playbook-new-module.md) | Después del workshop: SQL, hook, RBAC, sidebar (por pantalla) |
+| [**architecture.md**](./architecture.md) §2 | Árbol de directorios y pilares |
+| [**src/features/README.md**](../src/features/README.md) | Mapa de features del chasis |
+| [**feature-specs/FEATURE_SPEC_TEMPLATE.md**](./feature-specs/FEATURE_SPEC_TEMPLATE.md) | Spec escrita antes de módulos grandes |
+
+**Convención de código:** pantallas en `src/features/<dominio>/pages/` · URLs en `src/app/routes.config.ts` · **no existe** `src/pages/` en el ERP.
 
 ---
 
@@ -197,10 +207,17 @@ flowchart LR
 
 ---
 
+## 11. Spec antes de codear (opcional)
+
+Para módulos grandes, rellena **`docs/feature-specs/FEATURE_SPEC_TEMPLATE.md`** (alcance, RBAC, rutas, campos) y enlázala en el PR.
+
+---
+
 ## Referencias
 
 | Tema | Documento |
 |------|-----------|
+| Índice maestro | `docs/README.md` |
 | Pasos SQL → RBAC | `docs/playbook-new-module.md` |
 | Hooks y sesión | `.cursor/rules/05-secure-hooks.mdc` |
 | Navegación / workspace | `.cursor/rules/06-navigation-layout.mdc` |

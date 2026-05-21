@@ -1,7 +1,16 @@
 # Playbook: nuevo módulo ERP (10 pasos)
 
-Guía única para añadir una feature de negocio al **pilar operativo** sin romper el ADN Pragmata.  
-Antecedentes: reglas en `.cursor/rules/`, detalle en `docs/architecture.md` y setup en `docs/SETUP.md`.
+Checklist **técnico** para implementar un módulo en el pilar operativo sin romper el ADN Pragmata.
+
+| Si necesitas… | Lee |
+|---------------|-----|
+| Workshop con el cliente, dominios, subfeatures, qué va en `src/features/` | [**client-features-playbook.md**](./client-features-playbook.md) |
+| Este checklist (SQL → hook → page → RBAC) | Este documento |
+| Índice de toda la doc | [**README.md**](./README.md) |
+
+Antecedentes: `.cursor/rules/`, **`docs/architecture.md`** §2, **`docs/SETUP.md`**.
+
+> Las pantallas van en **`src/features/<modulo>/pages/`** (no en `src/pages/`). El lazy load se declara en **`src/app/routes.config.ts`**.
 
 ---
 
@@ -68,6 +77,16 @@ Mantén la lógica de negocio en `hooks/`; las páginas solo componen.
 ## 6. Rutas
 
 - `src/app/routes.config.ts`: registra `path`, `layout`, `resourceCode`, `group` (`settings` | sidebar global | `workspace` | `ecommerce`).
+- Lazy import desde la feature, por página:
+
+```ts
+const MiPage = lazy(() => import('@/features/<modulo>/pages/MiPage'));
+// Subfeature anidada:
+const ContratosPage = lazy(() =>
+  import('@/features/finanzas/egresos/contratos/pages/ContratosPage'),
+);
+```
+
 - Feature flag: constante `import.meta.env.VITE_ENABLE_*` y rama condicional del árbol de rutas (patrón ecommerce / IA).
 
 ---

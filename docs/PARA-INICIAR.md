@@ -113,16 +113,19 @@ La tabla completa y el checklist por cliente: **`docs/deployment-environments.md
 
 ## 7. Dónde seguir leyendo
 
+**Índice completo:** [**`docs/README.md`**](./README.md)
+
 | Necesitas… | Documento |
 |------------|-------------|
-| Studio local tras `supabase start`, usuario god, SQL 01/02, CMS (`cms_pages`) | **`docs/proceso-supabase-studio-local.md`** |
-| Scripts `scripts/`, `db:sync`, Edge Functions **local** (`functions serve`) | **`docs/proceso-post-migraciones-scripts-y-funciones-local.md`** |
-| Setup largo, módulos, IA, Edge Functions, checklist | **`docs/SETUP.md`** |
-| Dominios, dos apps en Vercel, local vs nube | **`docs/deployment-environments.md`** |
-| PowerSync y flags por entorno | **`docs/deployment.md`** |
-| Cómo está armado el código | **`docs/architecture.md`** |
-| Nuevo módulo ERP paso a paso | **`docs/playbook-new-module.md`** |
-| Features de cliente (workshop, subfeatures, carpeta `src/features/`) | **`docs/client-features-playbook.md`** |
+| Mapa de toda la documentación | **`docs/README.md`** |
+| Digitalizar el negocio de un cliente (workshop, `src/features/`) | **`docs/client-features-playbook.md`** |
+| Implementar un módulo (SQL → pantalla → RBAC) | **`docs/playbook-new-module.md`** |
+| Carpetas del chasis en `src/features/` | **`src/features/README.md`** |
+| Studio local, usuario god, SQL | **`docs/proceso-supabase-studio-local.md`** |
+| `db:sync`, Edge Functions local | **`docs/proceso-post-migraciones-scripts-y-funciones-local.md`** |
+| Setup largo, flags, Astro, checklist | **`docs/SETUP.md`** |
+| Vercel, dominios ERP + web | **`docs/deployment-environments.md`** |
+| Arquitectura y convenciones | **`docs/architecture.md`** |
 
 ---
 

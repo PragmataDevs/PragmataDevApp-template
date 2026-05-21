@@ -1,6 +1,10 @@
 # Session Hydration Playbook (Supabase + React Hooks)
 
-This document captures the fix we applied to avoid empty/frozen screens caused by protected queries running before Supabase finishes restoring the session.
+Patrón del chasis para evitar pantallas vacías o congeladas cuando las consultas protegidas corren **antes** de que Supabase restaure la sesión.
+
+**Hooks de referencia en esta template:** `src/features/auth/providers/AuthProvider.tsx`, `src/lib/hooks/useCrudResource.ts`, `src/features/tasks/hooks/useTasks.ts`, `src/features/entities/hooks/useEntities.ts`.
+
+**Regla Cursor:** `.cursor/rules/05-secure-hooks.mdc` · **Playbook módulos:** `docs/playbook-new-module.md` §3.
 
 ## Problem We Solved
 
@@ -25,12 +29,12 @@ if (authLoading || !isAuthenticated) {
 }
 ```
 
-Applied in:
+Aplicar en **todo hook nuevo** bajo `src/features/<dominio>/hooks/`:
 
-- `src/features/keywords/hooks/useKeywords.ts`
-- `src/features/rda/hooks/useRdaAnalyses.ts`
-- `src/features/attorneys/hooks/useAttorneys.ts`
-- `src/features/seo-accounts/hooks/useSeoAccounts.ts`
+- `src/lib/hooks/useCrudResource.ts` (gate + `sessionEpoch` integrados)
+- `src/features/tasks/hooks/useTasks.ts`
+- `src/features/entities/hooks/useEntities.ts`
+- `src/features/users/hooks/useUsers.ts`
 
 ### 2) Re-run effects after session hydration
 
@@ -161,10 +165,7 @@ useEffect(() => {
 Applied in this project:
 
 - `src/features/auth/providers/AuthProvider.tsx`
-- `src/features/keywords/hooks/useKeywords.ts`
-- `src/features/rda/hooks/useRdaAnalyses.ts`
-- `src/features/attorneys/hooks/useAttorneys.ts`
-- `src/features/seo-accounts/hooks/useSeoAccounts.ts`
+- Cualquier hook bajo `src/features/<dominio>/hooks/` que consulte Supabase con RLS
 
 ### 7) NEVER block the Supabase auth lock from inside `onAuthStateChange`
 

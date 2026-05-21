@@ -1,9 +1,10 @@
 # Estrategia de Chunks y Bundle
 
-**Proyecto:** CRM Objetiva Pragmata
-**Objetivo:** Evitar regresiones de performance por chunks grandes y documentar una respuesta estandar cada vez que aparezca el warning `> 500 kB`.
+**Proyecto:** PragmataDevApp Template  
+**Objetivo:** Evitar regresiones de performance por chunks grandes y documentar una respuesta estándar cuando aparezca el warning `> 500 kB`.
 
-> Reglas de implementacion y tabla de chunks actuales: [docs/architecture.md §10](architecture.md)
+> Reglas: `.cursor/rules/04-performance.mdc` · arquitectura: [architecture.md §10](architecture.md)  
+> **Lazy por página:** `src/app/routes.config.ts` importa cada pantalla desde `src/features/<dominio>/pages/` (no cargar carpetas `features/<dominio>` enteras).
 
 ---
 

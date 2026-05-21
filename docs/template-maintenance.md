@@ -2,7 +2,22 @@
 
 Registro de endurecimientos aplicados al chasis Pragmata. Útil al clonar el repo o al revisar PRs de infraestructura.
 
-## 1. Limpieza legacy `project/`
+**Índice de documentación:** [`docs/README.md`](./README.md).
+
+## 1. Features autocontenidas (`src/features/*/pages/`)
+
+Las pantallas del ERP **ya no** viven en `src/pages/`. Cada dominio lleva su vertical slice:
+
+```
+src/features/<dominio>/
+  pages/ hooks/ components/ [providers/] [types/] [<subfeature>/...]
+```
+
+- Rutas lazy: `src/app/routes.config.ts` importa `@/features/<dominio>/pages/...`
+- Duplicado eliminado: `features/settings/` (PermissionsPanel solo en `features/roles/`)
+- Guías: [`client-features-playbook.md`](./client-features-playbook.md), [`src/features/README.md`](../src/features/README.md)
+
+## 2. Limpieza legacy `project/`
 
 Antes existía un layout y rutas bajo terminología **Proyecto** (`ProjectLayout`, `/projects/:projectId`). La navegación canónica es **Workspace** + `:entityId` (`AppLayout` + `WorkspaceLayout`).
 
@@ -25,7 +40,7 @@ Reglas: `.cursor/rules/06-navigation-layout.mdc`
 
 ---
 
-## 2. Usuario dios en frontend
+## 3. Usuario dios en frontend
 
 `usePermission` antes concedía bypass con solo `access_level === 'god'`, sin validar `teams.is_platform_owner`.
 
@@ -39,7 +54,7 @@ Archivos tocados:
 
 ---
 
-## 3. Astro y Vite en red local (`host: true`)
+## 4. Astro y Vite en red local (`host: true`)
 
 Para paridad con Vite (`vite.config.ts` → `server.host: true`), Astro expone **Local** y **Network** al ejecutar `pnpm dev:astro` o `pnpm dev:all`:
 
