@@ -15,7 +15,7 @@ src/features/<dominio>/
 
 - Rutas lazy: `src/app/routes.config.ts` importa `@/features/<dominio>/pages/...`
 - Duplicado eliminado: `features/settings/` (PermissionsPanel solo en `features/roles/`)
-- Guías: [`client-features-playbook.md`](./client-features-playbook.md), [`src/features/README.md`](../src/features/README.md)
+- Guías: [`client-features-playbook.md`](./client-features-playbook.md), [`erp-features-structure.md`](./erp-features-structure.md)
 
 ## 2. Limpieza legacy `project/`
 

@@ -6,10 +6,11 @@ Guía para **clonar la template**, mapear el negocio del cliente y digitalizarlo
 
 | Documento | Cuándo |
 |-----------|--------|
-| [**README.md**](./README.md) | Índice de toda la documentación |
+| [**README.md**](./README.md) | Índice de toda la documentación en `docs/` |
+| [**erp-features-structure.md**](./erp-features-structure.md) | Mapa de carpetas `src/features/` (chasis + subfeatures) |
 | [**playbook-new-module.md**](./playbook-new-module.md) | Después del workshop: SQL, hook, RBAC, sidebar (por pantalla) |
-| [**architecture.md**](./architecture.md) §2 | Árbol de directorios y pilares |
-| [**src/features/README.md**](../src/features/README.md) | Mapa de features del chasis |
+| [**architecture.md**](./architecture.md) §2 | Pilares y directorios del monorepo |
+| [**database/README.md**](./database/README.md) | Scripts SQL e índice de migraciones |
 | [**feature-specs/FEATURE_SPEC_TEMPLATE.md**](./feature-specs/FEATURE_SPEC_TEMPLATE.md) | Spec escrita antes de módulos grandes |
 
 **Convención de código:** pantallas en `src/features/<dominio>/pages/` · URLs en `src/app/routes.config.ts` · **no existe** `src/pages/` en el ERP.
@@ -187,7 +188,7 @@ Módulos ya organizados en `src/features/`:
 | `ecommerce`, `cms` | Demos opcionales (flags) |
 | `chat`, `notifications`, `preferences` | Transversales |
 
-Mapa vivo: **`src/features/README.md`**.
+Mapa vivo: **`docs/erp-features-structure.md`**.
 
 ---
 

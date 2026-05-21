@@ -121,9 +121,9 @@ Esto mejora caché y evita un único bundle grande en la entrada de la app.
 | `src/lib/` | Infraestructura (Supabase, PowerSync, `useCrudResource`, auth) |
 | `src/types/` | Modelos canónicos compartidos (`AuditBase`, entidades) |
 | `astro/` | Sitio público (rutas en `astro/src/pages/`, independiente del ERP) |
-| `docs/` | Índice: **`docs/README.md`** |
+| `docs/` | **Toda la documentación** — empieza en **`docs/README.md`** |
 
-No hay `src/pages/` en el ERP; ver **`src/features/README.md`**.
+No hay `src/pages/` en el ERP; mapa de features: **`docs/erp-features-structure.md`**.
 
 ## Publicación como template en GitHub
 

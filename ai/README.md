@@ -1,5 +1,7 @@
 # AI Gateway — Pragmata Template
 
+> **Documentación completa:** [`docs/ai/setup.md`](../docs/ai/setup.md) · índice general: [`docs/README.md`](../docs/README.md)
+
 Capa única entre tu app (React, Astro, móvil) y el proveedor LLM. **La API key nunca vive en el navegador**: solo en secrets de Supabase Edge Functions.
 
 ## Qué resuelve

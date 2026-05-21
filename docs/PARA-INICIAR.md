@@ -120,7 +120,7 @@ La tabla completa y el checklist por cliente: **`docs/deployment-environments.md
 | Mapa de toda la documentación | **`docs/README.md`** |
 | Digitalizar el negocio de un cliente (workshop, `src/features/`) | **`docs/client-features-playbook.md`** |
 | Implementar un módulo (SQL → pantalla → RBAC) | **`docs/playbook-new-module.md`** |
-| Carpetas del chasis en `src/features/` | **`src/features/README.md`** |
+| Carpetas del chasis en `src/features/` | **`docs/erp-features-structure.md`** |
 | Studio local, usuario god, SQL | **`docs/proceso-supabase-studio-local.md`** |
 | `db:sync`, Edge Functions local | **`docs/proceso-post-migraciones-scripts-y-funciones-local.md`** |
 | Setup largo, flags, Astro, checklist | **`docs/SETUP.md`** |

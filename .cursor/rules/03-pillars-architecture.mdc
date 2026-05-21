@@ -11,7 +11,7 @@ alwaysApply: true
 
 Ruta: `src/` (este repositorio). El chasis principal.
 
-- Todos los módulos ERP viven en `src/features/<modulo>/` (`pages/`, `hooks/`, `components/`; subfeatures anidadas). Rutas lazy en `src/app/routes.config.ts`. **No** `src/pages/` en el ERP. Guías: `docs/client-features-playbook.md`, `docs/playbook-new-module.md`.
+- Todos los módulos ERP viven en `src/features/<modulo>/` (`pages/`, `hooks/`, `components/`; subfeatures anidadas). Rutas lazy en `src/app/routes.config.ts`. **No** `src/pages/` en el ERP. Guías: `docs/README.md`, `docs/erp-features-structure.md`, `docs/client-features-playbook.md`, `docs/playbook-new-module.md`.
 - Acceso protegido: `RouteGuard` + `RBAC` con `check_permission()`.
 - Lectura offline-ready: PowerSync → SQLite cuando `VITE_ENABLE_POWERSYNC=true`.
 - Feature flag: siempre activo (es el core).

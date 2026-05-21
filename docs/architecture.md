@@ -116,7 +116,7 @@ Seguimos **módulos autocontenidos** en `src/features/<dominio>/`: cada dominio 
 | Índice de toda la documentación | **`docs/README.md`** |
 | Workshop + dominios de **cliente** | **`docs/client-features-playbook.md`** |
 | Checklist técnico por módulo (SQL → RBAC) | **`docs/playbook-new-module.md`** |
-| Mapa de features del chasis | **`src/features/README.md`** |
+| Mapa de features del chasis | **`docs/erp-features-structure.md`** |
 
 > **No hay `src/pages/` en el ERP.** Las pantallas viven en `src/features/<dominio>/pages/`. Las URLs se registran en `src/app/routes.config.ts` con `lazy(() => import('@/features/...'))`.
 

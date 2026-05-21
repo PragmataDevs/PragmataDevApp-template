@@ -60,7 +60,7 @@ src/features/<modulo>/
 ```
 
 Mantén la lógica de negocio en `hooks/`; las páginas solo componen.  
-**Guía de dominios de cliente:** `docs/client-features-playbook.md` · mapa de carpetas: `src/features/README.md`.
+**Guía de dominios de cliente:** `docs/client-features-playbook.md` · mapa de carpetas: `docs/erp-features-structure.md`.
 
 ---
 
@@ -131,6 +131,8 @@ const ContratosPage = lazy(() =>
 | UI tabla | `.cursor/rules/02-ui-components.mdc` |
 | Formulario + Zod + RHF | `docs/architecture.md` (validación Zod), `src/features/ecommerce/pages/ProductsPage.tsx` |
 | Features de cliente (workshop, subfeatures) | `docs/client-features-playbook.md` |
+| Mapa carpetas `src/features/` | `docs/erp-features-structure.md` |
+| Índice toda la documentación | `docs/README.md` |
 | `useCrudResource` (AuditRecord, filter, upsert) | `docs/architecture.md` → *Hook genérico useCrudResource* |
 | `DataTable` genérico + CSV | `docs/architecture.md` §13.7 |
 | Publicación PowerSync | `docs/database/03_powersync_publication.sql`, `docs/powersync/sync-rules.yaml` |
