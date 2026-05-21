@@ -11,7 +11,7 @@ Antes existía un layout y rutas bajo terminología **Proyecto** (`ProjectLayout
 | Archivo | Motivo |
 |---------|--------|
 | `src/components/layout/ProjectLayout.tsx` | Sidebar propio duplicado; no referenciado en `router.tsx` |
-| `src/pages/project/TasksPage.tsx` | Duplicado de `src/pages/workspace/TasksPage.tsx` |
+| *(histórico)* `src/pages/project/TasksPage.tsx` | Eliminado; Kanban en `src/features/tasks/pages/TasksPage.tsx` |
 | `src/types/projects/project.schema.ts` | Sin imports en el codebase |
 | `PROJECT_ROUTES` en `routes.config.ts` | Alias obsoleto de `WORKSPACE_ROUTES` |
 

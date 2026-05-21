@@ -42,21 +42,26 @@ Antecedentes: reglas en `.cursor/rules/`, detalle en `docs/architecture.md` y se
 
 ```
 src/features/<modulo>/
+  pages/         # pantallas del módulo (lazy en routes.config.ts)
   hooks/
   components/    # opcional — modales, sub-vistas
+  providers/     # opcional
+  types/         # opcional — ver docs/client-features-playbook.md §5
+  <subfeature>/  # mismo kit si el negocio tiene hijos (ej. finanzas/egresos/contratos)
 ```
 
-Mantén la lógica de negocio aquí; las páginas solo componen.
+Mantén la lógica de negocio en `hooks/`; las páginas solo componen.  
+**Guía de dominios de cliente:** `docs/client-features-playbook.md` · mapa de carpetas: `src/features/README.md`.
 
 ---
 
 ## 5. Página(s)
 
-- `src/pages/...` — suele ser `workspace/` si depende de `:entityId`, o `settings/` / `ecommerce/` según el caso.
+- `src/features/<modulo>/pages/...` — workspace si depende de `:entityId`; global si es settings o dominio de equipo.
 - UI: `Button`, tokens `--pragmata-*`, bordes `rounded-pragmata`.
 - **Listados tabulares:** obligatorio **`DataTable`** (`@/components/ui/DataTable`). No montar `<table>` manual en páginas. Solo puedes usar otro patrón si el product owner lo indica **explícitamente** (Kanban, calendario, grid tipo spreadsheet, HTML solo para impresión/PDF). Ver `.cursor/rules/02-ui-components.mdc`. Genérico **`T extends object`** y CSV: **`docs/architecture.md`** §13.7 (*Listas tabulares*).
 - CSV masivo: prop opcional **`csv`**. Mínimo **`filename`** + **`fields`** para export / plantilla; **`onImport`** solo donde el dominio lo permita (ej. catálogo). *Por defecto en esta plantilla, usuarios / roles / entidades son solo export — sin carga CSV hasta que se defina.*
-- **Formularios + Zod:** schema alineado al modelo (campos editables = mismos nombres que en `src/types` y columnas expuestas); números desde el DOM con **`setValueAs`**, no **`z.coerce`** si rompe el tipado del resolver; tipo del formulario validado → **`z.output<typeof schema>`** cuando aplique. Detalle y ejemplo: **`docs/architecture.md`** (§ modelo canónico → *Validación con Zod + react-hook-form*) y **`src/pages/ecommerce/ProductsPage.tsx`**.
+- **Formularios + Zod:** schema alineado al modelo (campos editables = mismos nombres que en `src/types` y columnas expuestas); números desde el DOM con **`setValueAs`**, no **`z.coerce`** si rompe el tipado del resolver; tipo del formulario validado → **`z.output<typeof schema>`** cuando aplique. Detalle y ejemplo: **`docs/architecture.md`** (§ modelo canónico → *Validación con Zod + react-hook-form*) y **`src/features/ecommerce/pages/ProductsPage.tsx`**.
 
 ---
 
@@ -105,7 +110,8 @@ Mantén la lógica de negocio aquí; las páginas solo componen.
 | Navegación / Workspace | `.cursor/rules/06-navigation-layout.mdc` |
 | Hooks + sesión | `.cursor/rules/05-secure-hooks.mdc` |
 | UI tabla | `.cursor/rules/02-ui-components.mdc` |
-| Formulario + Zod + RHF | `docs/architecture.md` (validación Zod), `src/pages/ecommerce/ProductsPage.tsx` |
+| Formulario + Zod + RHF | `docs/architecture.md` (validación Zod), `src/features/ecommerce/pages/ProductsPage.tsx` |
+| Features de cliente (workshop, subfeatures) | `docs/client-features-playbook.md` |
 | `useCrudResource` (AuditRecord, filter, upsert) | `docs/architecture.md` → *Hook genérico useCrudResource* |
 | `DataTable` genérico + CSV | `docs/architecture.md` §13.7 |
 | Publicación PowerSync | `docs/database/03_powersync_publication.sql`, `docs/powersync/sync-rules.yaml` |

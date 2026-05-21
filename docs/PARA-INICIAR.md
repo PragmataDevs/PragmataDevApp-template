@@ -122,6 +122,7 @@ La tabla completa y el checklist por cliente: **`docs/deployment-environments.md
 | PowerSync y flags por entorno | **`docs/deployment.md`** |
 | Cómo está armado el código | **`docs/architecture.md`** |
 | Nuevo módulo ERP paso a paso | **`docs/playbook-new-module.md`** |
+| Features de cliente (workshop, subfeatures, carpeta `src/features/`) | **`docs/client-features-playbook.md`** |
 
 ---
 

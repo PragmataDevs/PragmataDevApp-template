@@ -460,7 +460,7 @@ Cuando el formulario usa **`react-hook-form`** y **`@hookform/resolvers/zod`**:
 - El schema valida **solo los campos editables** que existen en el modelo y en Postgres (mismos nombres; tipos finales coherentes con el tipo canónico: `number`, `boolean`, etc.). Campos de auditoría (`id`, `version`, `created_by`, …) y derivados (p. ej. `image_url` tras subir archivo) se **fusionan en el payload** al guardar; no hace falta duplicarlos en Zod si no hay input directo.
 - Los `<input type="number">` llegan como **string** al resolver: preferir **`register('campo', { setValueAs })`** para producir `number` o `number | null` antes de validar. Evitar **`z.coerce.number()`** cuando fuerce casts (`as Resolver<…>`) en el resolver; el objetivo es que **`zodResolver(schema)`** tipé solo contra **`z.output<typeof schema>`** y **`defaultValues`** de RHF.
 - Si el schema usa **`.default()`** en Zod, el tipo de *entrada* del resolver puede marcar campos como opcionales y chocar con `useForm<T>`; suele bastar con defaults solo en **`defaultValues`** y campos requeridos explícitos en Zod (p. ej. `currency`, `in_stock`).
-- Referencia canónica en esta plantilla: **`src/pages/ecommerce/ProductsPage.tsx`** (`productSchema`, helpers `parseRequiredMoney` / `parseOptionalMoney` / `parseOptionalInt`).
+- Referencia canónica en esta plantilla: **`src/features/ecommerce/pages/ProductsPage.tsx`** (`productSchema`, helpers `parseRequiredMoney` / `parseOptionalMoney` / `parseOptionalInt`).
 
 #### Hook genérico `useCrudResource`
 

@@ -523,20 +523,6 @@ function DeleteConfirm({
 
 export default function SitePagesPage() {
   const { data: pages, loading, error, upsert, softDelete } = useCmsPages(SITE_CMS_ENABLED);
-
-  if (!SITE_CMS_ENABLED) {
-    return (
-      <div style={{ padding: '60px 24px', textAlign: 'center', color: '#6b7280' }}>
-        <Globe size={48} style={{ marginBottom: 16, opacity: 0.4 }} />
-        <h2 style={{ margin: '0 0 8px', fontSize: '1.125rem', fontWeight: 600, color: '#111' }}>
-          CMS del sitio desactivado
-        </h2>
-        <p style={{ margin: 0, fontSize: '0.875rem' }}>
-          Este módulo está desactivado (<code>VITE_ENABLE_SITE_CMS=false</code>). Quita esa línea o ponla en <code>true</code>.
-        </p>
-      </div>
-    );
-  }
   const [modal, setModal] = useState<'new' | 'edit' | null>(null);
   const [editTarget, setEditTarget] = useState<CmsPage | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CmsPage | null>(null);
@@ -690,6 +676,20 @@ export default function SitePagesPage() {
     ),
     [],
   );
+
+  if (!SITE_CMS_ENABLED) {
+    return (
+      <div style={{ padding: '60px 24px', textAlign: 'center', color: '#6b7280' }}>
+        <Globe size={48} style={{ marginBottom: 16, opacity: 0.4 }} />
+        <h2 style={{ margin: '0 0 8px', fontSize: '1.125rem', fontWeight: 600, color: '#111' }}>
+          CMS del sitio desactivado
+        </h2>
+        <p style={{ margin: 0, fontSize: '0.875rem' }}>
+          Este módulo está desactivado (<code>VITE_ENABLE_SITE_CMS=false</code>). Quita esa línea o ponla en <code>true</code>.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 24px' }}>

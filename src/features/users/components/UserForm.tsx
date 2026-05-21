@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Shield, Loader2, Lock, FolderKanban } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import PermissionsPanel from '@/features/settings/components/PermissionsPanel';
-import type { GrantedPermissions } from '@/features/settings/components/PermissionsPanel';
+import PermissionsPanel from '@/features/roles/components/PermissionsPanel';
+import type { GrantedPermissions } from '@/features/roles/components/PermissionsPanel';
 import type { AccessLevel } from '@/types/users/profile';
 import type {
   UserCreateInput,

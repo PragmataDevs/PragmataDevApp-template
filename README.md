@@ -15,7 +15,8 @@ Arquitectura completa: `docs/architecture.md` · PWA / service worker (propuesta
 **¿Acabas de crear el repo?** Lee primero **`docs/PARA-INICIAR.md`** (pasos en orden + Vercel resumido). Luego profundiza en `docs/SETUP.md` cuando necesites cada módulo.
 
 Base de datos (schema): scripts en `docs/database/`; flujo industrial con Supabase CLI en **`docs/SETUP.md`** sección 3 (`supabase/migrations`, `db push`).  
-Nuevo feature ERP paso a paso: **`docs/playbook-new-module.md`**.
+Nuevo feature ERP paso a paso: **`docs/playbook-new-module.md`**.  
+Copia para un **cliente** (workshop, dominios, subfeatures): **`docs/client-features-playbook.md`** · mapa de carpetas: **`src/features/README.md`**.
 
 ## Requisitos
 
