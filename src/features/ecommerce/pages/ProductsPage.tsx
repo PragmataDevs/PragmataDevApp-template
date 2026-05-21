@@ -16,8 +16,8 @@ import { supabase } from '@/lib/supabase';
 
 import { DataTable, type ColumnDef, type CsvImportMode } from '@/components/ui/DataTable';
 import { useProducts }  from '@/features/products/hooks/useProducts';
-import { slugify }      from '@/types/products/product';
-import type { Product } from '@/types/products/product';
+import { slugify }      from '@/features/products/types/product';
+import type { Product } from '@/features/products/types/product';
 
 // ─── Feature flag guard ───────────────────────────────────────────────────────
 

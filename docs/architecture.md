@@ -109,7 +109,7 @@ En **desarrollo**, si abres el sitio o el ERP por **IP de red** (LAN, Tailscale 
 
 ## 2. Estructura de Directorios (Monorepo Feature-Based)
 
-Seguimos **módulos autocontenidos** en `src/features/<dominio>/`: cada dominio lleva `pages/`, `hooks/`, `components/` (y opcionalmente `providers/`, `types/`, subcarpetas hijas = subfeatures).
+Seguimos **módulos autocontenidos** en `src/features/<dominio>/`: cada dominio lleva `pages/`, `hooks/`, `components/`, **`types/`** (y opcionalmente `navigation.ts`, `providers/`, subcarpetas hijas = subfeatures con el mismo kit).
 
 | Objetivo | Documento |
 |----------|-----------|
@@ -137,32 +137,22 @@ Seguimos **módulos autocontenidos** en `src/features/<dominio>/`: cada dominio 
   │
   ├── features/                   # Negocio + demos (vertical slices)
   │   ├── shell/pages/            # PublicSiteEntry (redirección a Astro)
-  │   ├── auth/                   # pages/, hooks/, providers/, components/
-  │   ├── dashboard/pages/
-  │   ├── profile/pages/
-  │   ├── roles/pages/            # Configuración — /settings/roles
-  │   ├── users/pages/            # /settings/usuarios
-  │   ├── entities/               # pages/, hooks/, components/ (EntitySelector)
-  │   ├── tasks/pages/            # Kanban workspace
-  │   ├── workspace/pages/        # Dashboard por entity
-  │   ├── documents/pages/
-  │   ├── ecommerce/pages/        # [VITE_ENABLE_ECOMMERCE]
-  │   ├── cms/pages/              # [VITE_ENABLE_SITE_CMS]
+  │   ├── auth/                   # types/rbac, pages/, hooks/, providers/
+  │   ├── entities/               # types/entity, pages/, EntitySelector
+  │   ├── users/                  # types/profile, pages/
+  │   ├── roles/                  # types/role, pages/
+  │   ├── tasks/                  # types/task, pages/ (Kanban)
+  │   ├── documents/              # types/document, pages/
+  │   ├── ecommerce/              # types/order, pages/ [flag]
+  │   ├── cms/                    # types/cms-page, pages/ [flag]
+  │   ├── dashboard/, profile/, workspace/, shell/, products/
   │   ├── chat/, notifications/, preferences/
-  │   └── <dominio-cliente>/      # Lo que añades tras el workshop (ej. finanzas/)
-  │       ├── pages/ hooks/ components/
-  │       └── <subfeature>/         # Mismo kit anidado (ej. egresos/contratos/)
+  │   └── <dominio-cliente>/      # ej. finanzas/ + subfeatures (cada una con types/)
   │
   ├── lib/                        # Infraestructura (chasis)
-  │   ├── db/                     # PowerSync + SQLite (flag)
-  │   ├── supabase/
-  │   ├── hooks/useCrudResource.ts
-  │   └── auth/                   # isGodUser, sessionRetry
-  │
-  ├── config/security/            # APP_RESOURCES (catálogo RBAC en código)
-  └── types/                      # Modelos canónicos compartidos (AuditBase, entidades)
-      ├── core/base.ts
-      └── <dominio>/<entidad>.ts
+  ├── config/security/            # APP_RESOURCES
+  └── types/                      # Solo núcleo: core/base (AuditBase + AppRoute)
+      └── core/base.ts
 ```
 
 **Subfeatures:** carpeta hija con el mismo kit (`finanzas/egresos/contratos/`). No hace falta un directorio literal `subfeatures/`.
@@ -431,7 +421,7 @@ Todas las tablas del sistema seguirán un diseño **Relacional Normalizado (3NF)
 Cada entidad nueva se define así y nada más:
 
 ```ts
-// src/types/contratos/contrato.ts
+// src/features/finanzas/egresos/contratos/types/contrato.ts
 import type { AuditBase } from '@/types/core/base';
 
 export interface Contrato extends AuditBase {
@@ -448,7 +438,7 @@ export interface Contrato extends AuditBase {
 
 Eso es todo. No hay `ContratoCreatePayload`, no hay `ContratoFormState`, no hay `ContratoDTO`. **Un solo tipo.**
 
-- La definición vive en `src/types/<dominio>/<entidad>.ts` y **siempre** extiende `AuditBase`.
+- La definición vive en **`src/features/<dominio>/types/<entidad>.ts`** (o subfeature) y **siempre** extiende `AuditBase` desde `@/types/core/base`.
 - **PROHIBIDO** redeclarar el modelo en hooks, componentes, páginas o servicios. Quien lo necesite lo importa.
 - **PROHIBIDO** mantener "casi-copias" con campos sueltos para "lo que necesita esa pantalla".
 - Cuando hay desfase entre lo que devuelve la query y el modelo, **se ajusta la query**, no se inventa un tipo paralelo.
@@ -475,7 +465,7 @@ Ubicación: **`src/lib/hooks/useCrudResource.ts`**. Lista + `upsert` + `softDele
 Para crear una instancia en blanco se usa un helper que vive junto al tipo:
 
 ```ts
-// src/types/contratos/contrato.ts  (mismo archivo)
+// src/features/finanzas/egresos/contratos/types/contrato.ts  (mismo archivo)
 export function createEmptyContrato(userId: string): Contrato {
   return {
     id:           crypto.randomUUID(),
@@ -577,7 +567,7 @@ const payload: ContratoPayload = { numero: '001', nombre: '...', ... };
 await supabase.from('contratos').insert(payload); // pierde toda la trazabilidad
 
 // ❌ Prohibido: redeclarar el modelo dentro de un hook o componente
-interface Contrato { nombre: string; monto: number; } // NO — va en src/types/
+interface Contrato { nombre: string; monto: number; } // NO — va en features/.../types/
 ```
 
 #### Por qué AuditBase NUNCA se omite al persistir

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ShoppingCart, CreditCard, AlertTriangle, Package } from 'lucide-react';
 import { KPICard } from '@/components/ui/KPICard';
 import { supabase } from '@/lib/supabase';
-import type { Order } from '@/types/ecommerce/order';
+import type { Order } from '@/features/ecommerce/types/order';
 
 const ECOMMERCE_ENABLED = import.meta.env.VITE_ENABLE_ECOMMERCE === 'true';
 

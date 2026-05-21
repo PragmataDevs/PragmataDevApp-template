@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { supabase } from '@/lib/supabase';
-import type { Order } from '@/types/ecommerce/order';
+import type { Order } from '@/features/ecommerce/types/order';
 
 const ECOMMERCE_ENABLED = import.meta.env.VITE_ENABLE_ECOMMERCE === 'true';
 

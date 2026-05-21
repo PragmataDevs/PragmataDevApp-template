@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { authRedirectUrl } from '@/lib/auth/authRedirect';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
-import type { Profile } from '@/types/users/profile';
+import type { Profile } from '@/features/users/types/profile';
 import type { GrantedPermissions } from '@/features/roles/components/PermissionsPanel';
 
 // ─── Feature flag ────────────────────────────────────────────

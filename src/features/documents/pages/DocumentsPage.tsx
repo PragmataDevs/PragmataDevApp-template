@@ -3,10 +3,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Upload, FileText, Eye, Trash2, ExternalLink, X, Loader2, FileImage, File, Layers } from 'lucide-react';
 import { useDocuments } from '@/features/documents/hooks/useDocuments';
 import { useActiveEntity } from '@/features/entities/hooks/useActiveEntity';
-import { DOC_STATUS_CONFIG, DOC_TYPE_OPTIONS } from '@/types/documents/document';
-import type { Document as Doc } from '@/types/documents/document';
+import { DOC_STATUS_CONFIG, DOC_TYPE_OPTIONS } from '@/features/documents/types/document';
+import type { Document as Doc } from '@/features/documents/types/document';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { ENTITY_LABEL } from '@/types/entities/entity';
+import { ENTITY_LABEL } from '@/features/entities/types/entity';
 
 // ─── Document viewer modal ────────────────────────────────────────────────────
 

@@ -33,8 +33,11 @@ Antecedentes: `.cursor/rules/`, **`docs/architecture.md`** §2, **`docs/SETUP.md
 
 ## 2. Modelo TypeScript canónico
 
-- Un archivo en `src/types/<dominio>/<entidad>.ts`.
-- `export interface MiEntidad extends AuditBase { … }` (u omitir campos que la tabla no tenga, pero sin inventar DTOs paralelos).
+- Un archivo en **`src/features/<modulo>/types/<entidad>.ts`** (o `.../<subfeature>/types/` si solo aplica ahí).
+- `import type { AuditBase } from '@/types/core/base'`.
+- `export interface MiEntidad extends AuditBase { … }` + `createEmptyMiEntidad()` en el mismo archivo.
+- Schema Zod al lado: `<entidad>.schema.ts` en la misma carpeta `types/`.
+- Sin DTOs paralelos. **`src/types/`** solo para núcleo (`core/base`) — ver `src/types/README.md`.
 
 ---
 
@@ -51,12 +54,13 @@ Antecedentes: `.cursor/rules/`, **`docs/architecture.md`** §2, **`docs/SETUP.md
 
 ```
 src/features/<modulo>/
-  pages/         # pantallas del módulo (lazy en routes.config.ts)
+  navigation.ts  # opcional
+  pages/
   hooks/
-  components/    # opcional — modales, sub-vistas
+  components/
+  types/         # modelos + schemas Zod del módulo
   providers/     # opcional
-  types/         # opcional — ver docs/client-features-playbook.md §5
-  <subfeature>/  # mismo kit si el negocio tiene hijos (ej. finanzas/egresos/contratos)
+  <subfeature>/  # mismo kit (pages, hooks, components, types)
 ```
 
 Mantén la lógica de negocio en `hooks/`; las páginas solo componen.  

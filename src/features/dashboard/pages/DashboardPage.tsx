@@ -4,7 +4,7 @@ import { Layers, Users, CheckSquare, TrendingUp, ArrowRight, Clock } from 'lucid
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { KPICard } from '@/components/ui/KPICard';
-import { ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
+import { ENTITY_LABEL_PLURAL } from '@/features/entities/types/entity';
 import { BrandIcon } from '@/components/brand/BrandIcon';
 
 // ─── Types ───────────────────────────────────────────────────────────────────

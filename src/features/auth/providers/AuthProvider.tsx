@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { supabase } from '@/lib/supabase';
 import { isGodUser } from '@/lib/auth/isGodUser';
 import type { User } from '@supabase/supabase-js';
-import type { Profile } from '@/types/users/profile';
+import type { Profile } from '@/features/users/types/profile';
 
 /** Permissions map: resource_code → granted_actions[] */
 export type UserPermissionsMap = Record<string, string[]>;

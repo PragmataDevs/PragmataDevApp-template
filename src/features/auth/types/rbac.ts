@@ -1,4 +1,4 @@
-import type { AuditBase, UUID } from '../core/base';
+import type { AuditBase, UUID } from '@/types/core/base';
 
 /**
  * ResourceType: Clasificación del recurso para saber cómo manejarlo en la UI.

@@ -1,4 +1,4 @@
-import type { AuditBase } from '../core/base';
+import type { AuditBase } from '@/types/core/base';
 
 export function createEmptyRole(userId: string): Role {
   return {
@@ -26,6 +26,6 @@ export interface Role extends AuditBase {
   is_dev_role: boolean;
 }
 
-// Fuente canónica de RoleDefinition: src/types/auth/rbac.ts
+// Fuente canónica de RoleDefinition: src/features/auth/types/rbac.ts
 // Re-exportado aquí para compatibilidad de imports existentes.
-export type { RoleDefinition } from '@/types/auth/rbac';
+export type { RoleDefinition } from '@/features/auth/types/rbac';

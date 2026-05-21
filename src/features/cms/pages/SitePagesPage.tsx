@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { RichMarkdownEditor } from '@/components/cms/RichMarkdownEditor';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { useCmsPages } from '@/features/cms/hooks/useCmsPages';
-import type { CmsLandingContent, CmsPage } from '@/types/cms/cms-page';
+import type { CmsLandingContent, CmsPage } from '@/features/cms/types/cms-page';
 
 const SITE_CMS_ENABLED = import.meta.env.VITE_ENABLE_SITE_CMS !== 'false';
 

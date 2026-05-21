@@ -1,4 +1,4 @@
-import type { AuditBase, UUID } from '../core/base';
+import type { AuditBase, UUID } from '@/types/core/base';
 
 export type AccessLevel = 
   | 'god'        // Puede ver TODOS los datos de TODOS los usuarios (Solo válido en Team Platform Owner)

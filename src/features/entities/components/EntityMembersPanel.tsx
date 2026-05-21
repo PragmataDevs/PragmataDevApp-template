@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { resolveSignedUrl } from '@/lib/storage';
 import type { EntityMember } from '@/features/entities/hooks/useEntities';
-import { ENTITY_LABEL } from '@/types/entities/entity';
+import { ENTITY_LABEL } from '@/features/entities/types/entity';
 
 interface EntityMembersPanelProps {
   entityId: string;

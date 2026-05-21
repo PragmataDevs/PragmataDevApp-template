@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import type { Task, TaskStatus } from '@/types/tasks/task';
-import { KANBAN_COLUMNS } from '@/types/tasks/task';
+import type { Task, TaskStatus } from '@/features/tasks/types/task';
+import { KANBAN_COLUMNS } from '@/features/tasks/types/task';
 import { KanbanColumn } from './KanbanColumn';
 import type { UseTasks } from './types';
 

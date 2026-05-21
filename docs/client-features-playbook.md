@@ -52,13 +52,14 @@ Nombres de carpeta en **minúsculas** (`finanzas`, no `Finanzas`). El label visi
 
 ```
 src/features/<dominio>/
-  pages/           # pantallas (lazy desde routes.config.ts)
-  hooks/           # datos + reglas (useCrudResource o custom)
-  components/      # modales, formularios, sub-vistas
-  providers/       # opcional — contexto del dominio
-  types/           # opcional — modelos solo de este dominio (ver §5)
+  navigation.ts    # opcional — rutas/labels del dominio
+  pages/
+  hooks/
+  components/
+  providers/       # opcional
+  types/           # modelos canónicos de este dominio (ver §5)
 
-  <subfeature>/    # mismo kit repetido
+  <subfeature>/
     pages/
     hooks/
     components/
@@ -71,25 +72,19 @@ No hace falta la carpeta literal `subfeatures/`; cada hijo con el mismo kit **ya
 
 ```
 src/features/finanzas/
+  navigation.ts
   pages/FinanzasDashboardPage.tsx
   hooks/
   components/
+  types/
 
   ingresos/
-    pages/
-    hooks/
-    components/
-    types/
+    pages/ hooks/ components/ types/
 
   egresos/
-    pages/
-    hooks/
-    components/
+    pages/ hooks/ components/ types/
     contratos/
-      pages/ContratosPage.tsx
-      hooks/useContratos.ts
-      components/
-      types/contrato.ts
+      pages/ hooks/ components/ types/
 ```
 
 ---
@@ -108,16 +103,23 @@ Las **URLs públicas** no cambian al mover código: siguen definidas en `src/app
 
 ---
 
-## 5. Modelos (types)
+## 5. Modelos (`types/`)
 
 Regla del manifiesto: **un modelo, una verdad** (sin `*DTO`, `*Payload`, `*FormState`).
 
-| Enfoque | Cuándo |
-|---------|--------|
-| **`src/types/<dominio>/`** | Chasis compartido y módulos demo de la template (recomendado mientras el tipo lo usan varios features) |
-| **`features/<dominio>/types/`** | Módulo exclusivo del cliente; puedes re-exportar desde `src/types` si quieres un solo import público |
+| Dónde | Qué va |
+|-------|--------|
+| **`src/features/<dominio>/types/`** | Interfaces de negocio + `createEmpty*` + schema Zod del dominio |
+| **`src/features/<dominio>/<subfeature>/types/`** | Entidades que solo pertenecen a la subfeature (ej. `contrato.ts`) |
+| **`src/types/core/base.ts`** | Solo `AuditBase` (re-export) y tipos de **router** (`AppRoute`) |
 
-Los tipos de **props de UI** van junto al componente o en `components/types.ts` — no son el modelo de negocio.
+```ts
+// ✅ Contrato del dominio finanzas / subfeature contratos
+import type { Contrato } from '@/features/finanzas/egresos/contratos/types/contrato';
+import type { AuditBase } from '@/types/core/base';
+```
+
+Los tipos de **props de UI** (p. ej. shape de un hook para Kanban) pueden ir en `components/types.ts` — no sustituyen al modelo de negocio.
 
 ---
 

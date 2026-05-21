@@ -1,94 +1,110 @@
 # Estructura `src/features/` (ERP)
 
-Mapa de carpetas del pilar operativo. Las pantallas viven en **`src/features/<dominio>/pages/`**; las URLs se registran en **`src/app/routes.config.ts`**.
+Mapa de carpetas del pilar operativo. Cada dominio es un **vertical slice** completo.
 
-**No existe `src/pages/` en el ERP.** El sitio público Astro usa **`astro/src/pages/`** (otro pilar).
+**Pantallas:** `src/features/<dominio>/pages/` · **URLs:** `src/app/routes.config.ts` · **Modelos:** `src/features/<dominio>/types/` (no en `src/types/` salvo núcleo compartido).
 
-Guías relacionadas: [**client-features-playbook.md**](./client-features-playbook.md) · [**playbook-new-module.md**](./playbook-new-module.md) · [**architecture.md**](./architecture.md) §2.
+Guías: [**client-features-playbook.md**](./client-features-playbook.md) · [**playbook-new-module.md**](./playbook-new-module.md) · [**architecture.md**](./architecture.md) §2.
 
 ---
 
-## Kit por dominio (y subfeature)
+## Kit obligatorio por dominio (y subfeature)
 
 ```
 src/features/<dominio>/
-  pages/        ← obligatorio si hay rutas (lazy en routes.config.ts)
-  hooks/        ← useCrudResource o custom (withSessionRetry + sessionEpoch)
-  components/   ← modales, formularios, sub-vistas
-  providers/    ← opcional — contexto del dominio
-  types/        ← opcional — modelos solo de este dominio (ver client-features-playbook §5)
-  <subfeature>/ ← mismo kit anidado (ej. finanzas/egresos/contratos/)
+  navigation.ts          ← opcional: rutas + labels del dominio (merge en routes.config)
+  pages/                 ← pantallas (lazy en routes.config.ts)
+  hooks/
+  components/
+  types/                 ← modelos canónicos de ESTE dominio (+ schema Zod si aplica)
+
+  <subfeature>/          ← mismo kit (ej. finanzas/egresos/contratos/)
+    pages/
+    hooks/
+    components/
+    types/
 ```
 
 Convenciones:
 
-- Carpetas en **minúsculas** (`finanzas`, no `Finanzas`). Labels UI en sidebar y `APP_RESOURCES`.
-- **Chasis** (auth, RBAC, layouts): no reescribir por cliente; **extender** con dominios nuevos.
-- Lazy **por página**, no por carpeta `finanzas` entera (ver [**bundle-chunck-strategy.md**](./bundle-chunck-strategy.md)).
+- Carpetas en **minúsculas** (`finanzas`). Labels UI en sidebar y `APP_RESOURCES`.
+- **`types/`** en cada nivel: una verdad por entidad; sin `*DTO` / `*Payload` paralelos.
+- Solo **`src/types/core/`** queda para `AuditBase` (re-export) y tipos de **router** — ver [`src/types/README.md`](../src/types/README.md).
+- Lazy **por página**, no por carpeta `finanzas` entera.
 
 ---
 
-## Chasis incluido en la template
-
-| Feature | Contenido principal | Rutas URL (ej.) |
-|---------|---------------------|-----------------|
-| `shell` | `pages/PublicSiteEntry` | `/` → redirección Astro |
-| `auth` | `pages/`, `hooks/`, `providers/`, `components/RouteGuard` | `/login`, `/auth/*` |
-| `dashboard` | `pages/DashboardPage` | `/dashboard` |
-| `profile` | `pages/ProfilePage` | `/profile` |
-| `roles` | `pages/RolesPage`, `components/PermissionsPanel` | `/settings/roles` |
-| `users` | `pages/UsuariosPage`, `UsuarioNewPage` | `/settings/usuarios` |
-| `entities` | `pages/`, `hooks/`, `EntitySelector` | `/settings/entities` |
-| `tasks` | `pages/TasksPage`, Kanban en `components/` | `/workspace/:entityId/tasks` |
-| `workspace` | `pages/WorkspaceDashboardPage` | `.../dashboard` |
-| `documents` | `pages/DocumentsPage` | `.../documents` |
-| `ecommerce` | `pages/` (demo, flag) | `/ecommerce/*` |
-| `cms` | `pages/SitePagesPage` (flag CMS) | `/seo/pages` |
-
-**Transversales** (sin `pages/` propias): `chat`, `notifications`, `preferences`.
-
----
-
-## Dominio de cliente (ejemplo)
+## Ejemplo cliente: Finanzas
 
 ```
 src/features/finanzas/
+  navigation.ts
   pages/FinanzasDashboardPage.tsx
-  hooks/ components/
+  hooks/
+  components/
+  types/                 ← tipos transversales del dominio (si aplica)
 
   ingresos/
-    pages/ hooks/ components/ types/
+    pages/
+    hooks/
+    components/
+    types/
 
   egresos/
-    pages/ hooks/ components/
+    pages/
+    hooks/
+    components/
+    types/
     contratos/
       pages/ContratosPage.tsx
       hooks/useContratos.ts
-      components/ types/
+      components/
+      types/contrato.ts
 ```
-
-Workshop y decisiones de negocio: [**client-features-playbook.md**](./client-features-playbook.md).
 
 ---
 
-## Fronteras de import
+## Chasis de la template
 
-| Permitido | Prohibido |
-|-----------|-----------|
-| `@/lib`, `@/components/ui`, `@/types` | `features/finanzas` → `features/comercial` (hermanos) |
-| Padre → hijo (`egresos` → `contratos`) | Importar layouts o router desde un feature |
+| Feature | `types/` | `pages/` | Rutas (ej.) |
+|---------|----------|----------|-------------|
+| `shell` | — | `PublicSiteEntry` | `/` |
+| `auth` | `rbac.ts` | login, callback, reset | `/login`, `/auth/*` |
+| `dashboard` | — | `DashboardPage` | `/dashboard` |
+| `profile` | — | `ProfilePage` | `/profile` |
+| `roles` | `role.ts`, `role.schema.ts` | `RolesPage` | `/settings/roles` |
+| `users` | `profile.ts`, `profile.schema.ts` | usuarios | `/settings/usuarios` |
+| `entities` | `entity.ts`, `entity.schema.ts` | entidades | `/settings/entities` |
+| `tasks` | `task.ts`, `task.schema.ts` | Kanban | `.../tasks` |
+| `workspace` | — | dashboard entity | `.../dashboard` |
+| `documents` | `document.ts` | archivos | `.../documents` |
+| `products` | `product.ts` | — (páginas en `ecommerce`) | — |
+| `ecommerce` | `order.ts` | resumen, productos, ventas | `/ecommerce/*` |
+| `cms` | `cms-page.ts` | SEO páginas | `/seo/pages` |
+
+Transversales sin `pages/`: `chat`, `notifications`, `preferences`.
 
 ---
 
-## Registro de una pantalla nueva
+## Imports
 
-1. Crear `src/features/<dominio>/pages/MiPage.tsx`
-2. En `src/app/routes.config.ts`:
+| Permitido | Evitar |
+|-----------|--------|
+| `@/types/core/base` (`AuditBase`) | Modelos de negocio en `src/types/<dominio>/` (legacy) |
+| `@/features/<dominio>/types/...` | Import horizontal entre dominios hermanos sin necesidad |
+| `@/lib`, `@/components/ui` | |
+| Hijo → padre (`contratos` → `egresos`) | |
 
-```ts
-const MiPage = lazy(() => import('@/features/<dominio>/pages/MiPage'));
-```
+**Chasis cruzado:** p. ej. `users` puede importar `ENTITY_LABEL` desde `@/features/entities/types/entity` (constantes de UI del dominio entity).
 
-3. `resourceCode` en la misma entrada de ruta + fila en `src/config/security/resources.ts` + `pnpm db:sync`
+---
 
-Checklist completo: [**playbook-new-module.md**](./playbook-new-module.md).
+## Registrar pantalla + tipo nuevo
+
+1. `src/features/<dominio>/types/<entidad>.ts` — `extends AuditBase`, `createEmpty*` en el mismo archivo.
+2. `hooks/` — `useCrudResource` o custom.
+3. `pages/<NombrePage>.tsx` — compone hook + `DataTable`.
+4. `routes.config.ts` — `lazy(() => import('@/features/.../pages/...'))`.
+5. `resources.ts` + `pnpm db:sync`.
+
+Checklist: [**playbook-new-module.md**](./playbook-new-module.md).

@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
-import type { ResourceAction } from '@/types/auth/rbac';
-import type { Role, RoleDefinition } from '@/types/roles/role';
+import type { ResourceAction } from '@/features/auth/types/rbac';
+import type { Role, RoleDefinition } from '@/features/roles/types/role';
 import type { GrantedPermissions } from '@/features/roles/components/PermissionsPanel';
 
 // ─── Feature flag ────────────────────────────────────────────

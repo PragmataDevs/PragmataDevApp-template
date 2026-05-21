@@ -4,17 +4,28 @@ Registro de endurecimientos aplicados al chasis Pragmata. Útil al clonar el rep
 
 **Índice de documentación:** [`docs/README.md`](./README.md).
 
-## 1. Features autocontenidas (`src/features/*/pages/`)
+## 1. Features autocontenidas (`pages/` + `types/`)
+
+### Pantallas
 
 Las pantallas del ERP **ya no** viven en `src/pages/`. Cada dominio lleva su vertical slice:
 
 ```
 src/features/<dominio>/
-  pages/ hooks/ components/ [providers/] [types/] [<subfeature>/...]
+  navigation.ts   # opcional
+  pages/ hooks/ components/ types/
+  <subfeature>/   # mismo kit
 ```
 
-- Rutas lazy: `src/app/routes.config.ts` importa `@/features/<dominio>/pages/...`
-- Duplicado eliminado: `features/settings/` (PermissionsPanel solo en `features/roles/`)
+### Modelos
+
+Los tipos de negocio **ya no** viven en `src/types/<dominio>/`. Están en **`src/features/<dominio>/types/`**.
+
+Queda solo **`src/types/core/base.ts`** (`AuditBase` re-export + `AppRoute`). Ver `src/types/README.md`.
+
+Ejemplos: `features/entities/types/entity.ts`, `features/tasks/types/task.ts`, `features/auth/types/rbac.ts`.
+
+- Rutas lazy: `src/app/routes.config.ts`
 - Guías: [`client-features-playbook.md`](./client-features-playbook.md), [`erp-features-structure.md`](./erp-features-structure.md)
 
 ## 2. Limpieza legacy `project/`

@@ -58,7 +58,7 @@ Flag: <VITE_ENABLE_...> (si aplica) | none
 ### Entidad principal
 
 - **Nombre**: `PaymentSchedule` (ejemplo)
-- **Archivo tipo**: `src/types/<dominio>/<entidad>.ts` **o** `src/features/<dominio>/types/<entidad>.ts` (una sola verdad; ver `docs/client-features-playbook.md` §5)
+- **Archivo tipo**: `src/features/<dominio>/types/<entidad>.ts` (o `.../<subfeature>/types/`). `AuditBase` desde `@/types/core/base`. Ver `docs/client-features-playbook.md` §5.
 - **Tabla**: `public.<tabla>`
 - **Extiende AuditBase**: sí/no (si no, justificar)
 

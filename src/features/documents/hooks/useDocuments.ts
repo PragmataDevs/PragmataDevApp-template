@@ -14,7 +14,7 @@ import { useCrudResource } from '@/lib/hooks/useCrudResource';
 import { supabase } from '@/lib/supabase';
 import { uploadFile } from '@/lib/storage/uploadFile';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import type { Document, DocumentInput } from '@/types/documents/document';
+import type { Document, DocumentInput } from '@/features/documents/types/document';
 
 interface UploadDocumentInput {
   name: string;

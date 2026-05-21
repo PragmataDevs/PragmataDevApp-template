@@ -1,4 +1,4 @@
-import type { AuditBase, UUID } from '../core/base';
+import type { AuditBase, UUID } from '@/types/core/base';
 
 // ---------------------------------------------------------------------------
 // Enums

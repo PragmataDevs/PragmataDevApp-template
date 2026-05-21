@@ -7,9 +7,9 @@ import { TaskFormModal } from '@/features/tasks/components/TaskFormModal';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useActiveEntity } from '@/features/entities/hooks/useActiveEntity';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import type { Task, TaskStatus } from '@/types/tasks/task';
-import { parseTagsField } from '@/types/tasks/task.schema';
-import type { TaskFormValues } from '@/types/tasks/task.schema';
+import type { Task, TaskStatus } from '@/features/tasks/types/task';
+import { parseTagsField } from '@/features/tasks/types/task.schema';
+import type { TaskFormValues } from '@/features/tasks/types/task.schema';
 import { resolveSupabaseUrl } from '@/lib/supabase';
 
 const AI_ENABLED = import.meta.env.VITE_ENABLE_AI === 'true';

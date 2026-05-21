@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import EntityForm from '@/features/entities/components/EntityForm';
 import { useEntities, type EntityInput } from '@/features/entities/hooks/useEntities';
 import { usePermission } from '@/features/auth/hooks/usePermission';
-import { ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
+import { ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/features/entities/types/entity';
 
 export default function EntityNewPage() {
   const navigate = useNavigate();

@@ -23,7 +23,7 @@ import {
   type EntityInput,
 } from '@/features/entities/hooks/useEntities';
 import { usePermission } from '@/features/auth/hooks/usePermission';
-import { ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
+import { ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/features/entities/types/entity';
 import EntityFormModal from '@/features/entities/components/EntityFormModal';
 import EntityMembersPanel from '@/features/entities/components/EntityMembersPanel';
 

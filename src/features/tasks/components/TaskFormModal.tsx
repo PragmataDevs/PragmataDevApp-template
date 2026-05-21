@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X, Loader2 } from 'lucide-react';
-import type { Task, TaskStatus } from '@/types/tasks/task';
-import { KANBAN_COLUMNS, PRIORITY_META } from '@/types/tasks/task';
-import { taskSchema, type TaskFormValues } from '@/types/tasks/task.schema';
+import type { Task, TaskStatus } from '@/features/tasks/types/task';
+import { KANBAN_COLUMNS, PRIORITY_META } from '@/features/tasks/types/task';
+import { taskSchema, type TaskFormValues } from '@/features/tasks/types/task.schema';
 
 interface TaskFormModalProps {
   isOpen:       boolean;

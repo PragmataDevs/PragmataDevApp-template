@@ -1,4 +1,4 @@
-import type { ResourceType, ResourceAction } from '../../types/auth/rbac';
+import type { ResourceType, ResourceAction } from '@/features/auth/types/rbac';
 
 /**
  * ResourceDefinition:

@@ -27,7 +27,7 @@ Excepciones mínimas: `README.md` raíz (resumen + enlaces aquí), punteros en `
 | **Chasis** | Auth, RBAC, god, layouts, `DataTable`, entity/workspace | `src/lib/`, `src/components/`, `src/app/`, features `auth`, `entities`, … |
 | **Negocio** | Lo que construyes por cliente | `src/features/<dominio>/` → ver [**erp-features-structure.md**](./erp-features-structure.md) |
 
-**Reglas:** pantallas en `src/features/<dominio>/pages/` · URLs en `src/app/routes.config.ts` · **no** `src/pages/` en el ERP · Astro aparte en `astro/src/pages/`.
+**Reglas:** `features/.../pages/` + `features/.../types/` · solo `src/types/core/` (AuditBase, router) · URLs en `routes.config.ts` · **no** `src/pages/` en el ERP.
 
 ---
 

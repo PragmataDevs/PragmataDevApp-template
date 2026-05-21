@@ -1,5 +1,5 @@
 import { useCrudResource } from '@/lib/hooks/useCrudResource';
-import type { Product } from '@/types/products/product';
+import type { Product } from '@/features/products/types/product';
 
 export function useProducts() {
   return useCrudResource<Product>({

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronsUpDown, Layers, Check, Search, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { ENTITY_STATUS_CONFIG, ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/types/entities/entity';
+import { ENTITY_STATUS_CONFIG, ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/features/entities/types/entity';
 
 const STORAGE_KEY = 'pragmata_last_entity_id';
 const POWERSYNC_ENABLED = import.meta.env.VITE_ENABLE_POWERSYNC === 'true';

@@ -1,8 +1,8 @@
 import { memo } from 'react';
 import { Draggable } from '@hello-pangea/dnd';
 import { Calendar, User, Tag, Pencil, Trash2 } from 'lucide-react';
-import type { Task } from '@/types/tasks/task';
-import { PRIORITY_META } from '@/types/tasks/task';
+import type { Task } from '@/features/tasks/types/task';
+import { PRIORITY_META } from '@/features/tasks/types/task';
 
 interface TaskCardProps {
   task:     Task;

@@ -5,7 +5,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { KPICard } from '@/components/ui/KPICard';
 import { useActiveEntity } from '@/features/entities/hooks/useActiveEntity';
-import { ENTITY_LABEL } from '@/types/entities/entity';
+import { ENTITY_LABEL } from '@/features/entities/types/entity';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
