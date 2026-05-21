@@ -12,6 +12,7 @@ Guía para **clonar la template**, mapear el negocio del cliente y digitalizarlo
 | [**architecture.md**](./architecture.md) §2 | Pilares y directorios del monorepo |
 | [**database/README.md**](./database/README.md) | Scripts SQL e índice de migraciones |
 | [**client-feature-mapping-guide.md**](./client-feature-mapping-guide.md) | **Mapeo paso a paso (IA):** preguntas, ficha YAML, manifiesto `types/hooks/pages` |
+| [**feature-specs/agent/**](./feature-specs/agent/README.md) | **System prompt + generador** para tu IA (tú apruebas con `APROBADO FASE N`) |
 | [**feature-specs/MAPPING_RECORD.example.yaml**](./feature-specs/MAPPING_RECORD.example.yaml) | Plantilla de mapeo rellenable |
 | [**feature-specs/FEATURE_SPEC_TEMPLATE.md**](./feature-specs/FEATURE_SPEC_TEMPLATE.md) | Spec escrita antes de módulos grandes |
 

@@ -12,6 +12,7 @@ Excepciones mínimas: `README.md` raíz (resumen + enlaces aquí), punteros en `
 | Acabas de clonar el repo | [**PARA-INICIAR.md**](./PARA-INICIAR.md) |
 | Digitalizar negocio de un **cliente** (workshop, dominios) | [**client-features-playbook.md**](./client-features-playbook.md) |
 | **Mapeo con agente IA** (preguntas → árbol → archivos) | [**client-feature-mapping-guide.md**](./client-feature-mapping-guide.md) |
+| **System prompt + generador** (pegar en tu IA) | [**feature-specs/agent/**](./feature-specs/agent/README.md) |
 | Mapa de carpetas `src/features/` | [**erp-features-structure.md**](./erp-features-structure.md) |
 | Implementar módulo (SQL → RBAC) | [**playbook-new-module.md**](./playbook-new-module.md) |
 | Arquitectura y convenciones | [**architecture.md**](./architecture.md) |
@@ -51,6 +52,7 @@ Excepciones mínimas: `README.md` raíz (resumen + enlaces aquí), punteros en `
 |---------|-----------|
 | [client-features-playbook.md](./client-features-playbook.md) | Workshop cliente, dominios, imports |
 | [client-feature-mapping-guide.md](./client-feature-mapping-guide.md) | Mapeo guiado (IA): preguntas, ficha YAML, kit por subfeature |
+| [feature-specs/agent/](./feature-specs/agent/README.md) | System prompt, generador, brief, contrato de salida |
 | [feature-specs/MAPPING_RECORD.example.yaml](./feature-specs/MAPPING_RECORD.example.yaml) | Plantilla YAML para rellenar con el agente |
 | [playbook-new-module.md](./playbook-new-module.md) | 10 pasos: SQL → page → RBAC |
 | [feature-specs/FEATURE_SPEC_TEMPLATE.md](./feature-specs/FEATURE_SPEC_TEMPLATE.md) | Plantilla spec antes de codear |

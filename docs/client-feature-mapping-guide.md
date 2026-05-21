@@ -4,6 +4,8 @@ Documento para **descubrir el negocio del cliente** y traducirlo a carpetas bajo
 
 **Uso recomendado:** un agente IA hace preguntas por fases, va llenando la [ficha de mapeo](#ficha-de-mapeo-plantilla) y al final entrega el **árbol de carpetas + lista de archivos** antes de escribir código.
 
+**Kit listo para pegar en tu IA:** [feature-specs/agent/README.md](./feature-specs/agent/README.md) (system prompt + generador + contrato de salida).
+
 **Después de mapear:** implementar con [**playbook-new-module.md**](./playbook-new-module.md) (SQL → tipos → hook → page → ruta → RBAC).
 
 ---
