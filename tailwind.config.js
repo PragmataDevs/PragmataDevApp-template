@@ -1,14 +1,14 @@
 /** @type {import('tailwindcss').Config}
  *
  *  Paleta y tipografía espejadas desde el hub de marca:
- *    /home/pragmata-server-station/pragmata-business-info/design/tokens/tokens.json
+ *    $PRAGMATA_HOME/data/brand/design/tokens/tokens.json
  *
  *  Los nombres `brand.*` se conservan para no romper las ~164 ocurrencias
  *  en `src/`, pero sus valores ahora apuntan a la paleta dark canónica
- *  (la del portal vivo de pragmata-factory). El alias `pg.*` está
+ *  (portal factory en $PRAGMATA_HOME/ops/factory). El alias `pg.*` está
  *  disponible para código nuevo.
  *
- *  Cualquier cambio empieza en `pragmata-business-info/design/tokens/tokens.json`
+ *  Cualquier cambio empieza en `data/brand/design/tokens/tokens.json`
  *  y se espeja aquí — nunca al revés.
  */
 export default {
