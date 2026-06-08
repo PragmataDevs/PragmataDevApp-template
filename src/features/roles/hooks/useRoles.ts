@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
@@ -34,6 +35,7 @@ export function useRoles() {
   const [roles, setRoles] = useState<RoleWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // ── Fetch roles ──────────────────────────────────────────
 
@@ -45,6 +47,10 @@ export function useRoles() {
       setLoading(false);
       return;
     }
+
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
 
     try {
       setLoading(true);
@@ -96,6 +102,8 @@ export function useRoles() {
           };
         }, 'useRoles.fetchRoles');
 
+        if (ac.signal.aborted) return;
+
         const countMap = new Map<string, number>();
         for (const p of profilesData) {
           if (p.role_id) {
@@ -111,6 +119,7 @@ export function useRoles() {
         );
       }
     } catch (err: any) {
+      if (ac.signal.aborted) return;
       console.error('[useRoles] Error fetching roles:', err);
       setError(err.message ?? 'Error al cargar roles');
     } finally {
@@ -121,6 +130,7 @@ export function useRoles() {
   useEffect(() => {
     if (authLoading) return;
     fetchRoles();
+    return () => { abortRef.current?.abort(); };
     // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
   }, [authLoading, isAuthenticated, fetchRoles, sessionEpoch]);
 
@@ -210,6 +220,7 @@ export function useRoles() {
 
       // 3. Refresh local list
       await fetchRoles();
+      toast.success('Rol creado exitosamente');
 
       return newRole;
     },
@@ -257,6 +268,7 @@ export function useRoles() {
 
       // 3. Refresh local list
       await fetchRoles();
+      toast.success('Rol actualizado exitosamente');
     },
     [fetchRoles]
   );
@@ -282,6 +294,7 @@ export function useRoles() {
 
       // Refresh local list
       await fetchRoles();
+      toast.success('Rol eliminado exitosamente');
     },
     [fetchRoles]
   );

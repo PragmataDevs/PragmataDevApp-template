@@ -8,58 +8,71 @@ Guías: [**client-features-playbook.md**](./client-features-playbook.md) · [**p
 
 ---
 
-## Kit obligatorio por dominio (y subfeature)
+## Kit obligatorio por dominio (y subfeature) — recursivo
+
+Cada nivel del árbol replica el mismo patrón. No hay límite de profundidad, pero 3-4 niveles es lo práctico.
 
 ```
 src/features/<dominio>/
-  navigation.ts          ← opcional: rutas + labels del dominio (merge en routes.config)
-  pages/                 ← pantallas (lazy en routes.config.ts)
-  hooks/
-  components/
-  types/                 ← modelos canónicos de ESTE dominio (+ schema Zod si aplica)
-
-  <subfeature>/          ← mismo kit (ej. finanzas/egresos/contratos/)
-    pages/
-    hooks/
-    components/
-    types/
+├── navigation.ts          ← opcional: rutas + labels del dominio
+├── pages/                 ← pantallas (lazy en routes.config.ts)
+├── hooks/                 ← hooks compartidos del dominio
+├── components/            ← componentes compartidos del dominio
+├── types/                 ← modelos canónicos (+ schema Zod si aplica)
+│
+├── <subfeature>/          ← mismo patrón recursivo
+│   ├── pages/
+│   ├── hooks/
+│   ├── components/
+│   ├── types/
+│   │
+│   └── <sub-subfeature>/  ← mismo patrón (N niveles)
+│       ├── components/
+│       ├── hooks/
+│       └── types/
 ```
+
+Lo compartido entre subfeatures hermanas sube al `components/` / `hooks/` / `types/` del padre. No se crean carpetas `shared/` o `common/` — la jerarquía misma es el mecanismo de compartición.
 
 Convenciones:
 
-- Carpetas en **minúsculas** (`finanzas`). Labels UI en sidebar y `APP_RESOURCES`.
+- Carpetas en **minúsculas**. Labels UI en sidebar y `APP_RESOURCES`.
 - **`types/`** en cada nivel: una verdad por entidad; sin `*DTO` / `*Payload` paralelos.
 - Solo **`src/types/core/`** queda para `AuditBase` (re-export) y tipos de **router** — ver [`src/types/README.md`](../src/types/README.md).
-- Lazy **por página**, no por carpeta `finanzas` entera.
+- Lazy **por página**, no por feature entera.
 
 ---
 
-## Ejemplo cliente: Finanzas
+## Ejemplo genérico
 
 ```
-src/features/finanzas/
-  navigation.ts
-  pages/FinanzasDashboardPage.tsx
-  hooks/
-  components/
-  types/                 ← tipos transversales del dominio (si aplica)
-
-  ingresos/
-    pages/
-    hooks/
-    components/
-    types/
-
-  egresos/
-    pages/
-    hooks/
-    components/
-    types/
-    contratos/
-      pages/ContratosPage.tsx
-      hooks/useContratos.ts
-      components/
-      types/contrato.ts
+src/features/proyectos/
+├── navigation.ts
+├── pages/ProyectosDashboardPage.tsx
+├── hooks/useProyectos.ts
+├── components/ProyectoCard.tsx
+├── types/proyecto.ts
+│
+├── alcance/
+│   ├── pages/AlcancePage.tsx
+│   ├── hooks/useAlcance.ts
+│   ├── components/AlcanceWizard.tsx
+│   ├── types/alcance.ts
+│   │
+│   └── entregables/
+│       ├── components/EntregableTable.tsx
+│       ├── components/modal/EntregableFormModal.tsx
+│       ├── hooks/useEntregables.ts
+│       └── types/entregable.ts
+│
+├── costos/
+│   ├── pages/CostosPage.tsx
+│   ├── hooks/useCostos.ts
+│   ├── components/CostosChart.tsx
+│   └── types/costo.ts
+│
+└── riesgos/
+    └── pages/RiesgosPage.tsx
 ```
 
 ---

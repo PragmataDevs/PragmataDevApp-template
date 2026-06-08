@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { X, Loader2, Search, UserPlus, Trash2, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
@@ -143,7 +144,7 @@ export default function EntityMembersPanel({
       await addEntityMember(entityId, userId);
       await loadMembers();
     } catch (err: unknown) {
-      alert('Error al agregar miembro: ' + (err instanceof Error ? err.message : String(err)));
+      toast.error('Error al agregar miembro: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setAddingUserId(null);
     }
@@ -156,7 +157,7 @@ export default function EntityMembersPanel({
       await removeEntityMember(entityId, userId);
       await loadMembers();
     } catch (err: unknown) {
-      alert('Error al quitar miembro: ' + (err instanceof Error ? err.message : String(err)));
+      toast.error('Error al quitar miembro: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setRemovingUserId(null);
     }

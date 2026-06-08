@@ -1,0 +1,41 @@
+---
+export const prerender = false;
+
+const brand = import.meta.env.PUBLIC_BRAND_NAME ?? 'Mi Empresa';
+const appUrl = import.meta.env.PUBLIC_APP_URL || 'http://localhost:7070';
+---
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex" />
+  <title>Redirigiendo… — {brand}</title>
+  <script>
+    (function() {
+      var params = new URLSearchParams(location.hash.replace(/^#/, ''));
+      var accessToken = params.get('access_token');
+      var error = params.get('error');
+      var redirectTo = new URLSearchParams(location.search).get('redirect_to') || '/';
+      var appUrl = {JSON.stringify(appUrl)};
+
+      if (error) {
+        location.href = appUrl + '/login?error=' + encodeURIComponent(error);
+      } else if (accessToken) {
+        location.href = appUrl + '/login#access_token=' + encodeURIComponent(accessToken) + '&redirect_to=' + encodeURIComponent(redirectTo);
+      } else if (location.search) {
+        location.href = appUrl + '/login' + location.search;
+      } else {
+        location.href = appUrl + redirectTo;
+      }
+    })();
+  </script>
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#070b12;color:#8899aa;font-family:system-ui;font-size:14px">
+  <div style="text-align:center">
+    <div style="width:32px;height:32px;border:3px solid #1a2740;border-top-color:#00b8e6;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px"></div>
+    <div>Redirigiendo al inicio de sesión…</div>
+  </div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+</body>
+</html>

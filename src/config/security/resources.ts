@@ -140,7 +140,7 @@ export const APP_RESOURCES: ResourceDefinition[] = [
         default_actions: ['execute']
     },
     {
-        code: 'btn_export_entity_report',
+        code: 'action_export_entity_report',
         name: 'Exportar Excel/PDF',
         category: 'Actions',
         type: 'action',

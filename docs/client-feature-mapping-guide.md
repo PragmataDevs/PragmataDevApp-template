@@ -66,29 +66,39 @@ Por cada **dominio** (ej. `finanzas`), el agente pregunta:
 
 | # | Pregunta | Decisión |
 |---|----------|----------|
-| 2.1 | ¿Este dominio necesita **dashboard propio** en menú? | `pages/<Dominio>DashboardPage.tsx` + ruta `/finanzas` o solo subfeatures |
-| 2.2 | ¿Qué **bloques** de negocio son independientes (menú, permisos, equipo distinto)? | Subfeatures de primer nivel (`ingresos`, `egresos`) |
-| 2.3 | ¿Algún bloque tiene **hijos** con vida propia? | Subfeature anidada (`egresos/contratos`) |
+| 2.1 | ¿Este dominio necesita **dashboard propio** en menú? | `pages/<Dominio>DashboardPage.tsx` + ruta `/proyectos` o solo subfeatures |
+| 2.2 | ¿Qué **bloques** de negocio son independientes (menú, permisos, equipo distinto)? | Subfeatures de primer nivel (`alcance`, `costos`) |
+| 2.3 | ¿Algún bloque tiene **hijos** con vida propia? | Subfeature anidada (`alcance/entregables`) |
 | 2.4 | ¿Algo es solo **detalle de pantalla** (líneas, adjuntos, comentarios)? | Solo `components/`, **no** carpeta subfeature |
 
 ### Árbol canónico (plantilla)
 
 ```
 src/features/<dominio>/
-  navigation.ts          ← opcional
-  pages/
-  hooks/
-  components/
-  types/
-  <subfeature-A>/
-    pages/ hooks/ components/ types/
-  <subfeature-B>/
-    ...
-    <subfeature-B-hija>/
-      pages/ hooks/ components/ types/
+├── navigation.ts          ← opcional
+├── pages/
+├── hooks/                 ← compartidos del dominio
+├── components/            ← compartidos del dominio
+├── types/
+│
+├── <subfeature-A>/        ← mismo patrón (recursivo)
+│   ├── pages/
+│   ├── hooks/
+│   ├── components/
+│   ├── types/
+│   │
+│   └── <sub-subfeature>/  ← mismo patrón (N niveles)
+│       ├── components/
+│       ├── hooks/
+│       └── types/
+│
+└── <subfeature-B>/
+    └── ...
 ```
 
-**Nombres:** carpetas en `minúsculas-kebab` o `minúsculas` (`egresos`, `contratos`). Sin espacios ni mayúsculas en paths.
+**Nombres:** carpetas en `minúsculas` (`alcance`, `entregables`). Sin espacios ni mayúsculas en paths.
+
+**Regla de `pages/`:** solo en el nivel que tiene entrada en el router. Si una subfeature profunda no tiene ruta propia, sus componentes de UI anidados viven en `components/` y las pages están en el ancestro más cercano con ruta.
 
 ### ¿Subfeature o solo componente?
 
@@ -183,15 +193,15 @@ Checklist antes de pasar a la siguiente subfeature:
 
 Por cada subfeature, estos archivos son la **meta mínima** (ajustar si el patrón lo requiere).
 
-### Ejemplo: `finanzas/egresos/contratos`
+### Ejemplo genérico: `proyectos/alcance/entregables`
 
 | Orden | Archivo | Responsabilidad |
 |-------|---------|-------------------|
-| 1 | `types/contrato.ts` | `interface Contrato extends AuditBase`, `createEmptyContrato()` |
-| 2 | `types/contrato.schema.ts` | Zod del formulario (opcional mismo basename) |
-| 3 | `hooks/useContratos.ts` | `useCrudResource` o hook custom + `entity_id` |
-| 4 | `components/ContratoFormModal.tsx` | Formulario alta/edición |
-| 5 | `pages/ContratosPage.tsx` | `DataTable` + modales; solo compone |
+| 1 | `types/entregable.ts` | `interface Entregable extends AuditBase`, `createEmptyEntregable()` |
+| 2 | `types/entregable.schema.ts` | Zod del formulario (opcional mismo basename) |
+| 3 | `hooks/useEntregables.ts` | `useCrudResource` o hook custom + `entity_id` |
+| 4 | `components/EntregableFormModal.tsx` | Formulario alta/edición |
+| 5 | `components/EntregableTable.tsx` | Tabla de entregables |
 | 6 | `src/app/routes.config.ts` | Entrada lazy + `resourceCode` |
 | 7 | `src/config/security/resources.ts` | Definición del recurso |
 | 8 | `supabase/migrations/...` | Tabla + RLS (`is_god()` primero) |
@@ -199,26 +209,27 @@ Por cada subfeature, estos archivos son la **meta mínima** (ajustar si el patr�
 **Árbol resultante:**
 
 ```
-src/features/finanzas/
-  navigation.ts                    # opcional: export const FINANZAS_ROUTES = [...]
-  pages/FinanzasDashboardPage.tsx  # opcional
-  hooks/ components/ types/
-
-  ingresos/
-    pages/ hooks/ components/ types/
-
-  egresos/
-    pages/ hooks/ components/ types/
-    contratos/
-      types/
-        contrato.ts
-        contrato.schema.ts
-      hooks/
-        useContratos.ts
-      components/
-        ContratoFormModal.tsx
-      pages/
-        ContratosPage.tsx
+src/features/proyectos/
+├── navigation.ts                    # opcional: export const PROYECTOS_ROUTES = [...]
+├── pages/ProyectosDashboardPage.tsx
+├── hooks/ components/ types/
+│
+├── alcance/
+│   ├── pages/AlcancePage.tsx
+│   ├── hooks/ components/ types/
+│   │
+│   └── entregables/
+│       ├── types/
+│       │   ├── entregable.ts
+│       │   └── entregable.schema.ts
+│       ├── hooks/
+│       │   └── useEntregables.ts
+│       └── components/
+│           ├── EntregableTable.tsx
+│           └── EntregableFormModal.tsx
+│
+└── costos/
+    └── pages/ hooks/ components/ types/
 ```
 
 ### Imports típicos (referencia para implementación)
@@ -256,46 +267,46 @@ cliente: "Nombre Cliente"
 entity_label: "Proyecto"  # VITE_ENTITY_LABEL
 
 dominios:
-  - id: finanzas
-    label_ui: Finanzas
-    carpeta: src/features/finanzas
+  - id: proyectos
+    label_ui: Proyectos
+    carpeta: src/features/proyectos
     dashboard: true
     subfeatures:
-      - id: ingresos
-        path: ingresos
-        label_ui: Ingresos
+      - id: alcance
+        path: alcance
+        label_ui: Alcance
         ambito: workspace
-        entidad: null  # o Ingreso si aplica
+        entidad: null
         pantallas: []
         resource_code: null
 
-      - id: contratos
-        path: egresos/contratos
-        label_ui: Contratos
+      - id: entregables
+        path: alcance/entregables
+        label_ui: Entregables
         ambito: workspace
-        entidad: Contrato
-        tabla_sql: contratos
-        types_file: src/features/finanzas/egresos/contratos/types/contrato.ts
+        entidad: Entregable
+        tabla_sql: entregables
+        types_file: src/features/proyectos/alcance/entregables/types/entregable.ts
         patron_ui: datatable_crud
-        ruta_url: contratos
-        resource_code: page_workspace_contratos
+        ruta_url: entregables
+        resource_code: page_workspace_entregables
         campos:
-          - name: numero
+          - name: nombre
             type: string
             required: true
-          - name: monto_total
-            type: number
+          - name: fecha_entrega
+            type: string
             required: true
         archivos_a_crear:
-          - src/features/finanzas/egresos/contratos/types/contrato.ts
-          - src/features/finanzas/egresos/contratos/types/contrato.schema.ts
-          - src/features/finanzas/egresos/contratos/hooks/useContratos.ts
-          - src/features/finanzas/egresos/contratos/components/ContratoFormModal.tsx
-          - src/features/finanzas/egresos/contratos/pages/ContratosPage.tsx
+          - src/features/proyectos/alcance/entregables/types/entregable.ts
+          - src/features/proyectos/alcance/entregables/types/entregable.schema.ts
+          - src/features/proyectos/alcance/entregables/hooks/useEntregables.ts
+          - src/features/proyectos/alcance/entregables/components/EntregableFormModal.tsx
+          - src/features/proyectos/alcance/entregables/components/EntregableTable.tsx
         chasis_touches:
           - src/app/routes.config.ts
           - src/config/security/resources.ts
-          - supabase/migrations/<timestamp>_contratos.sql
+          - supabase/migrations/<timestamp>_entregables.sql
 ```
 
 ---

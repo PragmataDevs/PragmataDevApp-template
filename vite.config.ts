@@ -52,6 +52,11 @@ export default defineConfig({
             return "forms";
           }
 
+          // Rich text editor (only loaded on CMS pages)
+          if (id.includes("/@tiptap/")) {
+            return "tiptap";
+          }
+
           // Lucide icons: imported in layout components (always loaded),
           // isolated here so changes don't bust the react-vendor cache.
           if (id.includes("/lucide-react/")) {
@@ -63,6 +68,6 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 7070
-  }
+    port: Number(process.env.VITE_PORT) || 7070,
+  },
 })

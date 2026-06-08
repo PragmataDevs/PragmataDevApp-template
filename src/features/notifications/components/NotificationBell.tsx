@@ -72,7 +72,7 @@ function NotificationItem({
           </button>
         )}
         <button
-          onClick={(e) => { e.stopPropagation(); onArchive(notification.id); }}
+          onClick={(e) => { e.stopPropagation(); if (confirm('¿Archivar esta notificación?')) onArchive(notification.id); }}
           className="p-1 rounded hover:bg-[color:var(--pragmata-surface)] text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-muted)]"
           title="Archivar"
         >

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect, type MouseEvent as ReactMouseEvent } from 'react';
+import { toast } from 'sonner';
 import { createPortal } from 'react-dom';
 import {
   Plus,
@@ -146,7 +147,7 @@ export default function RolesPage() {
     try {
       await deleteRole(roleId);
     } catch (err: unknown) {
-      alert('Error al eliminar: ' + (err instanceof Error ? err.message : String(err)));
+      toast.error('Error al eliminar: ' + (err instanceof Error ? err.message : String(err)));
     }
   }, [deleteRole]);
 
@@ -163,7 +164,7 @@ export default function RolesPage() {
       setIsModalOpen(false);
       setEditingRole(null);
     } catch (err: unknown) {
-      alert('Error al guardar: ' + (err instanceof Error ? err.message : String(err)));
+      toast.error('Error al guardar: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setSaving(false);
     }

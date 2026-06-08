@@ -6,3 +6,10 @@
 export type { UUID, AuditStatus, AuditBase } from './audit.ts';
 export type { DocumentStatus, DocumentW } from './document-work.ts';
 export type { Product, ProductInput } from './product.ts';
+export {
+  isLoopbackHostname,
+  isLoopbackSupabaseUrl,
+  extractPort,
+  supabaseApiPort,
+  resolveSupabaseUrlForBrowser,
+} from './supabase-url.ts';

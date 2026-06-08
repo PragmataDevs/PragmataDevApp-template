@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useTheme, type ThemeOption } from '@/features/preferences/providers/ThemeProvider';
 import { authRedirectUrl } from '@/lib/auth/authRedirect';
@@ -77,7 +78,7 @@ export default function ProfilePage() {
       setAvatarPreview(null);
       await refreshProfile();
     } catch (err: any) {
-      alert('Error al subir imagen: ' + err.message);
+      toast.error('Error al subir imagen: ' + err.message);
       setAvatarPreview(null);
     } finally {
       setUploadingAvatar(false);
@@ -106,7 +107,7 @@ export default function ProfilePage() {
       setAvatarPreview(null);
       await refreshProfile();
     } catch (err: any) {
-      alert('Error al quitar imagen: ' + err.message);
+      toast.error('Error al quitar imagen: ' + err.message);
     } finally {
       setRemovingAvatar(false);
     }
@@ -131,7 +132,7 @@ export default function ProfilePage() {
       setProfileSuccess(true);
       setTimeout(() => setProfileSuccess(false), 3000);
     } catch (err: any) {
-      alert('Error al guardar: ' + err.message);
+      toast.error('Error al guardar: ' + err.message);
     } finally {
       setSavingProfile(false);
     }
@@ -150,7 +151,7 @@ export default function ProfilePage() {
       if (error) throw error;
       setResetSent(true);
     } catch (err: any) {
-      alert('Error al enviar: ' + err.message);
+      toast.error('Error al enviar: ' + err.message);
     } finally {
       setSendingReset(false);
     }

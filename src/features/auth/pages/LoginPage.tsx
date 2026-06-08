@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -52,7 +53,7 @@ export default function LoginPage() {
     });
     
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
     }
   };
 

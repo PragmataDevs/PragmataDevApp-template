@@ -1281,12 +1281,15 @@ CREATE POLICY "documents_update" ON public.documents
     public.is_god()
     OR (
       team_id = (SELECT team_id FROM public.profiles WHERE id = auth.uid())
-      AND public.check_permission('documents', 'update', entity_id)
+      AND public.check_permission('page_workspace_documents', 'update', entity_id)
     )
   );
 
 CREATE POLICY "documents_delete" ON public.documents
-  FOR DELETE USING (public.is_god());
+  FOR DELETE USING (
+    public.is_god()
+    OR public.check_permission('page_workspace_documents', 'delete', entity_id)
+  );
 
 -- 10.10 ECOMMERCE
 CREATE POLICY "products_select_public" ON public.products
@@ -1387,6 +1390,32 @@ DROP POLICY IF EXISTS "product_images_delete" ON storage.objects;
 CREATE POLICY "product_images_delete" ON storage.objects
   FOR DELETE USING (
     bucket_id = 'product-images'
+    AND auth.role() = 'authenticated'
+  );
+
+-- Documents storage bucket RLS
+DROP POLICY IF EXISTS "documents_select" ON storage.objects;
+CREATE POLICY "documents_select" ON storage.objects
+  FOR SELECT USING (bucket_id = 'documents');
+
+DROP POLICY IF EXISTS "documents_insert" ON storage.objects;
+CREATE POLICY "documents_insert" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'documents'
+    AND auth.role() = 'authenticated'
+  );
+
+DROP POLICY IF EXISTS "documents_update" ON storage.objects;
+CREATE POLICY "documents_update" ON storage.objects
+  FOR UPDATE USING (
+    bucket_id = 'documents'
+    AND auth.role() = 'authenticated'
+  );
+
+DROP POLICY IF EXISTS "documents_delete" ON storage.objects;
+CREATE POLICY "documents_delete" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'documents'
     AND auth.role() = 'authenticated'
   );
 

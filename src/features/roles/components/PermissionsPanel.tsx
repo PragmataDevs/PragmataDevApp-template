@@ -34,6 +34,7 @@ const ACTION_LABELS: Record<string, string> = {
   export: 'Exportar',
   execute: 'Ejecutar',
   invite: 'Invitar',
+  broadcast: 'Difundir',
 };
 
 interface PermissionGroup {

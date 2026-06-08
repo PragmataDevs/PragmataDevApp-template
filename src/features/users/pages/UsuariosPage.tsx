@@ -6,6 +6,7 @@ import {
   useRef,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
+import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
@@ -272,7 +273,7 @@ export default function UsuariosPage() {
       try {
         await toggleUserStatus(user.id);
       } catch (err: unknown) {
-        alert('Error: ' + (err instanceof Error ? err.message : String(err)));
+        toast.error('Error: ' + (err instanceof Error ? err.message : String(err)));
       }
     },
     [toggleUserStatus],
@@ -289,7 +290,7 @@ export default function UsuariosPage() {
       try {
         await deleteUser(user.id);
       } catch (err: unknown) {
-        alert('Error al eliminar: ' + (err instanceof Error ? err.message : String(err)));
+        toast.error('Error al eliminar: ' + (err instanceof Error ? err.message : String(err)));
       }
     },
     [deleteUser],
@@ -302,7 +303,7 @@ export default function UsuariosPage() {
       setIsModalOpen(false);
       setEditingUser(null);
     } catch (err: unknown) {
-      alert('Error al guardar: ' + (err instanceof Error ? err.message : String(err)));
+      toast.error('Error al guardar: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setSaving(false);
     }

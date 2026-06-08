@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, useRef, type MouseEvent as ReactMouseEvent } from 'react';
+import { toast } from 'sonner';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -213,7 +214,7 @@ export default function EntitiesPage() {
       try {
         await archiveEntity(entity.id);
       } catch (err: unknown) {
-        alert('Error: ' + (err instanceof Error ? err.message : String(err)));
+        toast.error('Error: ' + (err instanceof Error ? err.message : String(err)));
       }
     },
     [archiveEntity],
@@ -227,7 +228,7 @@ export default function EntitiesPage() {
       setIsModalOpen(false);
       setEditingEntity(null);
     } catch (err: unknown) {
-      alert('Error al guardar: ' + (err instanceof Error ? err.message : String(err)));
+      toast.error('Error al guardar: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setSaving(false);
     }

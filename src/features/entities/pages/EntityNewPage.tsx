@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -27,7 +28,7 @@ export default function EntityNewPage() {
       await createEntity(data);
       navigate('/settings/entities', { replace: true });
     } catch (err: unknown) {
-      alert('Error al guardar: ' + (err instanceof Error ? err.message : String(err)));
+      toast.error('Error al guardar: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setSaving(false);
     }

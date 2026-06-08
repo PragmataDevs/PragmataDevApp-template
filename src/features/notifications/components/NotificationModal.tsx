@@ -89,7 +89,7 @@ function NotificationRow({
           </button>
         )}
         <button
-          onClick={() => onArchive(notification.id)}
+          onClick={() => { if (confirm('¿Archivar esta notificación?')) onArchive(notification.id); }}
           className="p-1.5 rounded-lg hover:bg-[color:var(--pragmata-surface)] text-[color:var(--pragmata-muted)]"
           title="Archivar"
         >

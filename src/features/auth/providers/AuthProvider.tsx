@@ -260,7 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [profile, teamIsPlatformOwner],
   );
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     profile,
     teamIsPlatformOwner,
@@ -270,7 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user,
     sessionEpoch,
     refreshProfile,
-  };
+  }), [user, profile, teamIsPlatformOwner, isGod, permissions, loading, sessionEpoch, refreshProfile]);
 
   return (
     <AuthContext.Provider value={value}>

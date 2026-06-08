@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { uploadFile, CHAT_IMAGE_PRESET } from '@/lib/storage';
@@ -52,6 +53,7 @@ export function useEntities() {
   const [totalEntityCount, setTotalEntityCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // ── Fetch entities ─────────────────────────────────────
 
@@ -64,6 +66,10 @@ export function useEntities() {
       setLoading(false);
       return;
     }
+
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
 
     setLoading(true);
     setError(null);
@@ -78,6 +84,7 @@ export function useEntities() {
           `SELECT COUNT(*) as count FROM entities WHERE team_id = ?`,
           [profile.team_id],
         );
+        if (ac.signal.aborted) return;
         setTotalEntityCount(countRows[0]?.count ?? 0);
 
         entitiesData = await db.getAll<any>(
@@ -105,6 +112,8 @@ export function useEntities() {
             data: entitiesResponse.data ?? [],
           };
         }, 'useEntities.fetchEntities');
+
+        if (ac.signal.aborted) return;
 
         setTotalEntityCount(count ?? 0);
         entitiesData = data;
@@ -150,6 +159,7 @@ export function useEntities() {
 
       setEntities(enriched);
     } catch (err: any) {
+      if (ac.signal.aborted) return;
       console.error('Error fetching entities:', err.message);
       setError(err.message);
     } finally {
@@ -236,6 +246,7 @@ export function useEntities() {
       if (accessErr) console.error('Error adding creator access:', accessErr.message);
 
       await fetchEntities();
+      toast.success('Entidad creada exitosamente');
       return entity;
     },
     [profile, fetchEntities, uploadEntityImages]
@@ -283,6 +294,7 @@ export function useEntities() {
 
       if (error) throw error;
       await fetchEntities();
+      toast.success('Entidad actualizada exitosamente');
     },
     [fetchEntities, uploadEntityImages]
   );
@@ -298,6 +310,7 @@ export function useEntities() {
 
       if (error) throw error;
       await fetchEntities();
+      toast.success('Entidad archivada exitosamente');
     },
     [fetchEntities]
   );
@@ -348,6 +361,7 @@ export function useEntities() {
         });
 
       if (error) throw error;
+      toast.success('Miembro agregado exitosamente');
     },
     [profile]
   );
@@ -361,6 +375,7 @@ export function useEntities() {
         .eq('user_id', userId);
 
       if (error) throw error;
+      toast.success('Acceso revocado exitosamente');
     },
     []
   );
@@ -370,6 +385,7 @@ export function useEntities() {
   useEffect(() => {
     if (authLoading) return;
     fetchEntities();
+    return () => { abortRef.current?.abort(); };
   }, [authLoading, isAuthenticated, fetchEntities, sessionEpoch]);
 
   return {

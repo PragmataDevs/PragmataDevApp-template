@@ -3,14 +3,18 @@
  * Activo salvo `VITE_ENABLE_SITE_CMS=false`. Recurso RBAC: `page_seo_site_pages`.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { ExternalLink, Globe, Plus, Trash2 } from 'lucide-react';
 import { z } from 'zod';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { RichMarkdownEditor } from '@/components/cms/RichMarkdownEditor';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
+
+const RichMarkdownEditor = lazy(() =>
+  import('@/components/cms/RichMarkdownEditor').then((m) => ({ default: m.RichMarkdownEditor })),
+);
 import { useCmsPages } from '@/features/cms/hooks/useCmsPages';
 import type { CmsLandingContent, CmsPage } from '@/features/cms/types/cms-page';
 
@@ -193,11 +197,11 @@ function CmsPageModal({ mode, page, onClose, onSave, saving }: ModalProps) {
     if (mode === 'new') {
       const raw = values.slugInput?.trim() || slugify(values.internal_title);
       if (!raw || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(raw)) {
-        alert('Slug inválido: solo minúsculas, números y guiones.');
+        toast.error('Slug inválido: solo minúsculas, números y guiones.');
         return false;
       }
       if (FORBIDDEN_SLUGS.has(raw)) {
-        alert(`El slug «${raw}» está reservado para rutas del sitio.`);
+        toast.error(`El slug «${raw}» está reservado para rutas del sitio.`);
         return false;
       }
       slug = raw;
@@ -207,7 +211,7 @@ function CmsPageModal({ mode, page, onClose, onSave, saving }: ModalProps) {
       try {
         JSON.parse(values.featuresJson);
       } catch {
-        alert('JSON de características inválido.');
+        toast.error('JSON de características inválido.');
         return false;
       }
     }
@@ -216,7 +220,7 @@ function CmsPageModal({ mode, page, onClose, onSave, saving }: ModalProps) {
     if (publish && isStandard) {
       const md = values.body_markdown?.trim() ?? '';
       if (!md) {
-        alert('Para publicar una página estándar necesitas cuerpo Markdown.');
+        toast.error('Para publicar una página estándar necesitas cuerpo Markdown.');
         return false;
       }
     }
@@ -382,13 +386,15 @@ function CmsPageModal({ mode, page, onClose, onSave, saving }: ModalProps) {
                     name="heroSubheadline"
                     control={control}
                     render={({ field }) => (
-                      <RichMarkdownEditor
-                        key={`home-hero-${page?.id ?? 'new'}`}
-                        markdown={field.value ?? ''}
-                        onMarkdownChange={field.onChange}
-                        placeholder="Párrafo principal bajo el titular…"
-                        minHeightPx={200}
-                      />
+                      <Suspense fallback={<div style={{ minHeight: 200, background: '#f9fafb', borderRadius: 6 }} />}>
+                        <RichMarkdownEditor
+                          key={`home-hero-${page?.id ?? 'new'}`}
+                          markdown={field.value ?? ''}
+                          onMarkdownChange={field.onChange}
+                          placeholder="Párrafo principal bajo el titular…"
+                          minHeightPx={200}
+                        />
+                      </Suspense>
                     )}
                   />
                 </div>
@@ -539,7 +545,7 @@ export default function SitePagesPage() {
       const row = await upsert(payload);
       setSaving(false);
       if (!row) {
-        alert('No se pudo guardar (permisos, slug duplicado o conflicto de versión).');
+        toast.error('No se pudo guardar (permisos, slug duplicado o conflicto de versión).');
         return false;
       }
       closeModal();

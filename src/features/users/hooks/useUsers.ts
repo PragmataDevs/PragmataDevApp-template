@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { authRedirectUrl } from '@/lib/auth/authRedirect';
@@ -75,6 +76,7 @@ export function useUsers() {
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // ── Fetch users ──────────────────────────────────────────
 
@@ -87,6 +89,10 @@ export function useUsers() {
       setLoading(false);
       return;
     }
+
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
 
     try {
       setLoading(true);
@@ -103,6 +109,8 @@ export function useUsers() {
            ORDER BY p.created_at DESC`,
         );
 
+        if (ac.signal.aborted) return;
+
         setUsers(
           profileRows.map((row) => ({
             ...row,
@@ -110,6 +118,8 @@ export function useUsers() {
             role_name: row.role_name ?? 'Sin rol',
           })),
         );
+
+        if (ac.signal.aborted) return;
 
         const roleRows = await db.getAll<RoleOption>(
           `SELECT id, name, can_be_customized FROM sys_roles ORDER BY name`,
@@ -137,6 +147,8 @@ export function useUsers() {
           };
         }, 'useUsers.fetchUsers');
 
+        if (ac.signal.aborted) return;
+
         setUsers(
           profilesData.map((p: any) => ({
             id: p.id,
@@ -163,6 +175,7 @@ export function useUsers() {
         })));
       }
     } catch (err: any) {
+      if (ac.signal.aborted) return;
       console.error('[useUsers] Error fetching users:', err);
       setError(err.message ?? 'Error al cargar usuarios');
     } finally {
@@ -173,6 +186,7 @@ export function useUsers() {
   useEffect(() => {
     if (authLoading) return;
     fetchUsers();
+    return () => { abortRef.current?.abort(); };
     // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
   }, [authLoading, isAuthenticated, fetchUsers, sessionEpoch]);
 
@@ -430,6 +444,7 @@ export function useUsers() {
 
       // Step 6: Refresh list
       await fetchUsers();
+      toast.success('Usuario creado exitosamente');
 
       return {
         userId: newUserId,
@@ -472,6 +487,7 @@ export function useUsers() {
       }
 
       await fetchUsers();
+      toast.success('Usuario actualizado exitosamente');
     },
     [fetchUsers, syncUserEntityAssignments, upsertUserPermissions, users],
   );
@@ -494,6 +510,7 @@ export function useUsers() {
       if (statusError) throw statusError;
 
       await fetchUsers();
+      toast.success(newStatus === 'suspended' ? 'Usuario suspendido' : 'Usuario reactivado');
     },
     [users, fetchUsers],
   );
@@ -515,6 +532,7 @@ export function useUsers() {
       if (deleteError) throw deleteError;
 
       await fetchUsers();
+      toast.success('Usuario eliminado exitosamente');
     },
     [fetchUsers],
   );

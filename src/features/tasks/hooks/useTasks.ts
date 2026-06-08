@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import type { Task, TaskInput, TaskUpdateInput, TaskStatus } from '@/features/tasks/types/task';
@@ -135,10 +136,12 @@ export function useTasks(entityId: string | undefined): UseTasksReturn {
 
     if (error) {
       console.error('[useTasks] createTask:', error);
+      toast.error('Error al crear la tarea');
       return null;
     }
 
     setState(s => ({ ...s, tasks: [...s.tasks, data as Task] }));
+    toast.success('Tarea creada exitosamente');
     return data as Task;
   }, [user, state.tasks]);
 
@@ -160,6 +163,7 @@ export function useTasks(entityId: string | undefined): UseTasksReturn {
     if (error || !data) {
       if (!error) console.warn('[useTasks] OCC conflict on task', id);
       else console.error('[useTasks] updateTask:', error);
+      toast.error('Error al actualizar la tarea');
       return false;
     }
 
@@ -191,6 +195,7 @@ export function useTasks(entityId: string | undefined): UseTasksReturn {
     if (error || !data) return false;
 
     setState(s => ({ ...s, tasks: s.tasks.filter(t => t.id !== id) }));
+    toast.success('Tarea eliminada exitosamente');
     return true;
   }, [user]);
 
@@ -234,6 +239,7 @@ export function useTasks(entityId: string | undefined): UseTasksReturn {
 
     if (error) {
       console.error('[useTasks] moveTask:', error);
+      toast.error('Error al mover la tarea. Reintentando...');
       await fetchTasks(); // revert to server state
     }
   }, [user, state.tasks, fetchTasks]);

@@ -20,6 +20,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
@@ -217,9 +218,12 @@ export function useCrudResource<T extends AuditRecord>({
           : [...prev, row];
       });
 
+      toast.success(record.id ? 'Actualizado exitosamente' : 'Creado exitosamente');
+
       return row;
     } catch (err: unknown) {
       console.error(`[useCrudResource:${table}] upsert failed`, err);
+      toast.error(`Error al guardar. Intenta de nuevo.`);
       return null;
     }
   }, [user, table, select]);
@@ -249,9 +253,11 @@ export function useCrudResource<T extends AuditRecord>({
 
       // Remove from local state immediately (optimistic)
       setData(prev => prev.filter(r => r.id !== id));
+      toast.success('Eliminado exitosamente');
       return true;
     } catch (err: unknown) {
       console.error(`[useCrudResource:${table}] softDelete error`, err);
+      toast.error('Error al eliminar. Intenta de nuevo.');
       return false;
     }
   }, [user, table]);

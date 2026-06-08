@@ -11,3 +11,7 @@ docs/feature-specs/generated/
 
 # Supabase CLI (local); no versionar — cada copia cliente debe tener estado propio
 .supabase/
+
+# Dumps SQL locales (no versionar)
+dump*.sql
+**/dump_*.sql

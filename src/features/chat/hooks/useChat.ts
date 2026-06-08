@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
@@ -47,13 +47,20 @@ export function useConversations() {
   const { profile, loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchConversations = useCallback(async () => {
     if (authLoading || !isAuthenticated) {
       setLoading(true);
       return;
     }
+
     if (!profile) return;
+
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
     setLoading(true);
 
     try {
@@ -124,8 +131,10 @@ export function useConversations() {
         );
       }, 'useConversations.fetchConversations');
 
+      if (ac.signal.aborted) return;
       setConversations(conversationsWithLastMessage);
     } catch (err: any) {
+      if (ac.signal.aborted) return;
       console.error('Error fetching conversations:', err.message);
     } finally {
       setLoading(false);
@@ -186,6 +195,7 @@ export function useConversations() {
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
     fetchConversations();
+    return () => { abortRef.current?.abort(); };
     // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
   }, [authLoading, isAuthenticated, fetchConversations, sessionEpoch]);
 

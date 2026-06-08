@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
@@ -49,6 +49,7 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   // ── Fetch recent notifications ──
   const fetchNotifications = useCallback(
@@ -82,8 +83,10 @@ export function useNotifications() {
           return response.data;
         }, 'useNotifications.fetchNotifications');
 
+        if (abortRef.current?.signal.aborted) return;
         setNotifications((data as unknown as Notification[]) || []);
       } catch (err: any) {
+        if (abortRef.current?.signal.aborted) return;
         console.error('Error fetching notifications:', err.message);
       } finally {
         setLoading(false);
@@ -110,10 +113,12 @@ export function useNotifications() {
         return response.count;
       }, 'useNotifications.fetchUnreadCount');
 
+      if (abortRef.current?.signal.aborted) return;
       if (count !== null && count !== undefined) {
         setUnreadCount(count);
       }
     } catch (err: any) {
+      if (abortRef.current?.signal.aborted) return;
       console.error('Error fetching unread count:', err.message);
     }
   }, [authLoading, isAuthenticated, profile]);
@@ -293,8 +298,12 @@ export function useNotifications() {
   // ── Initial load ──
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
     fetchNotifications(10);
     fetchUnreadCount();
+    return () => { abortRef.current?.abort(); };
     // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
   }, [authLoading, isAuthenticated, fetchNotifications, fetchUnreadCount, sessionEpoch]);
 
