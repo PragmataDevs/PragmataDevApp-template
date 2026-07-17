@@ -30,6 +30,11 @@ const supabaseAnon =
 /** Dominios de ejemplo del template — no deben usarse como fallback en runtime. */
 const PLACEHOLDER = /tucliente|tudominio|your-project-ref|example\.com/i;
 
+/**
+ * @param {string | undefined} raw
+ * @param {string} devDefault
+ * @returns {string}
+ */
 function pickPublicUrl(raw, devDefault) {
   const t = raw?.trim?.() ?? '';
   if (t && !PLACEHOLDER.test(t)) return t;
