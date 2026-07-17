@@ -25,16 +25,21 @@
           <tr>
             <td style="padding:32px 40px;">
               <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0B1220;text-align:center;">Restablece tu contraseña</h1>
-              <p style="margin:0 0 28px;font-size:14px;line-height:22px;color:#5A6B85;text-align:center;">
+              <p style="margin:0 0 26px;font-size:14px;line-height:22px;color:#5A6B85;text-align:center;">
                 Recibimos una solicitud para cambiar la contraseña de <strong style="color:#0B1220;">{{ .Email }}</strong>.
-                Usa el botón para continuar. Si no fuiste tú, ignora este correo.
+                Ingresa el código de abajo en la pantalla de restablecimiento. Si no fuiste tú, ignora este correo.
               </p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom:28px;">
-                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;background-color:#0EA5E9;color:#FFFFFF;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;">
-                      Restablecer contraseña
-                    </a>
+                    <div style="display:inline-block;background:#F2F5FA;border:1px solid #E3E8F2;border-radius:10px;padding:18px 34px;">
+                      <div style="font-size:11px;font-weight:600;letter-spacing:0.12em;color:#5A6B85;text-transform:uppercase;margin-bottom:8px;">
+                        Tu código de verificación
+                      </div>
+                      <div style="font-family:'Courier New',Consolas,monospace;font-size:34px;font-weight:700;letter-spacing:0.3em;color:#0B1220;line-height:1;">
+                        {{ .Token }}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               </table>
@@ -42,17 +47,11 @@
                 <tr>
                   <td style="background:#F2F5FA;border:1px solid #E3E8F2;border-radius:8px;padding:16px 20px;">
                     <p style="margin:0;font-size:13px;line-height:20px;color:#5A6B85;">
-                      Este enlace expira en breve. En desarrollo local revisa el correo en Mailpit: <strong>http://127.0.0.1:54324</strong>
+                      Este código expira en breve y se usa una sola vez. En desarrollo local revisa el correo en Mailpit: <strong>http://127.0.0.1:54324</strong>
                     </p>
                   </td>
                 </tr>
               </table>
-              <p style="margin:24px 0 0;font-size:12px;line-height:18px;color:#8A9AB1;text-align:center;">
-                ¿El botón no funciona? Copia este enlace:
-              </p>
-              <p style="margin:6px 0 0;font-size:12px;line-height:18px;word-break:break-all;text-align:center;">
-                <a href="{{ .ConfirmationURL }}" style="color:#0EA5E9;">{{ .ConfirmationURL }}</a>
-              </p>
             </td>
           </tr>
           <tr>

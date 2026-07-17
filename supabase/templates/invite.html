@@ -25,22 +25,24 @@
           <tr>
             <td style="padding:32px 40px;">
               <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0B1220;text-align:center;">Establece tu contraseña</h1>
-              <p style="margin:0 0 28px;font-size:14px;line-height:22px;color:#5A6B85;text-align:center;">
+              <p style="margin:0 0 26px;font-size:14px;line-height:22px;color:#5A6B85;text-align:center;">
                 Se creó una cuenta para <strong style="color:#0B1220;">{{ .Email }}</strong> en PragmataDevs.
-                Haz clic para definir tu contraseña y acceder al ERP.
+                Ingresa el código de abajo en la pantalla de contraseña para activarla y entrar al ERP.
               </p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom:28px;">
-                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;background-color:#0EA5E9;color:#FFFFFF;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:8px;">
-                      Establecer contraseña
-                    </a>
+                    <div style="display:inline-block;background:#F2F5FA;border:1px solid #E3E8F2;border-radius:10px;padding:18px 34px;">
+                      <div style="font-size:11px;font-weight:600;letter-spacing:0.12em;color:#5A6B85;text-transform:uppercase;margin-bottom:8px;">
+                        Tu código de activación
+                      </div>
+                      <div style="font-family:'Courier New',Consolas,monospace;font-size:34px;font-weight:700;letter-spacing:0.3em;color:#0B1220;line-height:1;">
+                        {{ .Token }}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               </table>
-              <p style="margin:24px 0 0;font-size:12px;line-height:18px;color:#8A9AB1;text-align:center;">
-                Enlace alternativo: <a href="{{ .ConfirmationURL }}" style="color:#0EA5E9;">{{ .ConfirmationURL }}</a>
-              </p>
             </td>
           </tr>
           <tr>
