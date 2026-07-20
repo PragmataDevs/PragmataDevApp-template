@@ -9,4 +9,4 @@ export const roleSchema = z.object({
   description: z.string().max(300, 'La descripción no puede superar 300 caracteres').nullable(),
 });
 
-export type RoleFormValues = z.infer<typeof roleSchema>;
+export type RoleFormValues = z.output<typeof roleSchema>;

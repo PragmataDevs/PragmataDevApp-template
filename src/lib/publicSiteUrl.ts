@@ -5,9 +5,22 @@ export function getConfiguredPublicSiteUrl(): string {
     typeof import.meta.env.VITE_PUBLIC_SITE_URL === 'string'
       ? import.meta.env.VITE_PUBLIC_SITE_URL.trim().replace(/\/+$/, '')
       : '';
-  if (raw) return raw;
+  if (raw) {
+    const host = safeHostname(raw);
+    if (host && !import.meta.env.DEV && isPrivateOrLanHost(host)) return '';
+    return raw;
+  }
   if (import.meta.env.DEV) return 'http://localhost:4321';
   return '';
+}
+
+function safeHostname(url: string): string | null {
+  try {
+    const withProto = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    return new URL(withProto).hostname;
+  } catch {
+    return null;
+  }
 }
 
 function isPrivateOrLanHost(hostname: string): boolean {

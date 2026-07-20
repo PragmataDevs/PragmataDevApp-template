@@ -45,7 +45,7 @@ export const taskSchema = z.object({
  * TaskFormValues: lo que el form entrega, antes de cualquier transformación.
  * `tags` es un string CSV: "frontend, bugfix, bloqueado"
  */
-export type TaskFormValues = z.infer<typeof taskSchema>;
+export type TaskFormValues = z.output<typeof taskSchema>;
 
 /**
  * Helper para parsear las tags del string CSV a array.

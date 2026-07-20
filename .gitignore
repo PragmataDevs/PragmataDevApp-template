@@ -3,6 +3,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+!.env.cloud.example
 dist/
 .vercel/
 
@@ -12,6 +13,10 @@ docs/feature-specs/generated/
 # Supabase CLI (local); no versionar — cada copia cliente debe tener estado propio
 .supabase/
 
-# Dumps SQL locales (no versionar)
+# Dumps / backups SQL locales — NUNCA versionar (pueden traer hashes de password y datos)
 dump*.sql
 **/dump_*.sql
+*.dump
+*.sql.gz
+*-backup.sql
+*_backup.sql

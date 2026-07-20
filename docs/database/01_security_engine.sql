@@ -823,8 +823,28 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    -- Scenario B: a profile's role/sync flag changed → rebuild its permissions
+    -- Scenario B: a profile was created OR its role/sync flag changed →
+    --             (re)build its permission cache from the role definitions.
     IF (TG_TABLE_NAME = 'profiles') THEN
+        -- INSERT: a brand-new synced user must inherit the role's permissions.
+        -- (The frontend intentionally does NOT write permissions for synced
+        --  users — it relies on this trigger. Guard OLD.* behind TG_OP so it
+        --  is never referenced on INSERT.)
+        IF (TG_OP = 'INSERT') THEN
+            IF (NEW.is_role_synced = TRUE) THEN
+                INSERT INTO public.sys_user_permissions (user_id, team_id, resource_code, granted_actions, conditions)
+                SELECT NEW.id, NEW.team_id, rd.resource_code, rd.granted_actions, rd.conditions
+                FROM public.sys_role_definitions rd
+                WHERE rd.role_id = NEW.role_id
+                ON CONFLICT (user_id, resource_code) DO UPDATE
+                SET granted_actions = EXCLUDED.granted_actions,
+                    conditions      = EXCLUDED.conditions,
+                    updated_at      = NOW();
+            END IF;
+            RETURN NEW;
+        END IF;
+
+        -- UPDATE: rebuild only when the role changed or sync was turned back on.
         IF (OLD.role_id IS DISTINCT FROM NEW.role_id)
            OR (OLD.is_role_synced = FALSE AND NEW.is_role_synced = TRUE) THEN
 
@@ -852,7 +872,7 @@ FOR EACH ROW EXECUTE FUNCTION public.handle_permission_sync();
 
 DROP TRIGGER IF EXISTS trigger_sync_profile_role ON public.profiles;
 CREATE TRIGGER trigger_sync_profile_role
-AFTER UPDATE ON public.profiles
+AFTER INSERT OR UPDATE ON public.profiles
 FOR EACH ROW EXECUTE FUNCTION public.handle_permission_sync();
 
 -- 8.4 NOTIFICATION BROADCAST FAN-OUT

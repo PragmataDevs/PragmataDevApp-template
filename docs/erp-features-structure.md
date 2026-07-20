@@ -37,7 +37,7 @@ Lo compartido entre subfeatures hermanas sube al `components/` / `hooks/` / `typ
 Convenciones:
 
 - Carpetas en **minúsculas**. Labels UI en sidebar y `APP_RESOURCES`.
-- **`types/`** en cada nivel: una verdad por entidad; sin `*DTO` / `*Payload` paralelos.
+- **`types/`** en cada nivel: una verdad por entidad; par `<entidad>.ts` + `<entidad>.schema.ts` si hay formulario; sin `*DTO` / `*Payload` / `*FormState`. Referencia: **`src/features/clients/`**.
 - Solo **`src/types/core/`** queda para `AuditBase` (re-export) y tipos de **router** — ver [`src/types/README.md`](../src/types/README.md).
 - Lazy **por página**, no por feature entera.
 
@@ -88,6 +88,7 @@ src/features/proyectos/
 | `roles` | `role.ts`, `role.schema.ts` | `RolesPage` | `/settings/roles` |
 | `users` | `profile.ts`, `profile.schema.ts` | usuarios | `/settings/usuarios` |
 | `entities` | `entity.ts`, `entity.schema.ts` | entidades | `/settings/entities` |
+| `clients` | `cliente.ts`, `cliente.schema.ts` | — (referencia Model+Form) | — |
 | `tasks` | `task.ts`, `task.schema.ts` | Kanban | `.../tasks` |
 | `workspace` | — | dashboard entity | `.../dashboard` |
 | `documents` | `document.ts` | archivos | `.../documents` |

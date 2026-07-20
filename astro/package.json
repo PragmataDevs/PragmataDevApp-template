@@ -2,6 +2,7 @@
   "name": "pragmata-public",
   "version": "0.0.1",
   "private": true,
+  "packageManager": "pnpm@10.19.0",
   "type": "module",
   "scripts": {
     "dev": "astro dev",
@@ -9,7 +10,10 @@
     "build": "astro build",
     "start": "vercel dev",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "vercel:prod": "pnpm --dir .. run vercel:prod",
+    "vercel:prod:astro": "pnpm --dir .. run vercel:prod:astro",
+    "vercel:prod:all": "pnpm --dir .. run vercel:prod:all"
   },
   "dependencies": {
     "@pragmata/core": "workspace:*",

@@ -33,11 +33,19 @@ Antecedentes: `.cursor/rules/`, **`docs/architecture.md`** §2, **`docs/SETUP.md
 
 ## 2. Modelo TypeScript canónico
 
-- Un archivo en **`src/features/<modulo>/types/<entidad>.ts`** (o `.../<subfeature>/types/` si solo aplica ahí).
+**Regla rápida:** cada entidad con formulario = **dos archivos** en `types/`:
+
+| Archivo | Contenido |
+|---------|-----------|
+| `<entidad>.ts` | Modelo (`AuditBase`), `createEmpty*()`, `*Input` con `Pick` si hace falta |
+| `<entidad>.schema.ts` | Zod + `export type *FormValues = z.output<typeof schema>` |
+
+Sin `*DTO`, sin `*FormState`, sin validación repartida en el JSX.
+
+- Ubicación: **`src/features/<modulo>/types/`** (o subfeature).
 - `import type { AuditBase } from '@/types/core/base'`.
-- `export interface MiEntidad extends AuditBase { … }` + `createEmptyMiEntidad()` en el mismo archivo.
-- Schema Zod al lado: `<entidad>.schema.ts` en la misma carpeta `types/`.
-- Sin DTOs paralelos. **`src/types/`** solo para núcleo (`core/base`) — ver `src/types/README.md`.
+- **`src/types/`** solo para núcleo (`core/base`) — ver `src/types/README.md`.
+- **Plantilla al copiar:** `src/features/clients/` (`cliente.ts`, `cliente.schema.ts`, `ClientForm.tsx`). Detalle: **`docs/architecture.md`** §4.1.2.
 
 ---
 
@@ -74,7 +82,7 @@ Mantén la lógica de negocio en `hooks/`; las páginas solo componen.
 - UI: `Button`, tokens `--pragmata-*`, bordes `rounded-pragmata`.
 - **Listados tabulares:** obligatorio **`DataTable`** (`@/components/ui/DataTable`). No montar `<table>` manual en páginas. Solo puedes usar otro patrón si el product owner lo indica **explícitamente** (Kanban, calendario, grid tipo spreadsheet, HTML solo para impresión/PDF). Ver `.cursor/rules/02-ui-components.mdc`. Genérico **`T extends object`** y CSV: **`docs/architecture.md`** §13.7 (*Listas tabulares*).
 - CSV masivo: prop opcional **`csv`**. Mínimo **`filename`** + **`fields`** para export / plantilla; **`onImport`** solo donde el dominio lo permita (ej. catálogo). *Por defecto en esta plantilla, usuarios / roles / entidades son solo export — sin carga CSV hasta que se defina.*
-- **Formularios + Zod:** schema alineado al modelo (campos editables = mismos nombres que en `src/types` y columnas expuestas); números desde el DOM con **`setValueAs`**, no **`z.coerce`** si rompe el tipado del resolver; tipo del formulario validado → **`z.output<typeof schema>`** cuando aplique. Detalle y ejemplo: **`docs/architecture.md`** (§ modelo canónico → *Validación con Zod + react-hook-form*) y **`src/features/ecommerce/pages/ProductsPage.tsx`**.
+- **Formularios + Zod:** `zodResolver` + schema en `types/<entidad>.schema.ts`; campos editables = mismos nombres que el modelo y columnas SQL; números desde el DOM con **`setValueAs`**; tipo del formulario → **`z.output<typeof schema>`**. Ver **`docs/architecture.md`** §4.1.2 y **`src/features/clients/components/ClientForm.tsx`**.
 
 ---
 
@@ -133,7 +141,7 @@ const ContratosPage = lazy(() =>
 | Navegación / Workspace | `.cursor/rules/06-navigation-layout.mdc` |
 | Hooks + sesión | `.cursor/rules/05-secure-hooks.mdc` |
 | UI tabla | `.cursor/rules/02-ui-components.mdc` |
-| Formulario + Zod + RHF | `docs/architecture.md` (validación Zod), `src/features/ecommerce/pages/ProductsPage.tsx` |
+| Formulario + Zod + RHF | `docs/architecture.md` §4.1.2, `src/features/clients/` |
 | Features de cliente (workshop, subfeatures) | `docs/client-features-playbook.md` |
 | Mapa carpetas `src/features/` | `docs/erp-features-structure.md` |
 | Índice toda la documentación | `docs/README.md` |

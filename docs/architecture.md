@@ -413,7 +413,7 @@ Todas las tablas del sistema seguirán un diseño **Relacional Normalizado (3NF)
 
 ### 4.1.1 Modelo Único como Fuente de Verdad
 
-> **Regla de oro: una entidad → un modelo canónico → un único archivo en `src/types`.**
+> **Regla de oro: una entidad → un modelo canónico → `types/<entidad>.ts` en el feature.**
 > Este modelo es lo único que existe para representar esa entidad en todo el sistema: tipo TS, estado del form, payload a Supabase. No hay transformaciones, no hay copies, no hay wrappers.
 
 #### Definición del modelo
@@ -443,14 +443,66 @@ Eso es todo. No hay `ContratoCreatePayload`, no hay `ContratoFormState`, no hay 
 - **PROHIBIDO** mantener "casi-copias" con campos sueltos para "lo que necesita esa pantalla".
 - Cuando hay desfase entre lo que devuelve la query y el modelo, **se ajusta la query**, no se inventa un tipo paralelo.
 
+### 4.1.2 Modelo + schema Zod — patrón «Model + Form»
+
+En Django separas **qué es la entidad** (`models.Model`) de **qué acepta el formulario** (`forms.ModelForm` / `clean()`). En Pragmata la misma idea, con tres piezas — no tres modelos:
+
+| Capa | Archivo | Rol |
+|------|---------|-----|
+| **Modelo canónico** | `types/<entidad>.ts` | Fila completa: `AuditBase` + negocio. Es lo que viaja a Supabase. |
+| **Input editable** | mismo archivo, `Pick<Entidad, …>` | Subconjunto de campos que el usuario o el hook pueden escribir. Mismos nombres que columnas. |
+| **Schema Zod** | `types/<entidad>.schema.ts` | Reglas en runtime: required, formatos, `superRefine` / reglas cruzadas. |
+
+**Estructura obligatoria** cuando la entidad tiene formulario con react-hook-form:
+
+```text
+src/features/<modulo>/types/
+  cliente.ts         # Cliente extends AuditBase, ClienteInput, createEmptyCliente()
+  cliente.schema.ts  # clienteSchema, ClienteFormValues = z.output<typeof clienteSchema>
+```
+
+**Flujo de guardado** (sin tipos paralelos):
+
+```text
+Usuario → <ClientForm /> (react-hook-form + zodResolver)
+       → clienteSchema valida → ClienteFormValues (inferido)
+       → handler mapea a ClienteInput (trim, nulls)
+       → hook mezcla con createEmptyCliente() + AuditBase
+       → upsert tabla con objeto Cliente completo
+```
+
+**Qué sí está permitido**
+
+- `ClienteFormValues = z.output<typeof clienteSchema>` — se **infere** del schema; no es un `*FormState` manual.
+- `ClienteInput = Pick<Cliente, 'nombre' | …>` — proyección del mismo modelo.
+- `createEmptyCliente()` — factory en blanco; el hook la usa al crear.
+- Reglas de negocio en Zod (`superRefine`) cuando dependen de valores del formulario.
+
+**Qué sigue prohibido**
+
+- `ClienteDTO`, `ClientePayload`, `ClienteFormState` como interfaces sueltas.
+- Validación solo en el JSX (`if (!nombre) …` por campo).
+- Schema Zod **dentro** del componente de página o formulario.
+- Un segundo `.ts` que redeclare la entidad con otra forma.
+
+**Referencia canónica en esta plantilla:** `src/features/clients/` — copiar al crear el siguiente módulo.
+
+| Pieza | Ruta |
+|-------|------|
+| Modelo + Input + factory | `src/features/clients/types/cliente.ts` |
+| Schema Zod | `src/features/clients/types/cliente.schema.ts` |
+| Formulario RHF | `src/features/clients/components/ClientForm.tsx` |
+
+Otros módulos del chasis siguen el mismo par de archivos: `entities/types/entity.ts` + `entity.schema.ts`, `roles/`, `tasks/`, `users/`.
+
 #### Validación con Zod + react-hook-form
 
 Cuando el formulario usa **`react-hook-form`** y **`@hookform/resolvers/zod`**:
 
-- El schema valida **solo los campos editables** que existen en el modelo y en Postgres (mismos nombres; tipos finales coherentes con el tipo canónico: `number`, `boolean`, etc.). Campos de auditoría (`id`, `version`, `created_by`, …) y derivados (p. ej. `image_url` tras subir archivo) se **fusionan en el payload** al guardar; no hace falta duplicarlos en Zod si no hay input directo.
+- El schema valida **solo los campos editables** que existen en el modelo y en Postgres (mismos nombres; tipos finales coherentes con el tipo canónico: `number`, `boolean`, etc.). Campos de auditoría (`id`, `version`, `created_by`, `team_id`, …) y derivados (p. ej. `image_url` tras subir archivo) se **fusionan en el hook** al guardar (`createEmpty*` + `upsert`); no hace falta duplicarlos en Zod si no hay input directo.
 - Los `<input type="number">` llegan como **string** al resolver: preferir **`register('campo', { setValueAs })`** para producir `number` o `number | null` antes de validar. Evitar **`z.coerce.number()`** cuando fuerce casts (`as Resolver<…>`) en el resolver; el objetivo es que **`zodResolver(schema)`** tipé solo contra **`z.output<typeof schema>`** y **`defaultValues`** de RHF.
-- Si el schema usa **`.default()`** en Zod, el tipo de *entrada* del resolver puede marcar campos como opcionales y chocar con `useForm<T>`; suele bastar con defaults solo en **`defaultValues`** y campos requeridos explícitos en Zod (p. ej. `currency`, `in_stock`).
-- Referencia canónica en esta plantilla: **`src/features/ecommerce/pages/ProductsPage.tsx`** (`productSchema`, helpers `parseRequiredMoney` / `parseOptionalMoney` / `parseOptionalInt`).
+- Si el schema usa **`.default()`** en Zod, el tipo de *entrada* del resolver puede marcar campos como opcionales y chocar con `useForm<T>`; suele bastar con defaults solo en **`defaultValues`** y campos requeridos explícitos en Zod.
+- Referencias: **`src/features/clients/components/ClientForm.tsx`** + **`cliente.schema.ts`**; números con `setValueAs`: **`src/features/ecommerce/pages/ProductsPage.tsx`**.
 
 #### Hook genérico `useCrudResource`
 
@@ -504,7 +556,7 @@ const [contrato, setContrato] = useState<Contrato>(() =>
 />
 
 // Persistir: se refresca AuditBase y se manda el objeto COMPLETO tal cual
-// El .eq('version', ...) activa el Optimistic Concurrency Control (ver §4.1.3)
+// El .eq('version', ...) activa el Optimistic Concurrency Control (ver §4.1.4)
 async function guardar() {
   const toPersist: Contrato = {
     ...contrato,
@@ -594,7 +646,7 @@ Sin ellos, la tabla en Supabase y en PowerSync pierde trazabilidad completa. Por
 
 El trigger de Postgres en `updated_at` es la red de seguridad, pero el cliente siempre lo envía también para consistencia en PowerSync/SQLite local.
 
-### 4.1.2 Tipos Derivados Permitidos
+### 4.1.3 Tipos Derivados Permitidos
 
 Los únicos tipos que pueden vivir **fuera** de `src/types` son **derivaciones explícitas** del modelo canónico, con un único propósito de presentación o agregación. Toda derivación debe partir del tipo base por **extensión, intersección, `Pick` o `Partial`** — nunca por copia manual de campos, y **nunca** descartando los campos de `AuditBase`.
 
@@ -613,7 +665,7 @@ Reglas para los derivados:
 - **No** se permiten tipos `*CreatePayload` / `*UpdatePayload` que recorten el modelo canónico. Para crear o actualizar se usa la entidad completa (ver §4.1.1). Si el endpoint exige menos campos, eso lo resuelve la capa de persistencia con un `Pick` local **al momento de la query**, no con un tipo paralelo en el dominio.
 - Si el derivado deja de usar el tipo base canónico, es señal de que el modelo canónico está mal diseñado: corregir el modelo, no abandonar la regla.
 
-### 4.1.3 Resolución de Conflictos Offline (Optimistic Concurrency Control)
+### 4.1.4 Resolución de Conflictos Offline (Optimistic Concurrency Control)
 
 En un sistema offline-first (PowerSync + SQLite), dos usuarios pueden editar el mismo registro mientras uno o ambos están sin conexión. Sin un mecanismo explícito, el último en reconectar sobreescribe silenciosamente los cambios del otro. `AuditBase` incluye el campo `version: number` para detectar y exponer estos conflictos.
 

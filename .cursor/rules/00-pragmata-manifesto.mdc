@@ -21,9 +21,9 @@ Cada pilar se activa/desactiva con `.env`. No instalar dependencias de un pilar 
 
 1. **Trazabilidad Total** — Toda tabla de negocio extiende `AuditBase`. Sin excepciones. Nada se destruye (`DELETE`), todo se marca (`status: 'deleted'`).
 
-2. **Un Modelo, Una Verdad** — Una entidad = un único tipo TS en `src/types`. Prohibido `*DTO`, `*Payload`, `*FormState`. El objeto canónico viaja completo hasta Supabase.
+2. **Un Modelo, Una Verdad** — Una entidad = un único tipo TS en `src/features/<modulo>/types/<entidad>.ts`. Prohibido `*DTO`, `*Payload`, `*FormState`. El objeto canónico viaja completo hasta Supabase. Referencia: `src/features/clients/`.
 
-3. **Validación desde el Modelo** — Los esquemas Zod se generan o derivan del tipo canónico, nunca se escriben manualmente en el componente.
+3. **Validación desde el Modelo** — Con formulario: par `types/<entidad>.ts` + `types/<entidad>.schema.ts` (`z.output<typeof schema>`). Nunca Zod ni validación repartida en el JSX del componente.
 
 4. **Desacoplamiento de Infraestructura** — Auth, DB y Sync son intercambiables via Provider Pattern. Cambiar de Supabase no debe requerir tocar la lógica de negocio.
 

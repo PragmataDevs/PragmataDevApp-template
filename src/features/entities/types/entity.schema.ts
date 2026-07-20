@@ -19,4 +19,4 @@ export const entitySchema = z.object({
   { message: 'La fecha de fin debe ser posterior a la de inicio', path: ['end_date'] }
 );
 
-export type EntityFormValues = z.infer<typeof entitySchema>;
+export type EntityFormValues = z.output<typeof entitySchema>;

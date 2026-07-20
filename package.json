@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vite",
     "dev:astro": "pnpm --dir astro dev",
-    "dev:all": "concurrently -k -n erp,astro -c cyan,magenta \"vite\" \"pnpm --dir astro dev\"",
+    "dev:all": "bash scripts/dev-all.sh",
+    "dev:cloud": "bash scripts/dev-all.sh --cloud",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -17,7 +18,10 @@
     "ai:sync-prompts": "node scripts/sync-ai-prompts.mjs",
     "mapping:init": "node scripts/compose-mapping-prompt.mjs init",
     "mapping:prompt": "node scripts/compose-mapping-prompt.mjs prompt",
-    "brand:sync": "cp public/pragmatadevs-icon.svg astro/public/pragmatadevs-icon.svg && cp public/pragmatadevs-icon.svg src/assets/brand-icon.svg && cp public/pragmatadevs-icon.svg public/favicon.svg && cp public/pragmatadevs-icon.svg astro/public/favicon.svg"
+    "brand:sync": "cp public/pragmatadevs-icon.svg astro/public/pragmatadevs-icon.svg && cp public/pragmatadevs-icon.svg src/assets/brand-icon.svg && cp public/pragmatadevs-icon.svg public/favicon.svg && cp public/pragmatadevs-icon.svg astro/public/favicon.svg",
+    "vercel:prod": "vercel deploy --prod -y",
+    "vercel:prod:astro": "bash scripts/vercel-prod-astro.sh",
+    "vercel:prod:all": "bash scripts/vercel-prod-all.sh"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

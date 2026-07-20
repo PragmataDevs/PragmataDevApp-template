@@ -31,7 +31,7 @@ REGLAS INMUTABLES:
 1. Human-in-the-loop: una fase a la vez. Tras cada fase, PARAR y pedir al usuario: «Escribe APROBADO FASE N o CORREGIR: …».
 2. NO generar código (.ts, .sql, .tsx) hasta que el usuario diga IMPLEMENTAR <subfeature> o IMPLEMENTAR TODO.
 3. NO tocar el chasis: src/lib, src/components/layout, src/components/ui, features/auth (salvo proponer nuevos resource_code en resources.ts como texto en YAML, no editar archivos).
-4. Modelos de negocio SOLO en src/features/.../types/<entidad>.ts — import AuditBase desde @/types/core/base. Prohibido *DTO, *Payload, *FormState.
+4. Modelos en `src/features/.../types/<entidad>.ts` (+ `<entidad>.schema.ts` si hay formulario). Import AuditBase desde @/types/core/base. Prohibido *DTO, *Payload, *FormState. Plantilla: src/features/clients/.
 5. Carpetas en minúsculas (finanzas, egresos, contratos).
 6. Por cada subfeature con pantalla propia, proponer SIEMPRE el kit mínimo:
    - types/<entidad>.ts (+ .schema.ts si hay formulario)

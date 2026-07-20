@@ -29,7 +29,7 @@ export interface Contrato {
 
 ## Un Modelo — Una Verdad
 
-Ubicación: **`src/features/<dominio>/types/<entidad>.ts`** (o `.../<subfeature>/types/`). Import `AuditBase` desde `@/types/core/base`. Un solo tipo, importado donde se necesite. Ver `docs/erp-features-structure.md`.
+Ubicación: **`src/features/<dominio>/types/<entidad>.ts`** (o subfeature). Import `AuditBase` desde `@/types/core/base`. Un solo tipo canónico; el schema Zod va en **`types/<entidad>.schema.ts`**. Ver `docs/architecture.md` §4.1.2 y **`src/features/clients/`**.
 
 ```ts
 // ❌ PROHIBIDO
@@ -39,7 +39,17 @@ interface ContratoFormState { nombre: string; monto: number; }
 // ✅ PERMITIDO — derivados explícitos con propósito claro
 interface ContratoWithMembers extends Contrato { member_count: number }
 type ContratoOption = Pick<Contrato, 'id' | 'nombre'>
+type ContratoInput = Pick<Contrato, 'nombre' | 'monto_total'>  // mismo modelo, subconjunto
 ```
+
+## Entidad con formulario — dos archivos en `types/`
+
+| Archivo | Rol |
+|---------|-----|
+| `<entidad>.ts` | `interface` + `createEmpty*()` + `*Input` (`Pick`) |
+| `<entidad>.schema.ts` | Zod + `type *FormValues = z.output<typeof schema>` |
+
+Sin `*DTO`, sin `*FormState`, sin validación en JSX. Plantilla: **`src/features/clients/types/cliente.ts`** + **`cliente.schema.ts`** + **`components/ClientForm.tsx`**.
 
 ## createEmpty — Instancia en Blanco
 
@@ -99,16 +109,16 @@ await supabase.from('contratos').upsert(deleted);
 await supabase.from('contratos').delete().eq('id', id);
 ```
 
-## Esquema Zod — Derivado del Tipo, No Manual
+## Esquema Zod — en `types/<entidad>.schema.ts`, no en el componente
 
 ```ts
-// ✅ CORRECTO — Zod refleja el modelo canónico
-const contratoSchema = z.object({
+// ✅ CORRECTO — archivo types/contrato.schema.ts
+export const contratoSchema = z.object({
   numero: z.string().min(1),
   nombre: z.string().min(1),
-  proyecto_id: z.string().uuid(),
-  monto_total: z.number().positive(),
 });
+export type ContratoFormValues = z.output<typeof contratoSchema>;
 
 // ❌ PROHIBIDO — schema duplicado con campos distintos al modelo
+// ❌ PROHIBIDO — schema definido dentro de ClientForm.tsx o la página
 ```

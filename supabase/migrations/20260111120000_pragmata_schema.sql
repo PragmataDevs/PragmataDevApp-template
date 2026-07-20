@@ -823,8 +823,28 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    -- Scenario B: a profile's role/sync flag changed → rebuild its permissions
+    -- Scenario B: a profile was created OR its role/sync flag changed →
+    --             (re)build its permission cache from the role definitions.
     IF (TG_TABLE_NAME = 'profiles') THEN
+        -- INSERT: a brand-new synced user must inherit the role's permissions.
+        -- (The frontend intentionally does NOT write permissions for synced
+        --  users — it relies on this trigger. Guard OLD.* behind TG_OP so it
+        --  is never referenced on INSERT.)
+        IF (TG_OP = 'INSERT') THEN
+            IF (NEW.is_role_synced = TRUE) THEN
+                INSERT INTO public.sys_user_permissions (user_id, team_id, resource_code, granted_actions, conditions)
+                SELECT NEW.id, NEW.team_id, rd.resource_code, rd.granted_actions, rd.conditions
+                FROM public.sys_role_definitions rd
+                WHERE rd.role_id = NEW.role_id
+                ON CONFLICT (user_id, resource_code) DO UPDATE
+                SET granted_actions = EXCLUDED.granted_actions,
+                    conditions      = EXCLUDED.conditions,
+                    updated_at      = NOW();
+            END IF;
+            RETURN NEW;
+        END IF;
+
+        -- UPDATE: rebuild only when the role changed or sync was turned back on.
         IF (OLD.role_id IS DISTINCT FROM NEW.role_id)
            OR (OLD.is_role_synced = FALSE AND NEW.is_role_synced = TRUE) THEN
 
@@ -852,7 +872,7 @@ FOR EACH ROW EXECUTE FUNCTION public.handle_permission_sync();
 
 DROP TRIGGER IF EXISTS trigger_sync_profile_role ON public.profiles;
 CREATE TRIGGER trigger_sync_profile_role
-AFTER UPDATE ON public.profiles
+AFTER INSERT OR UPDATE ON public.profiles
 FOR EACH ROW EXECUTE FUNCTION public.handle_permission_sync();
 
 -- 8.4 NOTIFICATION BROADCAST FAN-OUT
@@ -1073,6 +1093,102 @@ CREATE POLICY "Admin Manage Profiles" ON public.profiles FOR ALL USING (
     OR id = auth.uid()
     OR public.check_permission('page_settings_usuarios', 'update')
 );
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Privilege-escalation guard on profiles.
+--
+-- The "Edit Self" policy (FOR UPDATE USING id = auth.uid(), no WITH CHECK) plus
+-- the absence of column-level GRANTs means the only constraint on a self-update
+-- is "it's still my row" — the value written to access_level / role_id / team_id
+-- is otherwise unconstrained. Since check_permission() short-circuits to TRUE for
+-- access_level = 'admin', a plain member could self-promote to admin and gain the
+-- whole team. Permissive policies are OR-combined so a WITH CHECK on one policy is
+-- bypassed by another; and OLD-vs-NEW column comparison isn't expressible in a
+-- policy. Hence a BEFORE INSERT OR UPDATE trigger.
+--
+-- Rules (authenticated callers; service_role / internal writes where auth.uid()
+-- IS NULL are trusted and pass through — create-auth-user sets access_level via
+-- service_role):
+--   * god may do anything.
+--   * access_level: only an admin (or god) may change/create it; no non-god may
+--     grant 'god'.
+--   * role_id: only a user-manager (check_permission('page_settings_usuarios')).
+--   * team_id: immutable for non-god (and new rows must be in the actor's team).
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.enforce_profile_privilege_guard()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    current_uid UUID := auth.uid();
+    actor_level TEXT;
+    actor_team  UUID;
+BEGIN
+    IF public.is_god() THEN
+        RETURN NEW;
+    END IF;
+
+    IF current_uid IS NULL THEN
+        RETURN NEW; -- trusted backend (service_role) / internal definer chain
+    END IF;
+
+    SELECT p.access_level, p.team_id INTO actor_level, actor_team
+    FROM public.profiles p
+    WHERE p.id = current_uid;
+
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.access_level IS DISTINCT FROM 'member' THEN
+            IF actor_level IS DISTINCT FROM 'admin' THEN
+                RAISE EXCEPTION 'Not authorized to create a user with this access level'
+                    USING ERRCODE = '42501';
+            END IF;
+            IF NEW.access_level = 'god' THEN
+                RAISE EXCEPTION 'Only a god may create a god user'
+                    USING ERRCODE = '42501';
+            END IF;
+        END IF;
+        IF NEW.team_id IS DISTINCT FROM actor_team THEN
+            RAISE EXCEPTION 'Cannot create a user in another team'
+                USING ERRCODE = '42501';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.access_level IS DISTINCT FROM OLD.access_level THEN
+        IF actor_level IS DISTINCT FROM 'admin' THEN
+            RAISE EXCEPTION 'Not authorized to change access_level'
+                USING ERRCODE = '42501';
+        END IF;
+        IF NEW.access_level = 'god' THEN
+            RAISE EXCEPTION 'Only a god may grant the god access level'
+                USING ERRCODE = '42501';
+        END IF;
+    END IF;
+
+    IF NEW.role_id IS DISTINCT FROM OLD.role_id THEN
+        IF NOT public.check_permission('page_settings_usuarios', 'update') THEN
+            RAISE EXCEPTION 'Not authorized to change role'
+                USING ERRCODE = '42501';
+        END IF;
+    END IF;
+
+    IF NEW.team_id IS DISTINCT FROM OLD.team_id THEN
+        RAISE EXCEPTION 'Not authorized to change team'
+            USING ERRCODE = '42501';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- "aaa_" prefix so it runs before the sync/audit triggers alphabetically.
+DROP TRIGGER IF EXISTS aaa_guard_profile_privileges ON public.profiles;
+CREATE TRIGGER aaa_guard_profile_privileges
+    BEFORE INSERT OR UPDATE ON public.profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION public.enforce_profile_privilege_guard();
 
 -- GOD ve TODAS las entidades sin necesitar sys_entity_access
 CREATE POLICY "View Authorized Entities" ON public.entities FOR SELECT USING (

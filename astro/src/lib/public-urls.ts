@@ -16,6 +16,12 @@ export function isLoopbackHostname(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
 }
 
+/** IP privada / Tailscale — inferir ERP en el mismo host que la petición (solo dev/LAN). */
+function isPrivateOrLanHost(hostname: string): boolean {
+  if (isLoopbackHostname(hostname)) return false;
+  return /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.)/.test(hostname);
+}
+
 function hostnameOf(url: string): string | null {
   try {
     const withProto = /^https?:\/\//i.test(url) ? url : `https://${url}`;
@@ -52,17 +58,32 @@ function portFromConfiguredUrl(raw: string | undefined, fallback: number): numbe
   }
 }
 
-function erpDevPort(): number {
-  return portFromConfiguredUrl(import.meta.env.PUBLIC_APP_URL, 7070);
+function parseEnvPort(raw: unknown): number | null {
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  const n = parseInt(raw.trim(), 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/** Puerto ERP en dev: `VITE_PORT` (misma fuente que vite.config) → `PUBLIC_APP_URL` → 7070. */
+function erpDevPort(): number {
+  return parseEnvPort(import.meta.env.VITE_PORT)
+    ?? portFromConfiguredUrl(import.meta.env.PUBLIC_APP_URL, 7070);
+}
+
+/** Puerto Astro en dev: `ASTRO_PORT` (astro.config) → `PUBLIC_SITE_URL` → 4321. */
 function siteDevPort(): number {
-  return portFromConfiguredUrl(import.meta.env.PUBLIC_SITE_URL, 4321);
+  return parseEnvPort(import.meta.env.ASTRO_PORT)
+    ?? portFromConfiguredUrl(import.meta.env.PUBLIC_SITE_URL, 4321);
 }
 
 function appOriginFromPage(pageUrl: URL): string {
   const { protocol, hostname } = pageUrl;
-  return normalizeOrigin(`${protocol}//${hostname}:${erpDevPort()}`);
+  const port = erpDevPort();
+  const omitPort =
+    (protocol === 'https:' && port === 443) || (protocol === 'http:' && port === 80);
+  return normalizeOrigin(
+    omitPort ? `${protocol}//${hostname}` : `${protocol}//${hostname}:${port}`,
+  );
 }
 
 function siteOriginFromPage(pageUrl: URL): string {
@@ -73,14 +94,18 @@ function siteOriginFromPage(pageUrl: URL): string {
 
 /** Base del ERP para enlaces «Iniciar sesión» → `{origin}/login`. */
 export function resolveAppOrigin(pageUrl?: URL): string {
-  // Mismo host que la petición (celular, Tailscale, LAN) — prioridad sobre localhost en .env
-  if (pageUrl?.hostname && !isLoopbackHostname(pageUrl.hostname)) {
-    return appOriginFromPage(pageUrl);
-  }
-
   const fromEnv =
     typeof import.meta.env.PUBLIC_APP_URL === 'string' ? import.meta.env.PUBLIC_APP_URL : '';
-  if (isUsablePublicUrl(fromEnv)) return normalizeOrigin(fromEnv);
+  if (isUsablePublicUrl(fromEnv) && !isLoopbackUrl(fromEnv)) {
+    return normalizeOrigin(fromEnv);
+  }
+
+  // LAN/móvil en dev: mismo host de la petición + puerto ERP del .env
+  if (pageUrl?.hostname && !isLoopbackHostname(pageUrl.hostname)) {
+    if (import.meta.env.DEV || isPrivateOrLanHost(pageUrl.hostname)) {
+      return appOriginFromPage(pageUrl);
+    }
+  }
 
   if (import.meta.env.DEV) {
     if (pageUrl?.hostname) return appOriginFromPage(pageUrl);
@@ -95,8 +120,16 @@ export function resolveAppOrigin(pageUrl?: URL): string {
  * Prioridad: petición remota → `site` Astro → `PUBLIC_SITE_URL` → dev localhost.
  */
 export function resolveSiteOrigin(site?: URL, pageUrl?: URL): string {
+  const fromEnv =
+    typeof import.meta.env.PUBLIC_SITE_URL === 'string' ? import.meta.env.PUBLIC_SITE_URL : '';
+  if (!import.meta.env.DEV && isUsablePublicUrl(fromEnv) && !isLoopbackUrl(fromEnv)) {
+    return normalizeOrigin(fromEnv);
+  }
+
   if (pageUrl?.hostname && !isLoopbackHostname(pageUrl.hostname)) {
-    return siteOriginFromPage(pageUrl);
+    if (import.meta.env.DEV || isPrivateOrLanHost(pageUrl.hostname)) {
+      return siteOriginFromPage(pageUrl);
+    }
   }
 
   const fromAstro = site?.origin ? normalizeOrigin(site.origin) : '';
@@ -104,14 +137,12 @@ export function resolveSiteOrigin(site?: URL, pageUrl?: URL): string {
     return fromAstro;
   }
 
-  const fromEnv =
-    typeof import.meta.env.PUBLIC_SITE_URL === 'string' ? import.meta.env.PUBLIC_SITE_URL : '';
   if (isUsablePublicUrl(fromEnv) && !isLoopbackUrl(fromEnv)) {
     return normalizeOrigin(fromEnv);
   }
 
-  if (fromAstro && isUsablePublicUrl(fromAstro)) return fromAstro;
-  if (isUsablePublicUrl(fromEnv)) return normalizeOrigin(fromEnv);
+  if (fromAstro && isUsablePublicUrl(fromAstro) && !isLoopbackUrl(fromAstro)) return fromAstro;
+  if (isUsablePublicUrl(fromEnv) && !isLoopbackUrl(fromEnv)) return normalizeOrigin(fromEnv);
 
   if (import.meta.env.DEV) {
     if (pageUrl?.hostname) return siteOriginFromPage(pageUrl);

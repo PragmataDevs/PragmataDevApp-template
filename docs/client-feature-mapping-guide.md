@@ -198,7 +198,7 @@ Por cada subfeature, estos archivos son la **meta mínima** (ajustar si el patr�
 | Orden | Archivo | Responsabilidad |
 |-------|---------|-------------------|
 | 1 | `types/entregable.ts` | `interface Entregable extends AuditBase`, `createEmptyEntregable()` |
-| 2 | `types/entregable.schema.ts` | Zod del formulario (opcional mismo basename) |
+| 2 | `types/entregable.schema.ts` | Zod del formulario (`z.output<typeof schema>`) — obligatorio si hay formulario |
 | 3 | `hooks/useEntregables.ts` | `useCrudResource` o hook custom + `entity_id` |
 | 4 | `components/EntregableFormModal.tsx` | Formulario alta/edición |
 | 5 | `components/EntregableTable.tsx` | Tabla de entregables |

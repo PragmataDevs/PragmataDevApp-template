@@ -17,5 +17,5 @@ export const userCreateSchema = z.object({
 
 export const userUpdateSchema = userCreateSchema.omit({ email: true });
 
-export type UserCreateFormValues = z.infer<typeof userCreateSchema>;
-export type UserUpdateFormValues = z.infer<typeof userUpdateSchema>;
+export type UserCreateFormValues = z.output<typeof userCreateSchema>;
+export type UserUpdateFormValues = z.output<typeof userUpdateSchema>;

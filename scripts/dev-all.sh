@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# dev-all.sh — Entorno de desarrollo de una app PragmataDevApp en un solo comando.
+#
+#   pnpm dev:all            → LOCAL  (Supabase local + app → local). Default.
+#   pnpm dev:all --cloud    → NUBE   (app → Supabase en la nube; NO levanta local).
+#     alias del flag de nube: --nube | --remote
+#
+# En LOCAL apaga Supabase automáticamente al salir (Ctrl+C, cerrar terminal o VS Code):
+#   - Salida limpia (SIGINT/SIGTERM/SIGHUP): el `trap` corre `supabase stop`.
+#   - Salida sucia (crash / kill -9): queda un lock huérfano en /tmp/pragmata-dev-locks/
+#     que el watchdog global (PM2: supabase-watchdog) detecta y limpia.
+#
+# La bandera --cloud elige a qué Supabase apunta la app: nube vía `vite --mode cloud`
+# (lee .env.cloud) o local vía el .env.local regenerado desde el CLI. Heredado del
+# template PragmataDevApp — genérico, no editar por proyecto salvo necesidad real.
+set -euo pipefail
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+# ── Parse de la bandera ───────────────────────────────────────────────────────
+TARGET="local"
+for arg in "$@"; do
+  case "$arg" in
+    --cloud|--nube|--remote) TARGET="cloud" ;;
+    --local)                 TARGET="local" ;;
+    *) echo "⚠️  dev-all: flag desconocida '$arg' (usa --cloud o --local)" >&2 ;;
+  esac
+done
+
+if [ ! -f supabase/config.toml ]; then
+  echo "❌ dev-all: no encuentro supabase/config.toml en $PROJECT_ROOT" >&2
+  exit 1
+fi
+
+# ── Arranque de la app (vite siempre; astro solo si existe la carpeta) ─────────
+run_app() {
+  local vite_cmd="$1"
+  # Sin carpeta astro = un solo proceso (vite) → correr directo, sin depender de
+  # 'concurrently'. Con astro = dos procesos → usar concurrently si está instalado.
+  if [ -d astro ]; then
+    if pnpm exec concurrently --version >/dev/null 2>&1; then
+      echo "🧩 dev-all: arrancando dev → erp,astro"
+      # -k: si un proceso muere, mata el resto → el script termina → el trap apaga Supabase.
+      pnpm exec concurrently -k -n erp,astro -c cyan,magenta "$vite_cmd" "pnpm --dir astro dev"
+    else
+      echo "⚠️  dev-all: falta 'concurrently' para correr vite+astro juntos (pnpm add -D concurrently)." >&2
+      echo "   Por ahora corro solo la app (vite)." >&2
+      pnpm exec $vite_cmd
+    fi
+  else
+    echo "🧩 dev-all: arrancando dev → erp"
+    pnpm exec $vite_cmd
+  fi
+}
+
+# ══ MODO NUBE ═════════════════════════════════════════════════════════════════
+if [ "$TARGET" = "cloud" ]; then
+  if [ ! -f .env.cloud ]; then
+    echo "❌ dev-all --cloud: falta .env.cloud (VITE_SUPABASE_URL/ANON_KEY de la nube)." >&2
+    echo "   Copia la plantilla: cp .env.cloud.example .env.cloud  y llena los valores." >&2
+    exit 1
+  fi
+  CLOUD_URL="$(grep -E '^VITE_SUPABASE_URL=' .env.cloud | head -1 | cut -d= -f2- | tr -d '"')"
+  echo ""
+  echo "  ╔════════════════════════════════════════════════════════════╗"
+  echo "  ║  ☁️   MODO NUBE — la app apunta a Supabase EN LA NUBE        ║"
+  echo "  ║  ${CLOUD_URL}"
+  echo "  ║  ⚠️   TOCAS DATOS REALES. No se levanta Supabase local.      ║"
+  echo "  ╚════════════════════════════════════════════════════════════╝"
+  echo ""
+  run_app "vite --mode cloud"
+  exit 0
+fi
+
+# ══ MODO LOCAL (default) ══════════════════════════════════════════════════════
+# project_id = mismo sufijo que usan los contenedores docker (supabase_db_<project_id>)
+PROJECT_ID="$(grep -E '^[[:space:]]*project_id' supabase/config.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
+# Puerto de Studio: leído dinámicamente de la sección [studio] del config (varía por cliente).
+STUDIO_PORT="$(awk '/^\[studio\]/{f=1;next} /^\[/{f=0} f&&/^[[:space:]]*port[[:space:]]*=/{gsub(/[^0-9]/,"");print;exit}' supabase/config.toml)"
+[ -z "$STUDIO_PORT" ] && STUDIO_PORT=54323
+LOCK_DIR="/tmp/pragmata-dev-locks"
+LOCK_FILE="$LOCK_DIR/${PROJECT_ID}.lock"
+mkdir -p "$LOCK_DIR"
+
+cleanup() {
+  trap - EXIT INT TERM HUP
+  echo ""
+  echo "🛑 dev-all: cerrando — apagando Supabase local ($PROJECT_ID)…"
+  supabase stop --project-id "$PROJECT_ID" >/dev/null 2>&1 || supabase stop >/dev/null 2>&1 || true
+  rm -f "$LOCK_FILE"
+}
+trap cleanup EXIT INT TERM HUP
+
+echo "🚀 dev-all: levantando Supabase LOCAL ($PROJECT_ID)…"
+supabase start
+
+# Heartbeat para el watchdog: PID de este script + ruta del proyecto.
+echo "$$|$PROJECT_ROOT" > "$LOCK_FILE"
+
+# Regenera .env.local con las credenciales locales reales (puertos/keys del CLI),
+# preservando cualquier feature-flag propio del proyecto que ya viviera en .env.local.
+echo "📝 dev-all: escribiendo .env.local (credenciales locales)…"
+PREV_FLAGS=""
+if [ -f .env.local ]; then
+  PREV_FLAGS="$(grep -vE '^[[:space:]]*(#|$)|^VITE_SUPABASE_(URL|ANON_KEY)=' .env.local || true)"
+fi
+{
+  echo "# Regenerado por 'pnpm dev:all' desde 'supabase status' en cada corrida local."
+  echo "# Ignorado por git (.env.*). Anon key: pública por diseño, protegida por RLS."
+  supabase status -o env \
+    --override-name api.url=VITE_SUPABASE_URL \
+    --override-name auth.anon_key=VITE_SUPABASE_ANON_KEY \
+    2>/dev/null | grep -E '^VITE_SUPABASE_(URL|ANON_KEY)='
+  [ -n "$PREV_FLAGS" ] && printf '%s\n' "$PREV_FLAGS"
+} > .env.local
+
+echo ""
+echo "  ╔════════════════════════════════════════════════════════════╗"
+echo "  ║  🖥️   MODO LOCAL — Supabase local + app apuntando a local    ║"
+echo "  ║  Studio: http://127.0.0.1:${STUDIO_PORT}"
+echo "  ╚════════════════════════════════════════════════════════════╝"
+echo ""
+run_app "vite"
