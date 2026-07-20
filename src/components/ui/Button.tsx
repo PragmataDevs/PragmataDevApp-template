@@ -91,7 +91,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     const classes = [
       // Base
-      'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--pragmata-accent)] focus-visible:ring-offset-1',
+      'inline-flex items-center justify-center font-medium rounded-pragmata transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--pragmata-accent)] focus-visible:ring-offset-1',
       // Variant + Size
       variantStyles[variant],
       sizeStyles[size],

@@ -30,19 +30,19 @@ export function PageHeader({
     <div className={`mb-6 ${className}`}>
       {/* Breadcrumb */}
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="flex items-center gap-1 text-xs text-slate-400 mb-2">
+        <nav className="flex items-center gap-1 text-xs text-[color:var(--pragmata-muted)] mb-2">
           {breadcrumbs.map((crumb, i) => (
             <span key={i} className="flex items-center gap-1">
               {i > 0 && <ChevronRight className="w-3 h-3 flex-shrink-0" />}
               {crumb.to ? (
                 <Link
                   to={crumb.to}
-                  className="hover:text-slate-600 transition-colors"
+                  className="hover:text-[color:var(--pragmata-fg)] transition-colors"
                 >
                   {crumb.label}
                 </Link>
               ) : (
-                <span className={i === breadcrumbs.length - 1 ? 'text-slate-600 font-medium' : ''}>
+                <span className={i === breadcrumbs.length - 1 ? 'text-[color:var(--pragmata-fg)] font-medium' : ''}>
                   {crumb.label}
                 </span>
               )}
@@ -54,9 +54,9 @@ export function PageHeader({
       {/* Title row */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-slate-900 truncate">{title}</h1>
+          <h1 className="text-xl font-bold text-[color:var(--pragmata-fg)] truncate">{title}</h1>
           {subtitle && (
-            <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>
+            <p className="mt-0.5 text-sm text-[color:var(--pragmata-muted)]">{subtitle}</p>
           )}
         </div>
         {actions && (

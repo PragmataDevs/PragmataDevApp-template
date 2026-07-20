@@ -10,6 +10,7 @@ import EntitySelector from '@/features/entities/components/EntitySelector';
 import { MULTI_ENTITY_ENABLED } from '@/features/entities/types/entity';
 import { OverlayPortal } from '@/lib/ui/OverlayPortal';
 import { useAnchoredPosition } from '@/lib/ui/useAnchoredPosition';
+import { useEscapeKey } from '@/lib/ui/useEscapeKey';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -59,6 +60,8 @@ export function Header({ onMenuClick }: HeaderProps) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isProfileOpen]);
+
+  useEscapeKey(isProfileOpen, () => setIsProfileOpen(false));
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -119,7 +122,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center gap-2 p-1 rounded-full hover:bg-[color:var(--pragmata-surface-2)] border border-transparent hover:border-[color:var(--pragmata-border)] transition-all"
             >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[color:var(--pragmata-accent)] to-[color:var(--pragmata-primary)] flex items-center justify-center text-white font-bold text-xs ring-2 ring-white shadow-sm overflow-hidden">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[color:var(--pragmata-accent)] to-[color:var(--pragmata-primary)] flex items-center justify-center text-white font-bold text-xs ring-2 ring-[color:var(--pragmata-border)] shadow-sm overflow-hidden">
                     {headerAvatarUrl ? (
                       <img src={headerAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (

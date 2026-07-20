@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMatch } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { withSessionRetry } from '@/lib/auth/sessionRetry';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 
 const STORAGE_KEY = 'pragmata_last_entity_id';
@@ -40,19 +41,31 @@ export function useActiveEntity(): string | null {
     // Only fetch from DB once the user is authenticated
     if (!isAuthenticated) return;
 
-    supabase
-      .from('entities')
-      .select('id')
-      .eq('status', 'active')
-      .order('name', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.id) {
-          localStorage.setItem(STORAGE_KEY, data.id);
-          setResolvedId(data.id);
-        }
-      });
+    // withSessionRetry: justo tras el login hay una ventana en la que
+    // isAuthenticated ya es true pero el token aún no valida en PostgREST (401
+    // transitorio). Se reintenta una vez tras refrescar sesión. Si aun así falla,
+    // NO se toca el estado — se conserva el id guardado y se espera el re-fetch
+    // que dispara sessionEpoch.
+    let cancelled = false;
+    void withSessionRetry(async () => {
+      const { data, error } = await supabase
+        .from('entities')
+        .select('id')
+        .eq('status', 'active')
+        .order('name', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }, 'useActiveEntity')
+      .then((data) => {
+        if (cancelled || !data?.id) return;
+        localStorage.setItem(STORAGE_KEY, data.id);
+        setResolvedId(data.id);
+      })
+      .catch(() => { /* transitorio: se conserva el estado actual */ });
+
+    return () => { cancelled = true; };
   // sessionEpoch ensures we re-run after token refresh or sign-in
   }, [urlEntityId, isAuthenticated, sessionEpoch]);
 

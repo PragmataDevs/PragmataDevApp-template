@@ -6,6 +6,7 @@ import { useActiveEntity } from '@/features/entities/hooks/useActiveEntity';
 import { DOC_STATUS_CONFIG, DOC_TYPE_OPTIONS } from '@/features/documents/types/document';
 import type { Document as Doc } from '@/features/documents/types/document';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { ENTITY_LABEL } from '@/features/entities/types/entity';
 
 // ─── Document viewer modal ────────────────────────────────────────────────────
@@ -285,6 +286,7 @@ export default function DocumentsPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [viewer, setViewer] = useState<{ doc: Doc; url: string } | null>(null);
   const [loadingUrl, setLoadingUrl] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   const handleOpen = useCallback(async (doc: Doc) => {
     setLoadingUrl(doc.id);
@@ -301,9 +303,9 @@ export default function DocumentsPage() {
   }, [uploadDocument]);
 
   const handleDelete = useCallback(async (doc: Doc) => {
-    if (!window.confirm(`¿Eliminar "${doc.name}"? Esta acción no se puede deshacer.`)) return;
+    if (!(await confirm({ title: `¿Eliminar "${doc.name}"?`, description: 'Esta acción no se puede deshacer.', destructive: true }))) return;
     await softDelete(doc.id, doc.version);
-  }, [softDelete]);
+  }, [softDelete, confirm]);
 
   // ── No entity ──────────────────────────────────────────────────────────
   if (noEntity) {

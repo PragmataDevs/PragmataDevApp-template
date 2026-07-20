@@ -23,6 +23,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { csvTextToRecords, downloadCsvUtf8, recordsToCsvString } from '@/lib/csv/csvUtils';
+import { useEscapeKey } from '@/lib/ui/useEscapeKey';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -190,6 +191,11 @@ export function DataTable<T extends object>({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [menuOpen]);
+
+  // Cerrar overlays con Escape (menú de columna + modales de export/import).
+  useEscapeKey(menuOpen !== null, () => { setMenuOpen(null); setMenuAnchor(null); });
+  useEscapeKey(exportDialogOpen, () => setExportDialogOpen(false));
+  useEscapeKey(importModeDialogOpen, () => setImportModeDialogOpen(false));
 
   // Reset to first page when data/filters change
   useEffect(() => { setPage(0); }, [data, columnFilters, globalSearch, sortConfig]);
@@ -387,6 +393,7 @@ export function DataTable<T extends object>({
                 value={columnFilters[col.key] ?? ''}
                 onChange={e => handleColumnFilter(col.key, e.target.value)}
                 onKeyDown={e => e.key === 'Escape' && setFilterInputCol(null)}
+                aria-label={`Filtrar por ${col.header.toLowerCase()}`}
                 placeholder={`Filtrar ${col.header.toLowerCase()}...`}
                 className="w-full bg-transparent text-xs text-[color:var(--pragmata-fg)] outline-none placeholder:text-[color:var(--pragmata-muted-2)] border-b border-[color:var(--pragmata-accent)]"
               />
@@ -453,10 +460,12 @@ export function DataTable<T extends object>({
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[color:var(--pragmata-muted)]" />
           <input
+            type="search"
             value={globalSearch}
             onChange={e => setGlobalSearch(e.target.value)}
+            aria-label="Buscar en todos los campos"
             placeholder="Buscar en todos los campos..."
-            className="w-full pl-9 pr-9 py-2 text-sm bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg text-[color:var(--pragmata-fg)] placeholder:text-[color:var(--pragmata-muted-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pragmata-accent)] focus:border-transparent transition"
+            className="w-full pl-9 pr-9 py-2 text-sm bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-pragmata text-[color:var(--pragmata-fg)] placeholder:text-[color:var(--pragmata-muted-2)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pragmata-accent)] focus:border-transparent transition"
           />
           {globalSearch && (
             <button
@@ -474,7 +483,7 @@ export function DataTable<T extends object>({
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-[color:var(--pragmata-danger)] border border-[color:var(--pragmata-danger)]/30 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-[color:var(--pragmata-danger)] border border-[color:var(--pragmata-danger)]/30 rounded-pragmata hover:bg-[color:var(--pragmata-danger)]/10 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
               Limpiar
@@ -485,7 +494,7 @@ export function DataTable<T extends object>({
           {hiddenCols.length > 0 && (
             <button
               onClick={handleShowAll}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-[color:var(--pragmata-muted)] border border-[color:var(--pragmata-border)] rounded-lg hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-[color:var(--pragmata-muted)] border border-[color:var(--pragmata-border)] rounded-pragmata hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
             >
               <Eye className="w-3.5 h-3.5" />
               Mostrar ({hiddenCols.length})
@@ -497,7 +506,7 @@ export function DataTable<T extends object>({
             type="button"
             onClick={openExportDialog}
             disabled={csvFieldKeys.length === 0 || (!!onExport && processedData.length === 0)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-[color:var(--pragmata-muted)] border border-[color:var(--pragmata-border)] rounded-lg hover:bg-[color:var(--pragmata-surface-2)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-[color:var(--pragmata-muted)] border border-[color:var(--pragmata-border)] rounded-pragmata hover:bg-[color:var(--pragmata-surface-2)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Download className="w-3.5 h-3.5" />
             Exportar CSV
@@ -516,7 +525,7 @@ export function DataTable<T extends object>({
                 type="button"
                 onClick={() => { setCsvMessage(null); fileInputRef.current?.click(); }}
                 disabled={csvBusy}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm text-[color:var(--pragmata-muted)] border border-[color:var(--pragmata-border)] rounded-lg hover:bg-[color:var(--pragmata-surface-2)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm text-[color:var(--pragmata-muted)] border border-[color:var(--pragmata-border)] rounded-pragmata hover:bg-[color:var(--pragmata-surface-2)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {csvBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                 Importar CSV
@@ -527,13 +536,13 @@ export function DataTable<T extends object>({
       </div>
 
       {csvMessage && (
-        <div className="rounded-lg border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface-2)] px-4 py-3 text-sm text-[color:var(--pragmata-fg)] whitespace-pre-wrap">
+        <div className="rounded-pragmata border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface-2)] px-4 py-3 text-sm text-[color:var(--pragmata-fg)] whitespace-pre-wrap">
           {csvMessage}
         </div>
       )}
 
       {/* ── Table container ──────────────────────────────────────────────── */}
-      <div className="rounded-lg border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface)] overflow-hidden">
+      <div className="rounded-pragmata border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface)] overflow-hidden">
         {/* ── DESKTOP TABLE (md+) ──────────────────────────────────────── */}
         <div className="hidden md:block overflow-auto max-h-[calc(100vh-20rem)]">
           <table className="w-full border-collapse" style={{ minWidth: 'max-content' }}>
@@ -743,7 +752,7 @@ export function DataTable<T extends object>({
           aria-modal="true"
           aria-labelledby="dt-export-csv-title"
         >
-          <div className="bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg shadow-xl max-w-md w-full p-6 flex flex-col gap-4">
+          <div className="bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-pragmata shadow-xl max-w-md w-full p-6 flex flex-col gap-4">
             <h3 id="dt-export-csv-title" className="text-base font-semibold text-[color:var(--pragmata-fg)]">
               Exportar CSV
             </h3>
@@ -757,14 +766,14 @@ export function DataTable<T extends object>({
               <button
                 type="button"
                 onClick={() => runExportChoice('current')}
-                className="w-full text-left px-4 py-3 rounded-lg border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
+                className="w-full text-left px-4 py-3 rounded-pragmata border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
               >
                 Datos actuales (respeta filtros y orden de la tabla)
               </button>
               <button
                 type="button"
                 onClick={() => runExportChoice('template')}
-                className="w-full text-left px-4 py-3 rounded-lg border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
+                className="w-full text-left px-4 py-3 rounded-pragmata border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
               >
                 Plantilla vacía (solo encabezados)
               </button>
@@ -787,7 +796,7 @@ export function DataTable<T extends object>({
           aria-modal="true"
           aria-labelledby="dt-import-csv-title"
         >
-          <div className="bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg shadow-xl max-w-lg w-full p-6 flex flex-col gap-4">
+          <div className="bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-pragmata shadow-xl max-w-lg w-full p-6 flex flex-col gap-4">
             <h3 id="dt-import-csv-title" className="text-base font-semibold text-[color:var(--pragmata-fg)]">
               Importar CSV
             </h3>
@@ -799,7 +808,7 @@ export function DataTable<T extends object>({
                 type="button"
                 disabled={csvBusy}
                 onClick={() => void runImportWithMode('replace_all')}
-                className="w-full text-left px-4 py-3 rounded-lg border border-red-200 text-sm font-medium text-red-800 dark:text-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50"
+                className="w-full text-left px-4 py-3 rounded-pragmata border border-[color:var(--pragmata-danger)]/30 text-sm font-medium text-[color:var(--pragmata-danger)] hover:bg-[color:var(--pragmata-danger)]/10 transition-colors disabled:opacity-50"
               >
                 Reemplazar todo: borrado lógico de los activos listados y cargar el CSV
               </button>
@@ -807,7 +816,7 @@ export function DataTable<T extends object>({
                 type="button"
                 disabled={csvBusy}
                 onClick={() => void runImportWithMode('insert_only')}
-                className="w-full text-left px-4 py-3 rounded-lg border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors disabled:opacity-50"
+                className="w-full text-left px-4 py-3 rounded-pragmata border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors disabled:opacity-50"
               >
                 Solo nuevos: no actualizar filas cuyo <code className="text-xs">id</code> ya existe
               </button>
@@ -815,7 +824,7 @@ export function DataTable<T extends object>({
                 type="button"
                 disabled={csvBusy}
                 onClick={() => void runImportWithMode('upsert')}
-                className="w-full text-left px-4 py-3 rounded-lg border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors disabled:opacity-50"
+                className="w-full text-left px-4 py-3 rounded-pragmata border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors disabled:opacity-50"
               >
                 Actualizar e insertar (upsert por <code className="text-xs">id</code>; filas sin id se crean)
               </button>
@@ -839,8 +848,10 @@ export function DataTable<T extends object>({
         return createPortal(
           <div
             ref={menuRef}
+            role="menu"
+            aria-label={`Opciones de ${col.header.toLowerCase()}`}
             style={{ position: 'fixed', top: menuAnchor.top, left: menuAnchor.left, zIndex: 9999 }}
-            className="min-w-[180px] bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg shadow-xl py-1 text-sm"
+            className="min-w-[180px] bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-pragmata shadow-xl py-1 text-sm"
           >
             {(col.sortable !== false) && (
               <>

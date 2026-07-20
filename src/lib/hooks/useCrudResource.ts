@@ -54,9 +54,19 @@ export interface UseCrudResourceOptions {
   /**
    * Enable real-time subscription via postgres_changes.
    * The subscription refetches the full dataset on any change.
-   * @default false
+   * @default true
    */
   realtime?: boolean;
+  /**
+   * Server-side filter for the realtime subscription, as a PostgREST filter
+   * string (e.g. `entity_id=eq.<uuid>`). Without it, Postgres pushes EVERY
+   * row change of the table to this client, so an edit in another scope would
+   * refetch this hook's full dataset. Scope it to the same key the `filter`
+   * fn uses to avoid cross-scope refetch storms. Soft-deletes are UPDATEs, so
+   * filtering by a non-PK column stays reliable (no DELETE replica-identity
+   * caveat).
+   */
+  realtimeFilter?: string;
   /**
    * Skip fetching when false (e.g. a required foreign key is still undefined).
    * @default true
@@ -93,6 +103,7 @@ export function useCrudResource<T extends AuditRecord>({
   filter,
   orderBy,
   realtime = true,
+  realtimeFilter,
   enabled = true,
 }: UseCrudResourceOptions): UseCrudResourceReturn<T> {
   const { user, isAuthenticated, loading: authLoading, sessionEpoch } = useAuth();
@@ -176,16 +187,21 @@ export function useCrudResource<T extends AuditRecord>({
     if (!realtime || !isAuthenticated || !enabled) return;
 
     const channel = supabase
-      .channel(`crud:${table}:${user?.id ?? 'anon'}`)
+      .channel(`crud:${table}:${realtimeFilter ?? 'all'}:${user?.id ?? 'anon'}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table },
+        {
+          event: '*',
+          schema: 'public',
+          table,
+          ...(realtimeFilter ? { filter: realtimeFilter } : {}),
+        },
         () => { void fetchData(); }
       )
       .subscribe();
 
     return () => { void supabase.removeChannel(channel); };
-  }, [realtime, isAuthenticated, enabled, table, user?.id, fetchData]);
+  }, [realtime, realtimeFilter, isAuthenticated, enabled, table, user?.id, fetchData]);
 
   // ── Upsert ───────────────────────────────────────────────────────────────
   const upsert = useCallback(async (

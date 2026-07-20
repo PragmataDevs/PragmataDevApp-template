@@ -16,11 +16,13 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
 
-          // React core + router
+          // React core + router. Match exacto por paquete: `/react/` como
+          // substring atrapaba `@tiptap/react`, `react-hook-form`, etc. y los
+          // hundía en react-vendor. Anclamos a `/node_modules/<pkg>/`.
           if (
-            id.includes("/react/") ||
-            id.includes("/react-dom/") ||
-            id.includes("/react-router-dom/")
+            id.includes("/node_modules/react/") ||
+            id.includes("/node_modules/react-dom/") ||
+            id.includes("/node_modules/react-router-dom/")
           ) {
             return "react-vendor";
           }
@@ -38,10 +40,9 @@ export default defineConfig({
             return "powersync";
           }
 
-          // Drag & drop (Kanban)
-          if (id.includes("/@hello-pangea/dnd/")) {
-            return "dnd";
-          }
+          // @hello-pangea/dnd (~103 KB) solo lo usa el Kanban de TasksPage
+          // (lazy). Sin chunk manual, rollup lo coloca con su página lazy y
+          // deja de precargarse en la primera pintura de toda la app.
 
           // Form validation
           if (

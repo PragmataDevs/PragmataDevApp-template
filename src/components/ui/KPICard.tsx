@@ -36,15 +36,15 @@ export interface KPICardProps {
 }
 
 const colorMap = {
-  accent:  { icon: 'bg-[color:var(--pragmata-accent-soft)]',  text: 'text-[color:var(--pragmata-accent)]' },
-  success: { icon: 'bg-emerald-50 dark:bg-emerald-950/30',    text: 'text-emerald-600 dark:text-emerald-400' },
-  warning: { icon: 'bg-amber-50 dark:bg-amber-950/30',        text: 'text-amber-600 dark:text-amber-400' },
-  danger:  { icon: 'bg-red-50 dark:bg-red-950/30',            text: 'text-red-600 dark:text-red-400' },
+  accent:  { icon: 'bg-[color:var(--pragmata-accent-soft)]',   text: 'text-[color:var(--pragmata-accent)]' },
+  success: { icon: 'bg-[color:var(--pragmata-success)]/15',    text: 'text-[color:var(--pragmata-success)]' },
+  warning: { icon: 'bg-[color:var(--pragmata-warning)]/15',    text: 'text-[color:var(--pragmata-warning)]' },
+  danger:  { icon: 'bg-[color:var(--pragmata-danger)]/15',     text: 'text-[color:var(--pragmata-danger)]' },
 };
 
 const trendColors = {
-  up:      'text-emerald-600 dark:text-emerald-400',
-  down:    'text-red-600 dark:text-red-400',
+  up:      'text-[color:var(--pragmata-success)]',
+  down:    'text-[color:var(--pragmata-danger)]',
   neutral: 'text-[color:var(--pragmata-muted)]',
 };
 
@@ -68,7 +68,7 @@ export function KPICard({
 
   const content = (
     <div className={[
-      'group flex flex-col gap-3 rounded-xl border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface)] p-5 shadow-sm transition-shadow',
+      'group flex flex-col gap-3 rounded-pragmata border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface)] p-5 shadow-sm transition-shadow',
       href ? 'hover:shadow-md hover:border-[color:var(--pragmata-accent)]/30 cursor-pointer' : '',
       className,
     ].join(' ')}>
@@ -76,7 +76,7 @@ export function KPICard({
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-[color:var(--pragmata-muted)] truncate">{label}</span>
         {icon && (
-          <div className={`flex-shrink-0 p-2 rounded-lg ${iconBg}`}>
+          <div className={`flex-shrink-0 p-2 rounded-pragmata ${iconBg}`}>
             <span className={iconText}>{icon}</span>
           </div>
         )}
@@ -89,7 +89,7 @@ export function KPICard({
           <div className="h-8 w-16 rounded animate-pulse bg-[color:var(--pragmata-border)]" />
         </div>
       ) : (
-        <span className="text-3xl font-bold tracking-tight text-[color:var(--pragmata-fg)]">
+        <span className="font-mono tabular-nums text-3xl font-bold tracking-tight text-[color:var(--pragmata-fg)]">
           {typeof value === 'number' ? value.toLocaleString('es-MX') : value}
         </span>
       )}
