@@ -105,6 +105,28 @@ En **desarrollo**, si abres el sitio o el ERP por **IP de red** (LAN, Tailscale 
 | **Vectorización** | `text-embedding-3-small` (OpenAI) | Embeddings de documentos y registros. |
 | **UI IA** | `src/features/ai/` | Componentes de búsqueda, resumen y asistente. |
 
+### 1.3.1 Módulo Agente Operativo — diseño aprobado, pendiente de construir
+
+> ⚠️ **Nada de esta sección existe todavía en el código.** Es el diseño (discovery de Arquímedes, 2026-07-30) para la próxima capa de IA del template, distinta del `ai-gateway` actual (que es texto-in/texto-out sin tools ni RBAC). Se documenta aquí ANTES de construirse para que Sócrates no vuelva a preguntar las decisiones de producto ya tomadas, y para no repetir el problema que ya tiene la fila "UI IA" de arriba (`src/features/ai/` declarado aquí pero inexistente en disco — no hacer lo mismo con esto).
+
+**Objetivo:** un agente que opere la app con las MISMAS funciones que usa la UI y respetando el rol/permisos reales del usuario — nunca un chatbot con API key pegado que hace bypass de RBAC.
+
+**Piezas (en `packages/core/src/agent/`, TypeScript puro sin React — lo consumen tanto los hooks de `src/features/<dominio>/hooks/` como la Edge Function):**
+- `defineAction()` — declara una mutation/lectura de negocio como unidad invocable: `resourceCode` + `action` (los MISMOS de `src/config/security/resources.ts` / `granted_actions`), `input`/`output` en Zod (reusa `types/<entidad>.schema.ts`), `sideEffect: 'read'|'write'|'destructive'`, `confirm: boolean`, `privileged: boolean`.
+- `runAction()` — el único choke point de ejecución: valida con Zod → `rpc('check_permission', …)` → handler con `ctx.db` construido del JWT real del caller → registra en `sys_agent_audit` (tabla nueva, AuditBase, pendiente de migración).
+- Edge Function `agent-gateway` (hermana de `ai-gateway`, en `supabase/functions/agent-gateway/`) — UNA sola función con `GET /manifest`, `POST /invoke`, `POST /chat`. Agregar una acción nueva es agregar una entrada al catálogo/registry, NO desplegar una función nueva.
+- Capability manifest (`ai/capability-manifest.json`, generado por `pnpm agent:manifest`, no escrito a mano) — filtrado por usuario/rol: un capturista no ve `contratos.aprobar` en su manifest.
+- Herramientas de cliente (distintas de las acciones de servidor) — cosas como "abrir modal de crear tarea" se resuelven DENTRO de `src/features/agent/` (React, en el navegador), sin pasar por `agent-gateway`, porque no tocan datos.
+
+**Invariante de seguridad (regla dura, ver también `.claude/skills/rbac-god-user/SKILL.md`):** ningún handler de action recibe cliente `service_role`. `ctx.db` se construye SOLO de `createSupabaseClient(req)` (`supabase/functions/_shared/auth.ts`) a partir del `Authorization` real. Si una action necesita privilegio, se declara `privileged: true` explícito (patrón ya usado en `create-auth-user/index.ts`).
+
+**Decisiones de producto ya tomadas por Wicho (2026-07-30, no volver a preguntar):**
+1. Confirmación humana SIEMPRE en acciones `destructive`, incluso si quien invoca es `is_god()`. No hay bypass por nivel de privilegio.
+2. El scoping por `conditions` ("solo mis registros / mi sucursal" — hoy `sys_role_definitions.conditions` y `profiles.role_variables` existen en el schema pero `check_permission()` los ignora, líneas ~725-731 de la migración) se implementa desde F0/F1, no se pospone. Debe ser aditivo: `conditions = '{}'` ⇒ comportamiento idéntico al actual — cuidado al tocar `check_permission()` en clientes con la función ya personalizada.
+3. Motor LLM abstraído de proveedor desde el día uno (`supabase/functions/_shared/agent/llm/`). Default de producción para agentes embebidos en apps de cliente: **Gemini (API de Google AI Studio/Vertex)**, no Anthropic — Flash es más barato por token y tiene buen function-calling. Claude queda como opción swappable "premium". La suscripción Claude Code/Max de Wicho es solo para su propio trabajo con Praxia, no se puede usar para servir el agente de un cliente — eso siempre se paga por token sin importar el proveedor.
+
+**Roadmap (F0→F6, ~92–124h el template una vez; ~20–50h por cliente nuevo; ~15–40h retrofit de cliente existente sin tocar nada de lo que ya jala):** contratos y `runAction` → `agent-gateway` (manifest+invoke) → generador de manifest + `validate:agent` en CI → migrar `tasks` como conejillo de indias (demo vendible: el agente niega una acción a un member sin permiso, en vivo) → resto de módulos → `src/features/agent/` (chat + confirmaciones) → loop de tool-calling + `sys_agent_audit`.
+
 ---
 
 ## 2. Estructura de Directorios (Monorepo Feature-Based)

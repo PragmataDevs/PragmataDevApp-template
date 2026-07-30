@@ -78,3 +78,4 @@ Helpers (SECURITY DEFINER, evitan recursión de RLS): `check_permission(resource
 4. God user se siembra con `docs/database/02_seed_god_user.sql` (privado por cliente), no a mano.
 5. El front espeja EXACTO la condición SQL (vía `useAuth().isGod`, no `access_level` pelón).
 6. Antes de prod: corre el `docs/security-checklist.md` punto por punto.
+7. **Módulo Agente Operativo (ver `docs/architecture.md` §1.3.1):** ningún handler de `defineAction()`/`runAction()` recibe cliente `service_role`. `ctx.db` se construye SOLO del JWT real del caller (patrón `create-auth-user/index.ts`); si una action necesita privilegio se declara `privileged: true` explícito, nunca implícito. Acciones `sideEffect: 'destructive'` piden confirmación humana SIEMPRE, sin excepción de `is_god()` — decisión de producto, no default técnico.
