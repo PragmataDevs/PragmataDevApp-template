@@ -391,6 +391,8 @@ La misma `OPENAI_API_KEY` sirve para `ai-task-summary` y `ai-gateway`. Prueba r�
 
 > **Local (post-SQL):** scripts + `supabase functions serve` → [**proceso-post-migraciones-scripts-y-funciones-local.md**](./proceso-post-migraciones-scripts-y-funciones-local.md). **Nube:** esta sección §7.
 
+> **Atajo recomendado:** todo §7 (link, secrets, deploy) más migraciones, RBAC, god user, Auth URLs y storage está automatizado en un solo comando — ver [**supabase-cloud-bootstrap.md**](./supabase-cloud-bootstrap.md) (`pnpm cloud:bootstrap`). Los pasos manuales de abajo siguen sirviendo como referencia o para re-desplegar algo puntual.
+
 Necesitas el **Supabase CLI** instalado y autenticado.
 
 ### 7.1 Login y link del proyecto

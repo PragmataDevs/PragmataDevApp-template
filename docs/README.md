@@ -85,6 +85,7 @@ Excepciones mínimas: `README.md` raíz (resumen + enlaces aquí), punteros en `
 | Archivo | Contenido |
 |---------|-----------|
 | [deployment-environments.md](./deployment-environments.md) | Dominios, Vercel ERP + Astro |
+| [supabase-cloud-bootstrap.md](./supabase-cloud-bootstrap.md) | Local → nube automatizado (`pnpm cloud:bootstrap`) |
 | [deployment.md](./deployment.md) | PowerSync y flags |
 | [template-handoff-vercel-y-astro.md](./template-handoff-vercel-y-astro.md) | Handoff producción |
 | [ci-workflow.md](./ci-workflow.md) | CI |

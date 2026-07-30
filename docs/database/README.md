@@ -15,8 +15,11 @@ Scripts de referencia y flujo con Supabase CLI. El schema versionado en producci
 | [**03_powersync_publication.sql**](./03_powersync_publication.sql) | Publicación PowerSync (si `VITE_ENABLE_POWERSYNC=true`) |
 | [**04_realtime_publication.sql**](./04_realtime_publication.sql) | Tablas en `supabase_realtime` |
 | [**05_cms_pages_ensure_legacy.sql**](./05_cms_pages_ensure_legacy.sql) | Solo bases antiguas sin `cms_pages` |
+| [**06_cloud_post_bootstrap.sql.tpl**](./06_cloud_post_bootstrap.sql.tpl) | Aplicado por `pnpm cloud:bootstrap` al pasar a la nube — vacío por defecto, extensible por cliente |
 
 **Orden típico (local):** migraciones CLI → Auth + `02_seed_god_user.sql` → `pnpm db:sync` → `05` solo si aplica.
+
+**Paso a nube:** ver [**supabase-cloud-bootstrap.md**](../supabase-cloud-bootstrap.md) — automatiza `06` + secrets + Edge Functions + god user + Auth URLs + storage.
 
 ---
 

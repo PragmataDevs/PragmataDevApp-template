@@ -109,6 +109,8 @@ En **Supabase (nube)** → *Authentication* → *URL configuration*: añade las 
 
 La tabla completa y el checklist por cliente: **`docs/deployment-environments.md`**.
 
+**Atajo:** en vez de hacer local→nube a mano (schema, secrets, functions, god user, Auth URLs, storage), `pnpm cloud:bootstrap` lo automatiza en un comando — ver **`docs/supabase-cloud-bootstrap.md`**.
+
 ---
 
 ## 7. Dónde seguir leyendo
@@ -125,6 +127,7 @@ La tabla completa y el checklist por cliente: **`docs/deployment-environments.md
 | `db:sync`, Edge Functions local | **`docs/proceso-post-migraciones-scripts-y-funciones-local.md`** |
 | Setup largo, flags, Astro, checklist | **`docs/SETUP.md`** |
 | Vercel, dominios ERP + web | **`docs/deployment-environments.md`** |
+| Local → nube en un comando (`cloud:bootstrap`) | **`docs/supabase-cloud-bootstrap.md`** |
 | Arquitectura y convenciones | **`docs/architecture.md`** |
 
 ---
