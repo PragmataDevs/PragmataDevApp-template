@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Shield, Loader2, Lock, FolderKanban } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import PermissionsPanel from '@/features/roles/components/PermissionsPanel';
 import type { GrantedPermissions } from '@/features/roles/components/PermissionsPanel';
 import type { AccessLevel } from '@/features/users/types/profile';
@@ -62,6 +63,21 @@ export default function UserForm({
 
   const selectedRole = roles.find((r) => r.id === roleId);
   const canBeCustomized = selectedRole?.can_be_customized ?? false;
+
+  // Tope de privilegio: nunca ofrecer un nivel de acceso que el actor no pueda
+  // otorgar. Espeja el guard a nivel DB: solo un god puede otorgar god, solo
+  // admin/god puede otorgar admin. Un member no puede otorgar nada arriba de member.
+  const { profile: actor, isGod } = useAuth();
+  const grantableLevels: AccessLevel[] = isGod
+    ? ['god', 'admin', 'member']
+    : actor?.access_level === 'admin'
+      ? ['admin', 'member']
+      : ['member'];
+  // Si se edita a alguien cuyo nivel actual el actor no puede otorgar, bloquea el campo.
+  const canEditAccessLevel = grantableLevels.includes(accessLevel);
+  const visibleAccessLevels = ACCESS_LEVELS.filter(
+    (al) => grantableLevels.includes(al.value) || al.value === accessLevel,
+  );
 
   useEffect(() => {
     if (!roleId) return;
@@ -258,16 +274,19 @@ export default function UserForm({
           <select
             value={accessLevel}
             onChange={(e) => setAccessLevel(e.target.value as AccessLevel)}
-            className="w-full px-4 py-2.5 bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg text-sm text-[color:var(--pragmata-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pragmata-accent)] focus:border-transparent transition-all"
+            disabled={!canEditAccessLevel}
+            className="w-full px-4 py-2.5 bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg text-sm text-[color:var(--pragmata-fg)] focus:outline-none focus:ring-2 focus:ring-[color:var(--pragmata-accent)] focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {ACCESS_LEVELS.map((al) => (
-              <option key={al.value} value={al.value}>
+            {visibleAccessLevels.map((al) => (
+              <option key={al.value} value={al.value} disabled={!grantableLevels.includes(al.value)}>
                 {al.label}
               </option>
             ))}
           </select>
           <p className="text-xs text-[color:var(--pragmata-muted-2)] mt-1">
-            {ACCESS_LEVELS.find((al) => al.value === accessLevel)?.hint}
+            {!canEditAccessLevel
+              ? 'No puedes cambiar este nivel de acceso — es superior al tuyo.'
+              : ACCESS_LEVELS.find((al) => al.value === accessLevel)?.hint}
           </p>
         </div>
       </div>
