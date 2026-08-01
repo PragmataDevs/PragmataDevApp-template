@@ -70,5 +70,30 @@ export default defineConfig({
   server: {
     host: true,
     port: Number(process.env.VITE_PORT) || 7070,
+    /**
+     * Puente a Supabase local por el MISMO puerto del dev server.
+     *
+     * Para abrir la app desde otra máquina (celular por Tailscale, otra compu),
+     * el navegador tendría que alcanzar DOS puertos: el de Vite y el de Supabase.
+     * El segundo no pasa —aunque Docker lo publique en 0.0.0.0— y el login truena
+     * con "Failed to fetch" pese a tener las credenciales bien. Comprobado A/B en
+     * crm-objetiva el 31-jul-2026.
+     *
+     * Con este proxy basta con que el puerto de Vite sea alcanzable: las llamadas
+     * viajan por el mismo origen (adiós CORS) y Vite las reenvía a Supabase.
+     * `dev-all.sh` apunta VITE_SUPABASE_URL a `<ip>:<puerto>/supabase` y exporta
+     * SUPABASE_LOCAL_URL con el puerto real del stack de este proyecto.
+     *
+     * No afecta el desarrollo normal: si VITE_SUPABASE_URL apunta directo al
+     * puerto de Supabase (o a la nube), esta ruta simplemente no se usa.
+     */
+    proxy: {
+      '/supabase': {
+        target: process.env.SUPABASE_LOCAL_URL || 'http://127.0.0.1:54321',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/supabase/, ''),
+      },
+    },
   },
 })

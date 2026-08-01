@@ -115,6 +115,33 @@ fi
   [ -n "$PREV_FLAGS" ] && printf '%s\n' "$PREV_FLAGS"
 } > .env.local
 
+# ── Acceso desde otra máquina (celular por Tailscale, otra compu) ─────────────
+# El navegador remoto alcanza el puerto de Vite pero NO el de Supabase, aunque
+# Docker lo publique en 0.0.0.0 (comprobado A/B en crm-objetiva el 31-jul-2026:
+# apuntando al puerto de Supabase el login truena con "Failed to fetch"; por el
+# proxy entra). Por eso la app apunta al proxy `/supabase` que sirve el propio
+# dev server — ver `server.proxy` en vite.config.ts: basta UN puerto alcanzable
+# y de paso no hay CORS.
+#
+# Va después de escribir .env.local a propósito: ese archivo se regenera en cada
+# corrida, así que si esto viviera antes se perdería el cambio en cada arranque.
+# Solo aplica si el proyecto tiene el proxy configurado y hay Tailscale arriba.
+TS_IP="$(tailscale ip -4 2>/dev/null | head -1 || true)"
+if [ -n "$TS_IP" ] && grep -q "'/supabase'" vite.config.ts 2>/dev/null; then
+  # Soporta las dos formas del template: `port: 9090` y
+  # `port: Number(process.env.VITE_PORT) || 7070`. Si VITE_PORT viene del
+  # entorno, esa gana (es la que va a usar Vite de verdad).
+  APP_PORT="${VITE_PORT:-$(grep -oE 'port:[^,}]*' vite.config.ts | head -1 | grep -oE '[0-9]{2,5}' | tail -1)}"
+  if [ -n "$APP_PORT" ]; then
+    # A dónde reenvía el proxy: el puerto real de Supabase de ESTE proyecto, tal
+    # como lo acaba de reportar `supabase status` (cada stack usa el suyo).
+    SUPABASE_LOCAL_URL="$(grep -E '^VITE_SUPABASE_URL=' .env.local | head -1 | cut -d= -f2- | tr -d '"')"
+    export SUPABASE_LOCAL_URL
+    sed -i -E "s|^VITE_SUPABASE_URL=.*|VITE_SUPABASE_URL=\"http://${TS_IP}:${APP_PORT}/supabase\"|" .env.local
+    echo "🔗 dev-all: accesible desde otra máquina → http://${TS_IP}:${APP_PORT}"
+  fi
+fi
+
 echo ""
 echo "  ╔════════════════════════════════════════════════════════════╗"
 echo "  ║  🖥️   MODO LOCAL — Supabase local + app apuntando a local    ║"
