@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client'
 import { Toaster } from 'sonner'
 import './index.css'
 import App from './App.tsx'
+import { installUUIDPolyfill } from './lib/uuid'
+
+// Debe correr antes de renderizar: en dev remoto por HTTP el browser no expone crypto.randomUUID.
+installUUIDPolyfill()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
