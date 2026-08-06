@@ -2,16 +2,26 @@ import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { ScrollNav } from '@/components/ui/ScrollNav';
 
 export function AppLayout() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const location = useLocation();
 
-  useEffect(() => {
+  // Cerrar el sidebar móvil al navegar. Se ajusta DURANTE el render comparando
+  // con la ruta anterior, en vez de en un useEffect: un setState síncrono dentro
+  // de un efecto obliga a React a pintar el estado viejo y volver a renderizar
+  // (render en cascada). Con este patrón —el que documenta React para "ajustar
+  // estado cuando cambia una prop"— React descarta el render en curso y rehace
+  // con el valor nuevo, sin llegar a pintar el intermedio.
+  const [lastPath, setLastPath] = useState(location.pathname);
+  if (lastPath !== location.pathname) {
+    setLastPath(location.pathname);
     setSidebarOpen(false);
-  }, [location.pathname]);
+  }
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -64,9 +74,12 @@ export function AppLayout() {
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
         <Header onMenuClick={toggleSidebar} />
 
-        <main className="flex-1 overflow-auto bg-[color:var(--pragmata-bg)] scroll-smooth">
+        <main ref={mainRef} className="flex-1 overflow-auto bg-[color:var(--pragmata-bg)] scroll-smooth">
           <Outlet />
         </main>
+
+        {/* Flechitas para irse hasta arriba/abajo del contenido (Wicho 2026-07-30) */}
+        <ScrollNav targetRef={mainRef} />
       </div>
     </div>
   );

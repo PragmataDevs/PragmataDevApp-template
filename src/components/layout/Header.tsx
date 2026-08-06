@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useMatch } from 'react-router-dom';
-import { Menu, ChevronDown, User, LogOut } from 'lucide-react';
+import { Menu, ChevronDown, User, LogOut, Globe } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { resolveSignedUrl } from '@/lib/storage';
+import { getConfiguredPublicSiteUrl } from '@/lib/publicSiteUrl';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { ChatIcon } from '@/features/chat/components/ChatPanel';
 import EntitySelector from '@/features/entities/components/EntitySelector';
@@ -16,6 +17,8 @@ interface HeaderProps {
   onMenuClick: () => void;
 }
 
+const PUBLIC_SITE_URL = getConfiguredPublicSiteUrl();
+
 export function Header({ onMenuClick }: HeaderProps) {
   const { user, profile } = useAuth();
   const isInWorkspace = !!useMatch('/workspace/:entityId/*');
@@ -24,14 +27,30 @@ export function Header({ onMenuClick }: HeaderProps) {
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const [headerAvatarUrl, setHeaderAvatarUrl] = useState<string | null>(null);
 
-  // Resolve avatar signed URL
+  // Limpiar la URL firmada anterior se hace DURANTE el render, no dentro del
+  // efecto: un setState síncrono en un useEffect provoca un render en cascada.
+  // De paso se gana algo real — al cambiar de avatar ya no se ve el anterior
+  // mientras se firma el nuevo.
+  const avatarPath = profile?.avatar_url ?? null;
+  const [lastAvatarPath, setLastAvatarPath] = useState(avatarPath);
+  if (lastAvatarPath !== avatarPath) {
+    setLastAvatarPath(avatarPath);
+    setHeaderAvatarUrl(null);
+  }
+
+  // Firmar la URL sí va en un efecto: es asíncrono. El flag `cancel` evita que
+  // la respuesta lenta de un avatar viejo pise a la del actual si el usuario
+  // cambia de foto dos veces seguidas.
   useEffect(() => {
-    if (profile?.avatar_url) {
-      resolveSignedUrl('attachments', profile.avatar_url).then(setHeaderAvatarUrl);
-    } else {
-      setHeaderAvatarUrl(null);
-    }
-  }, [profile?.avatar_url]);
+    if (!avatarPath) return;
+    let cancel = false;
+    resolveSignedUrl('attachments', avatarPath).then((url) => {
+      if (!cancel) setHeaderAvatarUrl(url);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [avatarPath]);
 
   // Cerrar menú perfil cuando se abre el panel de chat (misma zona del header)
   useEffect(() => {
@@ -154,14 +173,26 @@ export function Header({ onMenuClick }: HeaderProps) {
                     </div>
 
                     <div className="p-1">
-                        <NavLink 
-                          to="/profile" 
+                        <NavLink
+                          to="/profile"
                             className="flex items-center gap-2 px-3 py-2 text-sm text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] rounded-pragmata"
                             onClick={() => setIsProfileOpen(false)}
                         >
                             <User className="w-4 h-4" />
                             Mi Perfil
                         </NavLink>
+                        {PUBLIC_SITE_URL && (
+                          <a
+                            href={PUBLIC_SITE_URL}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] rounded-pragmata"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                              <Globe className="w-4 h-4" />
+                              Ir al sitio web
+                          </a>
+                        )}
                     </div>
 
                     <div className="border-t border-[color:var(--pragmata-border)] p-1 mt-1">

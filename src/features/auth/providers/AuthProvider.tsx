@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { isGodUser } from '@/lib/auth/isGodUser';
+import { errorMessage } from '@/lib/errors';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/features/users/types/profile';
 
@@ -105,8 +106,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(profileRow as Profile);
       setTeamIsPlatformOwner(team?.is_platform_owner ?? null);
       setPermissions(nextPermissions);
-    } catch (err: any) {
-      if (err?.name === 'AbortError' || /aborted/i.test(err?.message || '')) {
+    } catch (err: unknown) {
+      // El `name` se lee con narrowing y no con `instanceof Error` a propósito:
+      // los errores de supabase-js y PostgREST llegan como objetos planos, así
+      // que un instanceof los descartaría y perderíamos el AbortError legítimo
+      // (el que dispara nuestro propio AbortController al cambiar de sesión).
+      const name =
+        err && typeof err === 'object' && 'name' in err
+          ? String((err as { name?: unknown }).name ?? '')
+          : '';
+      if (name === 'AbortError' || /aborted/i.test(errorMessage(err, ''))) {
         console.warn('[AuthProvider] fetchProfile aborted, ignoring.');
         return;
       }
@@ -176,7 +185,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (event === 'PASSWORD_RECOVERY') {
-        queueMicrotask(() => window.location.replace('/auth/reset-password'));
+        // verifyOtp(type: 'recovery') fires this event mid-submit on the reset
+        // page itself; a location.replace there reloads the page and kills the
+        // in-flight updateUser({ password }). Only redirect from other pages
+        // (legacy recovery-link landings).
+        if (window.location.pathname !== '/auth/reset-password') {
+          queueMicrotask(() => window.location.replace('/auth/reset-password'));
+        }
         return;
       }
 
