@@ -83,9 +83,13 @@ LOCK_DIR="/tmp/pragmata-dev-locks"
 LOCK_FILE="$LOCK_DIR/${PROJECT_ID}.lock"
 mkdir -p "$LOCK_DIR"
 
+FUNCTIONS_LOG="$LOCK_DIR/${PROJECT_ID}-functions.log"
+FUNCTIONS_PID=""
+
 cleanup() {
   trap - EXIT INT TERM HUP
   echo ""
+  [ -n "$FUNCTIONS_PID" ] && kill "$FUNCTIONS_PID" >/dev/null 2>&1 || true
   echo "🛑 dev-all: cerrando — apagando Supabase local ($PROJECT_ID)…"
   supabase stop --project-id "$PROJECT_ID" >/dev/null 2>&1 || supabase stop >/dev/null 2>&1 || true
   rm -f "$LOCK_FILE"
@@ -94,6 +98,24 @@ trap cleanup EXIT INT TERM HUP
 
 echo "🚀 dev-all: levantando Supabase LOCAL ($PROJECT_ID)…"
 supabase start
+
+# ── Edge Functions ────────────────────────────────────────────────────────────
+# `supabase start` NO levanta el edge runtime: hay que servir las funciones aparte.
+# Sin esto, todo /functions/v1/* responde 503 desde Kong — y es un 503 mudo, no
+# avisa que falta el runtime (así estuvo 12 días sin que nadie lo notara, 3-ago-2026).
+# Las secrets (API keys del asistente) viven en supabase/functions/.env, fuera de git.
+if compgen -G "supabase/functions/*/index.ts" >/dev/null 2>&1; then
+  ENV_FLAG=()
+  if [ -f supabase/functions/.env ]; then
+    ENV_FLAG=(--env-file supabase/functions/.env)
+  else
+    echo "⚠️  dev-all: no hay supabase/functions/.env — las funciones que necesiten"
+    echo "   secrets van a fallar. Plantilla: cp supabase/functions/.env.example supabase/functions/.env"
+  fi
+  echo "⚡ dev-all: sirviendo Edge Functions (log: $FUNCTIONS_LOG)…"
+  supabase functions serve "${ENV_FLAG[@]}" > "$FUNCTIONS_LOG" 2>&1 &
+  FUNCTIONS_PID=$!
+fi
 
 # Heartbeat para el watchdog: PID de este script + ruta del proyecto.
 echo "$$|$PROJECT_ROOT" > "$LOCK_FILE"
@@ -127,7 +149,10 @@ fi
 # corrida, así que si esto viviera antes se perdería el cambio en cada arranque.
 # Solo aplica si el proyecto tiene el proxy configurado y hay Tailscale arriba.
 TS_IP="$(tailscale ip -4 2>/dev/null | head -1 || true)"
-if [ -n "$TS_IP" ] && grep -q "'/supabase'" vite.config.ts 2>/dev/null; then
+# El patrón acepta comilla simple o doble: los vite.config.ts del portafolio no
+# usan el mismo estilo (lawrank-os usa dobles) y con el patrón fijo el proxy
+# quedaba configurado pero este bloque nunca se activaba — silencioso y confuso.
+if [ -n "$TS_IP" ] && grep -qE "['\"]/supabase['\"]" vite.config.ts 2>/dev/null; then
   # Soporta las dos formas del template: `port: 9090` y
   # `port: Number(process.env.VITE_PORT) || 7070`. Si VITE_PORT viene del
   # entorno, esa gana (es la que va a usar Vite de verdad).
@@ -146,6 +171,7 @@ echo ""
 echo "  ╔════════════════════════════════════════════════════════════╗"
 echo "  ║  🖥️   MODO LOCAL — Supabase local + app apuntando a local    ║"
 echo "  ║  Studio: http://127.0.0.1:${STUDIO_PORT}"
+[ -n "$FUNCTIONS_PID" ] && echo "  ║  Edge Functions: sirviendo (log: $FUNCTIONS_LOG)" || true
 echo "  ╚════════════════════════════════════════════════════════════╝"
 echo ""
 run_app "vite"
