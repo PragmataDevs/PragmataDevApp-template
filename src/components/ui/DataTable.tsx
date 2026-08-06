@@ -174,6 +174,13 @@ export function DataTable<T extends object>({
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{ top: number; left: number } | null>(null);
   const [filterInputCol, setFilterInputCol] = useState<string | null>(null);
+  // Filtro por VALORES ÚNICOS estilo Excel (pedido de Wicho 2026-07-29):
+  // selección exacta por valor — "Nivel 1" ya no arrastra a "Nivel 10".
+  // Selección vacía = sin filtro (todos), como el "(Seleccionar todo)" de Excel.
+  const [columnValueFilters, setColumnValueFilters] = useState<Record<string, string[]>>({});
+  const [valuePanelCol, setValuePanelCol] = useState<string | null>(null);
+  const [valuePanelAnchor, setValuePanelAnchor] = useState<{ top: number; left: number } | null>(null);
+  const [valueSearch, setValueSearch] = useState('');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
 
@@ -198,7 +205,7 @@ export function DataTable<T extends object>({
   useEscapeKey(importModeDialogOpen, () => setImportModeDialogOpen(false));
 
   // Reset to first page when data/filters change
-  useEffect(() => { setPage(0); }, [data, columnFilters, globalSearch, sortConfig]);
+  useEffect(() => { setPage(0); }, [data, columnFilters, columnValueFilters, globalSearch, sortConfig]);
 
   // ── Derived data ───────────────────────────────────────────────────────────
   const visibleColumns = useMemo(
@@ -229,6 +236,13 @@ export function DataTable<T extends object>({
       );
     }
 
+    // Filtros por valores únicos (match EXACTO por valor)
+    for (const [key, vals] of Object.entries(columnValueFilters)) {
+      if (!vals.length) continue;
+      const set = new Set(vals);
+      result = result.filter(row => set.has(String(resolveValue(row, key) ?? '—')));
+    }
+
     // Sort
     if (sortConfig) {
       result.sort((a, b) => {
@@ -240,7 +254,7 @@ export function DataTable<T extends object>({
     }
 
     return result;
-  }, [data, visibleColumns, globalSearch, columnFilters, sortConfig]);
+  }, [data, visibleColumns, globalSearch, columnFilters, columnValueFilters, sortConfig]);
 
   const totalPages = Math.max(1, Math.ceil(processedData.length / pageSize));
   const paginatedData = processedData.slice(page * pageSize, (page + 1) * pageSize);
@@ -343,12 +357,15 @@ export function DataTable<T extends object>({
 
   const clearFilters = useCallback(() => {
     setColumnFilters({});
+    setColumnValueFilters({});
     setGlobalSearch('');
     setSortConfig(null);
     setFilterInputCol(null);
+    setValuePanelCol(null);
+    setValuePanelAnchor(null);
   }, []);
 
-  const hasActiveFilters = globalSearch || Object.values(columnFilters).some(v => v.trim());
+  const hasActiveFilters = globalSearch || Object.values(columnFilters).some(v => v.trim()) || Object.values(columnValueFilters).some(v => v.length > 0);
 
   // ── Render helpers ─────────────────────────────────────────────────────────
 
@@ -414,6 +431,14 @@ export function DataTable<T extends object>({
           )}
 
           {/* Sort icon */}
+          {filterInputCol !== col.key && (columnValueFilters[col.key]?.length ?? 0) > 0 && (
+            <span
+              className="flex items-center gap-0.5 flex-shrink-0 text-[10px] text-[color:var(--pragmata-accent)]"
+              title={`Filtrado a ${columnValueFilters[col.key].length} valor${columnValueFilters[col.key].length !== 1 ? 'es' : ''} — abre el menú para ajustar`}
+            >
+              <Filter className="w-3 h-3" />{columnValueFilters[col.key].length}
+            </span>
+          )}
           {filterInputCol !== col.key && (
             <SortIcon colKey={col.key} />
           )}
@@ -841,10 +866,80 @@ export function DataTable<T extends object>({
         </div>
       )}
 
+      {/* ── Panel de VALORES ÚNICOS (estilo Excel) ─────────────────────── */}
+      {valuePanelCol && valuePanelAnchor && (() => {
+        const col = columns.find(c => c.key === valuePanelCol);
+        if (!col) return null;
+        const norm = (t: string) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const counts = new Map<string, number>();
+        for (const row of data) {
+          const v = String(resolveValue(row, valuePanelCol) ?? '—');
+          counts.set(v, (counts.get(v) ?? 0) + 1);
+        }
+        const todos = [...counts.entries()].sort((x, y) => x[0].localeCompare(y[0], undefined, { numeric: true, sensitivity: 'base' }));
+        const visibles = valueSearch ? todos.filter(([v]) => norm(v).includes(norm(valueSearch))) : todos;
+        const sel = new Set(columnValueFilters[valuePanelCol] ?? []);
+        const cerrar = () => { setValuePanelCol(null); setValuePanelAnchor(null); };
+        const toggleVal = (v: string) => {
+          const next = new Set(sel);
+          if (next.has(v)) next.delete(v); else next.add(v);
+          setColumnValueFilters(prev => ({ ...prev, [valuePanelCol]: [...next] }));
+        };
+        return createPortal(
+          <>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={cerrar} />
+            <div
+              style={{ position: 'fixed', top: valuePanelAnchor.top, left: valuePanelAnchor.left, zIndex: 9999 }}
+              className="w-64 bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-lg shadow-xl text-sm flex flex-col"
+            >
+              <div className="p-2 border-b border-[color:var(--pragmata-border)]">
+                <input
+                  autoFocus
+                  value={valueSearch}
+                  onChange={e => setValueSearch(e.target.value)}
+                  onKeyDown={e => e.key === 'Escape' && cerrar()}
+                  placeholder={`Buscar en ${col.header.toLowerCase()}…`}
+                  className="w-full px-2 py-1 text-xs bg-transparent border border-[color:var(--pragmata-border)] rounded-md outline-none focus:border-[color:var(--pragmata-accent)] text-[color:var(--pragmata-fg)] placeholder:text-[color:var(--pragmata-muted-2)]"
+                />
+              </div>
+              <div className="max-h-64 overflow-y-auto py-1">
+                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-[color:var(--pragmata-surface-2)] cursor-pointer text-xs text-[color:var(--pragmata-fg)]">
+                  <input
+                    type="checkbox"
+                    checked={sel.size === 0}
+                    onChange={() => setColumnValueFilters(prev => ({ ...prev, [valuePanelCol]: [] }))}
+                  />
+                  <span className="font-medium">(Todos)</span>
+                  <span className="ml-auto text-[color:var(--pragmata-muted)]">{data.length}</span>
+                </label>
+                {visibles.slice(0, 300).map(([v, n]) => (
+                  <label key={v} className="flex items-center gap-2 px-3 py-1.5 hover:bg-[color:var(--pragmata-surface-2)] cursor-pointer text-xs text-[color:var(--pragmata-fg)]">
+                    <input type="checkbox" checked={sel.has(v)} onChange={() => toggleVal(v)} />
+                    <span className="flex-1 truncate" title={v}>{v}</span>
+                    <span className="text-[color:var(--pragmata-muted)]">{n}</span>
+                  </label>
+                ))}
+                {visibles.length > 300 && (
+                  <div className="px-3 py-1.5 text-[11px] text-[color:var(--pragmata-muted)]">…y {visibles.length - 300} valores más — afina la búsqueda.</div>
+                )}
+                {visibles.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-[color:var(--pragmata-muted)]">Sin valores que coincidan.</div>
+                )}
+              </div>
+              <div className="flex justify-between items-center gap-2 p-2 border-t border-[color:var(--pragmata-border)] text-xs">
+                <span className="text-[color:var(--pragmata-muted)]">{sel.size === 0 ? 'Sin filtro (todos)' : `${sel.size} seleccionado${sel.size !== 1 ? 's' : ''}`}</span>
+                <button onClick={cerrar} className="px-2 py-1 rounded-md border border-[color:var(--pragmata-border)] hover:bg-[color:var(--pragmata-surface-2)] text-[color:var(--pragmata-fg)]">Listo</button>
+              </div>
+            </div>
+          </>,
+          document.body,
+        );
+      })()}
+
       {menuOpen && menuAnchor && (() => {
         const col = columns.find(c => c.key === menuOpen);
         if (!col) return null;
-        const isFiltered = !!columnFilters[col.key];
+        const isFiltered = !!columnFilters[col.key] || !!(columnValueFilters[col.key]?.length);
         return createPortal(
           <div
             ref={menuRef}
@@ -874,7 +969,7 @@ export function DataTable<T extends object>({
             )}
             {(col.filterable !== false) && (
               <button
-                onClick={() => { setFilterInputCol(col.key); setMenuOpen(null); setMenuAnchor(null); }}
+                onClick={() => { setValuePanelCol(col.key); setValuePanelAnchor(menuAnchor); setValueSearch(''); setMenuOpen(null); setMenuAnchor(null); }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-left text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
               >
                 <Filter className="w-4 h-4 text-[color:var(--pragmata-muted)]" />
