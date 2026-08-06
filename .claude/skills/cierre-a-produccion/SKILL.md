@@ -40,8 +40,21 @@ allowed-tools: Read, Grep, Glob, Bash
 
 ## 5. Deploy 🚀 (dos proyectos Vercel desde un repo)
 - [ ] Proyecto **ERP** (root) → `app.<dominio>` · Proyecto **Web/Astro** (`astro/`) → `www.<dominio>`. Ver `vercel.json`.
+- [ ] **`rootDirectory` explícito en cada proyecto: `.` para el ERP y `astro` para el sitio.**
+      Es el paso que más se olvida y falla **en silencio**: sin `rootDirectory`, Vercel lee el
+      `vercel.json` de la raíz (el del ERP, con `noindex`) y **publica el ERP bajo el nombre del
+      sitio público**. El build sale verde y la liga responde 200 — solo que sirve la app
+      equivocada, invisible a Google. Le pasó a Clibsa y nadie lo notó (detectado 2026-08-05).
+      Verificalo: `curl -s https://<web> | grep -E '<title>|robots|/_astro/'` → debe traer
+      `/_astro/` y `robots: index, follow`, nunca `id="root"` ni `noindex`.
+- [ ] **Ambos proyectos conectados al MISMO repo y branch** (solo cambia `rootDirectory`). Así un
+      push despliega las dos ligas. Sin git conectado el proyecto solo sale por CLI manual y se
+      queda atrás sin avisar. Ojo: **un proyecto de Vercel = un repo** — no reciclés el proyecto
+      del sitio de un cliente para el `astro/` de otro repo suyo; el último deploy pisa al otro.
 - [ ] Env vars cargadas en **cada** proyecto Vercel, en el scope correcto (Production).
 - [ ] Push a `main` → auto-deploy. Confirmá que ambos buildearon en verde.
+- [ ] ¿El cliente **necesita** sitio público? Si la app es interna (PMO, back-office), el pilar
+      Astro no se despliega: un solo proyecto y listo. No todo repo son dos ligas.
 
 ## 6. Verificación post-deploy ✅ (el paso que la gente olvida)
 - [ ] Entrá a la URL de prod y **logueá de verdad** (no asumas).
