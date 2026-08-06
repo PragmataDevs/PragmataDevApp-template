@@ -75,7 +75,13 @@ fi
 
 # ══ MODO LOCAL (default) ══════════════════════════════════════════════════════
 # project_id = mismo sufijo que usan los contenedores docker (supabase_db_<project_id>)
-PROJECT_ID="$(grep -E '^[[:space:]]*project_id' supabase/config.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
+PROJECT_ID="$(grep -E '^[[:space:]]*project_id' supabase/config.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)"
+# `project_id` es OPCIONAL en config.toml: sin él, el CLI de Supabase usa el nombre
+# de la carpeta del proyecto (por eso los contenedores salen `supabase_db_<carpeta>`).
+# Se replica ese fallback porque, sin él, el `grep` sin match reventaba el script en
+# SILENCIO — con `set -euo pipefail` la tubería devuelve 1 y `set -e` corta ahí mismo,
+# antes de imprimir una sola línea. Ni segubros ni la template declaran project_id.
+[ -z "$PROJECT_ID" ] && PROJECT_ID="$(basename "$PROJECT_ROOT")"
 # Puerto de Studio: leído dinámicamente de la sección [studio] del config (varía por cliente).
 STUDIO_PORT="$(awk '/^\[studio\]/{f=1;next} /^\[/{f=0} f&&/^[[:space:]]*port[[:space:]]*=/{gsub(/[^0-9]/,"");print;exit}' supabase/config.toml)"
 [ -z "$STUDIO_PORT" ] && STUDIO_PORT=54323
@@ -88,9 +94,21 @@ FUNCTIONS_PID=""
 
 cleanup() {
   trap - EXIT INT TERM HUP
-  echo ""
+  # Los mensajes van a stderr (>&2), NO a stdout. El motivo es un bug real que
+  # dejó un proyecto sin poder arrancar:
+  #
+  # Si el script muere DENTRO de un bloque con stdout redirigido —como el
+  # `{ … } > .env.local` de más abajo— el trap corre con esa redirección todavía
+  # puesta, y estos `echo` se escriben DENTRO del archivo. `.env.local` acababa
+  # con un "🛑 dev-all: cerrando…" pegado, y `supabase start` se negaba a
+  # arrancar para siempre ("unexpected character '' in variable name").
+  # Peor: como falla en `supabase start`, el script nunca vuelve a regenerar el
+  # archivo — el proyecto queda atascado hasta que alguien borre `.env.local` a
+  # mano. stderr nunca se redirige aquí, así que el mensaje siempre va a la
+  # terminal y jamás contamina un archivo.
+  echo "" >&2
   [ -n "$FUNCTIONS_PID" ] && kill "$FUNCTIONS_PID" >/dev/null 2>&1 || true
-  echo "🛑 dev-all: cerrando — apagando Supabase local ($PROJECT_ID)…"
+  echo "🛑 dev-all: cerrando — apagando Supabase local ($PROJECT_ID)…" >&2
   supabase stop --project-id "$PROJECT_ID" >/dev/null 2>&1 || supabase stop >/dev/null 2>&1 || true
   rm -f "$LOCK_FILE"
 }
@@ -127,15 +145,31 @@ PREV_FLAGS=""
 if [ -f .env.local ]; then
   PREV_FLAGS="$(grep -vE '^[[:space:]]*(#|$)|^VITE_SUPABASE_(URL|ANON_KEY)=' .env.local || true)"
 fi
+# Se escribe a un temporal y se mueve al final (mv es atómico). Antes se escribía
+# directo sobre `.env.local`: si algo fallaba a media escritura, el archivo quedaba
+# truncado o con basura, y `supabase start` se negaba a arrancar en las corridas
+# siguientes — sin forma de recuperarse solo, porque el script muere antes de
+# volver a generarlo. Con el temporal, `.env.local` solo se reemplaza cuando el
+# contenido nuevo está completo y bien formado.
+ENV_TMP="$(mktemp "${TMPDIR:-/tmp}/dev-all-env.XXXXXX")"
 {
   echo "# Regenerado por 'pnpm dev:all' desde 'supabase status' en cada corrida local."
   echo "# Ignorado por git (.env.*). Anon key: pública por diseño, protegida por RLS."
   supabase status -o env \
     --override-name api.url=VITE_SUPABASE_URL \
     --override-name auth.anon_key=VITE_SUPABASE_ANON_KEY \
-    2>/dev/null | grep -E '^VITE_SUPABASE_(URL|ANON_KEY)='
-  [ -n "$PREV_FLAGS" ] && printf '%s\n' "$PREV_FLAGS"
-} > .env.local
+    2>/dev/null | grep -E '^VITE_SUPABASE_(URL|ANON_KEY)=' || true
+  if [ -n "$PREV_FLAGS" ]; then printf '%s\n' "$PREV_FLAGS"; fi
+} > "$ENV_TMP"
+
+# Solo se publica si de verdad trae la URL: un archivo sin ella deja la app sin
+# backend y es preferible conservar el anterior a pisarlo con algo inservible.
+if grep -q '^VITE_SUPABASE_URL=' "$ENV_TMP"; then
+  mv "$ENV_TMP" .env.local
+else
+  rm -f "$ENV_TMP"
+  echo "⚠️  dev-all: 'supabase status' no devolvió VITE_SUPABASE_URL; se conserva el .env.local anterior." >&2
+fi
 
 # ── Acceso desde otra máquina (celular por Tailscale, otra compu) ─────────────
 # El navegador remoto alcanza el puerto de Vite pero NO el de Supabase, aunque
@@ -149,14 +183,25 @@ fi
 # corrida, así que si esto viviera antes se perdería el cambio en cada arranque.
 # Solo aplica si el proyecto tiene el proxy configurado y hay Tailscale arriba.
 TS_IP="$(tailscale ip -4 2>/dev/null | head -1 || true)"
-# El patrón acepta comilla simple o doble: los vite.config.ts del portafolio no
-# usan el mismo estilo (lawrank-os usa dobles) y con el patrón fijo el proxy
-# quedaba configurado pero este bloque nunca se activaba — silencioso y confuso.
-if [ -n "$TS_IP" ] && grep -qE "['\"]/supabase['\"]" vite.config.ts 2>/dev/null; then
-  # Soporta las dos formas del template: `port: 9090` y
-  # `port: Number(process.env.VITE_PORT) || 7070`. Si VITE_PORT viene del
-  # entorno, esa gana (es la que va a usar Vite de verdad).
-  APP_PORT="${VITE_PORT:-$(grep -oE 'port:[^,}]*' vite.config.ts | head -1 | grep -oE '[0-9]{2,5}' | tail -1)}"
+if [ -n "$TS_IP" ] && grep -q "'/supabase'" vite.config.ts 2>/dev/null; then
+  # De dónde sale el puerto del dev server, en orden de precedencia real:
+  #   1. el entorno  2. VITE_PORT del .env  3. lo que esté escrito en vite.config.ts
+  #
+  # Antes se sacaba SOLO con `grep -oE 'port:[^,}]*' vite.config.ts`, y eso es
+  # frágil de dos formas: basta que el config escriba el puerto de otra manera
+  # (p. ej. `port,` tomando el valor de una variable) para que el grep no
+  # encuentre nada y —con `set -euo pipefail`— tumbe el script entero AQUÍ, ya
+  # con Supabase levantado y sin imprimir una sola pista. Cada paso lleva su
+  # `|| true`: no encontrar el puerto es un caso normal, no un error fatal.
+  APP_PORT="${VITE_PORT:-}"
+  if [ -z "$APP_PORT" ] && [ -f .env ]; then
+    APP_PORT="$(grep -E '^[[:space:]]*VITE_PORT=' .env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"'"'"' ' || true)"
+  fi
+  if [ -z "$APP_PORT" ]; then
+    # Fallback para configs que aún escriben el puerto literal en `server.port`
+    # (`port: 9090` o `port: Number(process.env.VITE_PORT) || 7070`).
+    APP_PORT="$(grep -oE 'port:[^,}]*' vite.config.ts 2>/dev/null | head -1 | grep -oE '[0-9]{2,5}' | tail -1 || true)"
+  fi
   if [ -n "$APP_PORT" ]; then
     # A dónde reenvía el proxy: el puerto real de Supabase de ESTE proyecto, tal
     # como lo acaba de reportar `supabase status` (cada stack usa el suyo).
