@@ -4,6 +4,7 @@ import { ChevronsUpDown, Layers, Check, Search, Plus, Loader2 } from 'lucide-rea
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { ENTITY_STATUS_CONFIG, ENTITY_LABEL, ENTITY_LABEL_PLURAL } from '@/features/entities/types/entity';
+import { errorMessage } from '@/lib/errors';
 
 const STORAGE_KEY = 'pragmata_last_entity_id';
 const POWERSYNC_ENABLED = import.meta.env.VITE_ENABLE_POWERSYNC === 'true';
@@ -49,8 +50,8 @@ export default function EntitySelector() {
         if (error) throw error;
         setEntities(data || []);
       }
-    } catch (err: any) {
-      console.error('Error loading entities:', err.message);
+    } catch (err: unknown) {
+      console.error('Error loading entities:', errorMessage(err, 'Error al cargar las entidades'));
     } finally {
       setLoading(false);
     }

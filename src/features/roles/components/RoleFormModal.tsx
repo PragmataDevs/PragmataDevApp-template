@@ -21,19 +21,33 @@ export default function RoleFormModal({ role, onClose, onSave, saving = false, f
   const [name, setName] = useState(role?.name || '');
   const [description, setDescription] = useState(role?.description || '');
   const [selectedPermissions, setSelectedPermissions] = useState<GrantedPermissions>({});
-  const [loadingPermissions, setLoadingPermissions] = useState(false);
+  // Arranca en `true` si de entrada vamos a ir por los permisos: el `setLoading(true)`
+  // síncrono dentro del efecto sólo servía para corregir un estado inicial que ya
+  // se podía saber aquí, y de paso dejaba un primer frame con el modal "listo"
+  // antes de mostrar el spinner.
+  const [loadingPermissions, setLoadingPermissions] = useState(
+    Boolean(role && fetchRoleDefinitions),
+  );
 
   const isEditing = !!role;
 
   // Load existing permissions when editing a role
   useEffect(() => {
-    if (role && fetchRoleDefinitions) {
-      setLoadingPermissions(true);
-      fetchRoleDefinitions(role.id)
-        .then((perms) => setSelectedPermissions(perms))
-        .catch((err) => console.error('Error loading permissions:', err))
-        .finally(() => setLoadingPermissions(false));
-    }
+    if (!role || !fetchRoleDefinitions) return;
+
+    let cancelled = false;
+    fetchRoleDefinitions(role.id)
+      .then((perms) => {
+        if (!cancelled) setSelectedPermissions(perms);
+      })
+      .catch((err) => console.error('Error loading permissions:', err))
+      .finally(() => {
+        if (!cancelled) setLoadingPermissions(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [role, fetchRoleDefinitions]);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -20,7 +20,8 @@
  */
 
 import Stripe from 'https://esm.sh/stripe@14?target=deno';
-import { corsHeaders } from '../_shared/cors.ts';
+// Un webhook es server-to-server: no hay preflight ni CORS que atender, y las
+// respuestas salen por `jsonResponse`/`errorResponse`, que ya traen headers.
 import { createServiceClient, errorResponse, jsonResponse } from '../_shared/auth.ts';
 
 Deno.serve(async (req: Request) => {

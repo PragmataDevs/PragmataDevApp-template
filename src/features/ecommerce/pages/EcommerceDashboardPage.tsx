@@ -16,18 +16,16 @@ function formatMoney(amount: number, currency: string) {
 
 export default function EcommerceDashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Arranca en `false` cuando el módulo está apagado: no hay nada que cargar, así
+  // que no hay por qué pintar un spinner y apagarlo con un setState dentro del
+  // efecto. El estado inicial ya sabe la respuesta.
+  const [loading, setLoading] = useState(ECOMMERCE_ENABLED);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    if (!ECOMMERCE_ENABLED) {
-      setLoading(false);
-      return;
-    }
+    if (!ECOMMERCE_ENABLED) return;
     (async () => {
-      setLoading(true);
-      setError(null);
       const { data, error: err } = await supabase
         .from('orders')
         .select('*')

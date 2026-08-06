@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable, type ColumnDef } from '@/components/ui/DataTable';
 import { useUsers, type UserCreateInput, type UserWithRole, type UserUpdateInput } from '@/features/users/hooks/useUsers';
 import { usePermission } from '@/features/auth/hooks/usePermission';
-import { resolveSignedUrl } from '@/lib/storage';
+import { useSignedUrl } from '@/lib/storage';
 import UserFormModal from '@/features/users/components/UserFormModal';
 
 const USER_CSV_FIELDS = [
@@ -70,14 +70,7 @@ function getInitials(name: string | null): string {
 }
 
 function UserAvatar({ avatarPath, name }: { avatarPath: string | null; name: string | null }) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (avatarPath) {
-      resolveSignedUrl('attachments', avatarPath).then(setUrl);
-    } else {
-      setUrl(null);
-    }
-  }, [avatarPath]);
+  const url = useSignedUrl('attachments', avatarPath);
 
   if (url) {
     return (

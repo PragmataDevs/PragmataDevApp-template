@@ -5,6 +5,7 @@ import { useTheme, type ThemeOption } from '@/features/preferences/providers/The
 import { authRedirectUrl } from '@/lib/auth/authRedirect';
 import { supabase } from '@/lib/supabase';
 import { uploadFile, deleteFile, resolveSignedUrl, AVATAR_PRESET } from '@/lib/storage';
+import { errorMessage } from '@/lib/errors';
 import { Button } from '@/components/ui/Button';
 import { Sun, Moon, Monitor, CheckCircle2, Camera, Loader2, Trash2 } from 'lucide-react';
 
@@ -77,8 +78,8 @@ export default function ProfilePage() {
       setAvatarUrl(signedUrl);
       setAvatarPreview(null);
       await refreshProfile();
-    } catch (err: any) {
-      toast.error('Error al subir imagen: ' + err.message);
+    } catch (err: unknown) {
+      toast.error('Error al subir imagen: ' + errorMessage(err, 'error desconocido'));
       setAvatarPreview(null);
     } finally {
       setUploadingAvatar(false);
@@ -106,8 +107,8 @@ export default function ProfilePage() {
       setAvatarUrl(null);
       setAvatarPreview(null);
       await refreshProfile();
-    } catch (err: any) {
-      toast.error('Error al quitar imagen: ' + err.message);
+    } catch (err: unknown) {
+      toast.error('Error al quitar imagen: ' + errorMessage(err, 'error desconocido'));
     } finally {
       setRemovingAvatar(false);
     }
@@ -131,8 +132,8 @@ export default function ProfilePage() {
       if (error) throw error;
       setProfileSuccess(true);
       setTimeout(() => setProfileSuccess(false), 3000);
-    } catch (err: any) {
-      toast.error('Error al guardar: ' + err.message);
+    } catch (err: unknown) {
+      toast.error('Error al guardar: ' + errorMessage(err, 'error desconocido'));
     } finally {
       setSavingProfile(false);
     }
@@ -150,8 +151,8 @@ export default function ProfilePage() {
 
       if (error) throw error;
       setResetSent(true);
-    } catch (err: any) {
-      toast.error('Error al enviar: ' + err.message);
+    } catch (err: unknown) {
+      toast.error('Error al enviar: ' + errorMessage(err, 'error desconocido'));
     } finally {
       setSendingReset(false);
     }

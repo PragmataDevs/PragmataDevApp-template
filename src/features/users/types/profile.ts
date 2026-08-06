@@ -1,4 +1,5 @@
 import type { AuditBase, UUID } from '@/types/core/base';
+import type { Json } from '@pragmata/core';
 
 export type AccessLevel = 
   | 'god'        // Puede ver TODOS los datos de TODOS los usuarios (Solo válido en Team Platform Owner)
@@ -55,7 +56,7 @@ export interface Profile extends AuditBase {
   is_role_synced: boolean;
 
   // Variables Extra del Rol (Nivel Chido/Chafa)
-  role_variables?: Record<string, any>;
+  role_variables?: Record<string, Json>;
 
   // --- Estado de Negocio ---
   profile_status: 'active' | 'suspended'; 

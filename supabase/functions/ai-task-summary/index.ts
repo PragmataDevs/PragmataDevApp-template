@@ -16,7 +16,9 @@
  * Deploy: supabase functions deploy ai-task-summary
  */
 
-import { handleCors, corsHeaders } from '../_shared/cors.ts';
+// `corsHeaders` no se importa aquí a propósito: `jsonResponse`/`errorResponse`
+// (../_shared/auth.ts) ya los inyectan en cada respuesta.
+import { handleCors } from '../_shared/cors.ts';
 import { requireAuth, createSupabaseClient, errorResponse, jsonResponse } from '../_shared/auth.ts';
 
 interface Task {

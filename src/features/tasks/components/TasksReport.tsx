@@ -12,7 +12,8 @@
  *   docs/ai/setup.md — sección @react-pdf/renderer
  */
 
-import { PrintButton, buildPrintTable } from '@/components/ui/PrintButton';
+import { PrintButton } from '@/components/ui/PrintButton';
+import { buildPrintTable } from '@/lib/pdf/usePrint';
 import type { Task } from '@/features/tasks/types/task';
 
 const PRIORITY_LABELS: Record<string, string> = {

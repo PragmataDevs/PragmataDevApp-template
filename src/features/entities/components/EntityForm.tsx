@@ -35,7 +35,9 @@ export default function EntityForm({
   totalEntities = 0,
 }: EntityFormProps) {
   const [name, setName] = useState(entity?.name || '');
-  const [code, setCode] = useState(entity?.code || '');
+  // `codeInput` guarda SÓLO lo que el usuario tecleó. El código auto-generado no
+  // se guarda: se deriva del nombre en cada render (ver `code` más abajo).
+  const [codeInput, setCodeInput] = useState(entity?.code || '');
   const [codeManuallyEdited, setCodeManuallyEdited] = useState(!!entity?.code);
   const [description, setDescription] = useState(entity?.description || '');
   const [location, setLocation] = useState(entity?.location || '');
@@ -50,14 +52,18 @@ export default function EntityForm({
 
   const isEditing = !!entity;
 
-  useEffect(() => {
-    if (!isEditing && !codeManuallyEdited && name.trim()) {
-      setCode(generateEntityCode(name, totalEntities));
-    }
-    if (!isEditing && !name.trim()) {
-      setCode('');
-    }
-  }, [name, isEditing, codeManuallyEdited, totalEntities]);
+  /**
+   * El código es estado DERIVADO mientras nadie lo escriba a mano: sale del
+   * nombre. Vivía en un `useEffect` que hacía `setCode(...)` en cada tecla del
+   * campo Nombre, lo que forzaba un render extra por pulsación y dejaba un frame
+   * con el código de la letra anterior. Calculándolo aquí, el input siempre
+   * muestra el valor correcto en la misma pintura.
+   *
+   * En modo edición, o cuando el usuario ya tecleó un código, manda `codeInput`.
+   */
+  const code = !isEditing && !codeManuallyEdited
+    ? (name.trim() ? generateEntityCode(name, totalEntities) : '')
+    : codeInput;
 
   useEffect(() => {
     return () => {
@@ -179,7 +185,7 @@ export default function EntityForm({
                   type="text"
                   value={code}
                   onChange={(e) => {
-                    setCode(e.target.value.toUpperCase());
+                    setCodeInput(e.target.value.toUpperCase());
                     setCodeManuallyEdited(true);
                   }}
                   onBlur={() => {

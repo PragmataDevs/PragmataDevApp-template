@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
+import { errorMessage } from '@/lib/errors';
 import type { NotificationType, BroadcastTargetType } from '../config';
 
 // ─── Types ───────────────────────────────────────────────────
@@ -85,9 +86,9 @@ export function useNotifications() {
 
         if (abortRef.current?.signal.aborted) return;
         setNotifications((data as unknown as Notification[]) || []);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (abortRef.current?.signal.aborted) return;
-        console.error('Error fetching notifications:', err.message);
+        console.error('Error fetching notifications:', errorMessage(err, 'Error al cargar las notificaciones'));
       } finally {
         setLoading(false);
       }
@@ -117,9 +118,9 @@ export function useNotifications() {
       if (count !== null && count !== undefined) {
         setUnreadCount(count);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (abortRef.current?.signal.aborted) return;
-      console.error('Error fetching unread count:', err.message);
+      console.error('Error fetching unread count:', errorMessage(err, 'Error al contar las no leídas'));
     }
   }, [authLoading, isAuthenticated, profile]);
 

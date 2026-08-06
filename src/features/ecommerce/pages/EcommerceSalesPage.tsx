@@ -42,18 +42,15 @@ function formatDate(iso: string) {
 
 export default function EcommerceSalesPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Igual que en EcommerceDashboardPage: con el módulo apagado no hay carga que
+  // esperar, así que el estado inicial lo refleja en vez de corregirse solo.
+  const [loading, setLoading] = useState(ECOMMERCE_ENABLED);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    if (!ECOMMERCE_ENABLED) {
-      setLoading(false);
-      return;
-    }
+    if (!ECOMMERCE_ENABLED) return;
     (async () => {
-      setLoading(true);
-      setError(null);
       const { data, error: err } = await supabase
         .from('orders')
         .select('*')

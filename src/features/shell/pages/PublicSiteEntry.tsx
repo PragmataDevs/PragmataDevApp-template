@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { getConfiguredPublicSiteUrl } from '@/lib/publicSiteUrl';
 
 function originOf(url: string): string | null {
@@ -17,24 +17,24 @@ function originOf(url: string): string | null {
  * Si `VITE_PUBLIC_SITE_URL` apunta al mismo host que el ERP (p. ej. www en ambos), evitamos bucle infinito.
  */
 export default function PublicSiteEntry() {
-  const [sameHostMisconfig, setSameHostMisconfig] = useState(false);
+  // Todo esto es síncrono (env + `window.location`), así que se DERIVA en el
+  // render en vez de calcularse en un efecto para guardarlo en estado. Antes el
+  // componente pintaba un primer frame "sin problema" y se corregía después;
+  // ahora la primera pintura ya sabe si hay mala configuración.
+  const base = getConfiguredPublicSiteUrl();
+  const baseOrigin = base ? originOf(base) : null;
+  const sameHostMisconfig = Boolean(baseOrigin && window.location.origin === baseOrigin);
 
+  // El efecto queda sólo con lo que SÍ es un efecto: navegar fuera de la app.
   useEffect(() => {
-    const base = getConfiguredPublicSiteUrl();
-    const baseOrigin = base ? originOf(base) : null;
-    const here = window.location.origin;
-
-    if (baseOrigin && here === baseOrigin) {
-      setSameHostMisconfig(true);
-      return;
-    }
+    if (sameHostMisconfig) return;
 
     if (base) {
       window.location.replace(`${base.replace(/\/+$/, '')}/`);
       return;
     }
     window.location.replace('/login');
-  }, []);
+  }, [base, sameHostMisconfig]);
 
   if (sameHostMisconfig) {
     return (

@@ -17,7 +17,8 @@
  */
 
 import Stripe from 'https://esm.sh/stripe@14?target=deno';
-import { handleCors, corsHeaders } from '../_shared/cors.ts';
+// Sin `corsHeaders`: `jsonResponse`/`errorResponse` ya los ponen.
+import { handleCors } from '../_shared/cors.ts';
 import { errorResponse, jsonResponse } from '../_shared/auth.ts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

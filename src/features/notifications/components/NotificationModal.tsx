@@ -9,6 +9,7 @@ import { usePermission } from '@/features/auth/hooks/usePermission';
 import { NOTIFICATION_TYPES, BROADCAST_TARGETS, type NotificationType, type BroadcastTargetType } from '../config';
 import { supabase } from '@/lib/supabase';
 import { OverlayPortal } from '@/lib/ui/OverlayPortal';
+import { errorMessage } from '@/lib/errors';
 
 // ─── Notification row in modal ───────────────────────────────
 function NotificationRow({
@@ -143,8 +144,8 @@ function SendNotificationForm({ onBack, onSent }: { onBack: () => void; onSent: 
       });
 
       onSent();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'No se pudo enviar la notificación'));
     } finally {
       setSending(false);
     }

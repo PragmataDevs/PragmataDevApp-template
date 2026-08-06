@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { uploadFile, CHAT_IMAGE_PRESET } from '@/lib/storage';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
+import { errorMessage } from '@/lib/errors';
 import type { Entity } from '@/features/entities/types/entity';
 import { ENTITY_STATUS_CONFIG } from '@/features/entities/types/entity';
 
@@ -28,6 +29,22 @@ export interface EntityMember {
 export interface EntityWithMembers extends EntityRow {
   member_count: number;
 }
+
+/**
+ * Fila cruda de `sys_entity_access` con el doble embed del select de
+ * `fetchEntityMembers` (`profiles(... sys_roles(name))`). PostgREST la entrega
+ * anidada; el hook la aplana a `EntityMember`. Los embeds son nullables porque
+ * el perfil o el rol pueden no existir (o quedar fuera por RLS).
+ */
+type EntityAccessRowWithProfile = Pick<EntityMember, 'id' | 'user_id' | 'entity_id' | 'created_at'> & {
+  profiles: {
+    full_name:  string | null;
+    email:      string | null;
+    avatar_url: string | null;
+    role_id:    string | null;
+    sys_roles:  { name: string } | null;
+  } | null;
+};
 
 export interface EntityImageAsset {
   path:        string;
@@ -75,7 +92,7 @@ export function useEntities() {
     setError(null);
 
     try {
-      let entitiesData: any[] = [];
+      let entitiesData: Entity[] = [];
 
       if (POWERSYNC_ENABLED) {
         const { db } = await import('@/lib/db');
@@ -87,7 +104,7 @@ export function useEntities() {
         if (ac.signal.aborted) return;
         setTotalEntityCount(countRows[0]?.count ?? 0);
 
-        entitiesData = await db.getAll<any>(
+        entitiesData = await db.getAll<Entity>(
           `SELECT * FROM entities WHERE status = 'active' ORDER BY updated_at DESC`,
         );
       } else {
@@ -120,8 +137,8 @@ export function useEntities() {
       }
 
       // Get member counts via sys_entity_access
-      const entityIds = (entitiesData || []).map((e: any) => e.id);
-      let memberCounts: Record<string, number> = {};
+      const entityIds = (entitiesData || []).map((e) => e.id);
+      const memberCounts: Record<string, number> = {};
 
       if (entityIds.length > 0) {
         if (POWERSYNC_ENABLED) {
@@ -152,16 +169,17 @@ export function useEntities() {
         }
       }
 
-      const enriched: EntityWithMembers[] = (entitiesData || []).map((e: any) => ({
+      const enriched: EntityWithMembers[] = (entitiesData || []).map((e) => ({
         ...e,
         member_count: memberCounts[e.id] || 0,
       }));
 
       setEntities(enriched);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (ac.signal.aborted) return;
-      console.error('Error fetching entities:', err.message);
-      setError(err.message);
+      const message = errorMessage(err, 'Error al cargar las entidades');
+      console.error('Error fetching entities:', message);
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -256,7 +274,7 @@ export function useEntities() {
 
   const updateEntity = useCallback(
     async (entityId: string, data: EntityInput) => {
-      let nextMetadata: Record<string, any> | undefined;
+      let nextMetadata: Record<string, unknown> | undefined;
 
       if (data.images && data.images.length > 0) {
         const { data: existing, error: existingErr } = await supabase
@@ -334,14 +352,16 @@ export function useEntities() {
       return response.data ?? [];
     }, 'useEntities.fetchEntityMembers');
 
-    return data.map((row: any) => ({
+    return (data as unknown as EntityAccessRowWithProfile[]).map((row) => ({
       id:         row.id,
       user_id:    row.user_id,
       entity_id:  row.entity_id,
       created_at: row.created_at,
-      full_name:  row.profiles?.full_name,
+      // `?? null` y no a secas: sin el embed (perfil borrado o filtrado por RLS)
+      // el optional chaining da `undefined`, y `EntityMember` promete `| null`.
+      full_name:  row.profiles?.full_name ?? null,
       email:      row.profiles?.email || '',
-      avatar_url: row.profiles?.avatar_url,
+      avatar_url: row.profiles?.avatar_url ?? null,
       role_name:  row.profiles?.sys_roles?.name || 'Sin rol',
     }));
   }, []);

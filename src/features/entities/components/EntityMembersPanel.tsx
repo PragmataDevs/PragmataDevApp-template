@@ -4,7 +4,7 @@ import { X, Loader2, Search, UserPlus, Trash2, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { resolveSignedUrl } from '@/lib/storage';
+import { useSignedUrl } from '@/lib/storage';
 import type { EntityMember } from '@/features/entities/hooks/useEntities';
 import { ENTITY_LABEL } from '@/features/entities/types/entity';
 
@@ -39,15 +39,7 @@ function getInitials(name: string | null, email: string): string {
 }
 
 function useAvatarUrl(path: string | null) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (path) {
-      resolveSignedUrl('attachments', path).then(setUrl);
-    } else {
-      setUrl(null);
-    }
-  }, [path]);
-  return url;
+  return useSignedUrl('attachments', path);
 }
 
 function MemberAvatar({

@@ -12,8 +12,9 @@ import {
   type ChatMessage,
 } from '../hooks/useChat';
 import { supabase } from '@/lib/supabase';
-import { resolveSignedUrl } from '@/lib/storage';
+import { useSignedUrl } from '@/lib/storage';
 import { OverlayPortal } from '@/lib/ui/OverlayPortal';
+import { errorMessage } from '@/lib/errors';
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -34,15 +35,7 @@ function getInitials(name?: string | null, email?: string): string {
 
 /** Resolve avatar_url (storage path) to a signed URL */
 function useAvatarUrl(avatarPath?: string | null) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (avatarPath) {
-      resolveSignedUrl('attachments', avatarPath).then(setUrl);
-    } else {
-      setUrl(null);
-    }
-  }, [avatarPath]);
-  return url;
+  return useSignedUrl('attachments', avatarPath);
 }
 
 /** Reusable avatar circle with image or initials fallback */
@@ -298,8 +291,8 @@ function MessageView({
     try {
       await sendMessage(input.trim());
       setInput('');
-    } catch (err: any) {
-      console.error('Send error:', err.message);
+    } catch (err: unknown) {
+      console.error('Send error:', errorMessage(err, 'No se pudo enviar el mensaje'));
     } finally {
       setSending(false);
     }

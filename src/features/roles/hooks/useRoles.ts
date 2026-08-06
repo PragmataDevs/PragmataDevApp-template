@@ -6,6 +6,7 @@ import { withSessionRetry } from '@/lib/auth/sessionRetry';
 import type { ResourceAction } from '@/features/auth/types/rbac';
 import type { Role, RoleDefinition } from '@/features/roles/types/role';
 import type { GrantedPermissions } from '@/features/roles/components/PermissionsPanel';
+import { errorMessage } from '@/lib/errors';
 
 // ─── Feature flag ────────────────────────────────────────────
 const POWERSYNC_ENABLED = import.meta.env.VITE_ENABLE_POWERSYNC === 'true';
@@ -118,10 +119,10 @@ export function useRoles() {
           }))
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (ac.signal.aborted) return;
       console.error('[useRoles] Error fetching roles:', err);
-      setError(err.message ?? 'Error al cargar roles');
+      setError(errorMessage(err, 'Error al cargar roles'));
     } finally {
       setLoading(false);
     }
@@ -173,7 +174,7 @@ export function useRoles() {
           }
           return permissions;
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[useRoles] Error fetching definitions:', err);
         throw err;
       }

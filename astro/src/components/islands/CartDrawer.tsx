@@ -2,42 +2,24 @@
  * CartDrawer — Floating cart icon + slide-in drawer.
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import type { CartItem } from './CartButton';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { PublicIcon } from '../icons/PublicIcon';
-
-const CART_KEY = 'pragmata_cart';
-
-function getCart(): CartItem[] {
-  try {
-    const raw = localStorage.getItem(CART_KEY);
-    return raw ? (JSON.parse(raw) as CartItem[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCart(items: CartItem[]) {
-  localStorage.setItem(CART_KEY, JSON.stringify(items));
-  window.dispatchEvent(new CustomEvent('cart:updated', { detail: items }));
-}
+import {
+  getCartSnapshot,
+  getCartServerSnapshot,
+  subscribeToCart,
+  saveCart,
+  readCart,
+} from '../../lib/cart';
 
 export default function CartDrawer() {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // El carrito se lee del store compartido en vez de copiarse a estado con un
+  // `setCart(getCart())` dentro del efecto de montaje. `getCartServerSnapshot`
+  // hace que la primera pintura (la que genera Astro en el servidor) coincida
+  // con la del cliente antes de hidratar — que es justo para lo que existía la
+  // bandera `mounted`.
+  const cart = useSyncExternalStore(subscribeToCart, getCartSnapshot, getCartServerSnapshot);
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setCart(getCart());
-    setMounted(true);
-
-    const handler = (e: Event) => {
-      setCart((e as CustomEvent<CartItem[]>).detail ?? getCart());
-    };
-
-    window.addEventListener('cart:updated', handler);
-    return () => window.removeEventListener('cart:updated', handler);
-  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -48,14 +30,14 @@ export default function CartDrawer() {
   }, []);
 
   const updateQty = useCallback((id: string, delta: number) => {
-    const updated = getCart().map(item =>
+    const updated = readCart().map(item =>
       item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item,
     );
     saveCart(updated);
   }, []);
 
   const removeItem = useCallback((id: string) => {
-    saveCart(getCart().filter(item => item.id !== id));
+    saveCart(readCart().filter(item => item.id !== id));
   }, []);
 
   const clearCart = useCallback(() => saveCart([]), []);
@@ -66,8 +48,10 @@ export default function CartDrawer() {
     totalPrice,
   );
 
-  if (!mounted) return null;
-
+  // Ya no hace falta el `if (!mounted) return null`: el server snapshot del store
+  // es un carrito vacío, así que el HTML que emite Astro y el primer render del
+  // cliente coinciden por construcción. El contenido real entra al hidratar, sin
+  // mismatch y sin el frame en blanco que dejaba el guard.
   return (
     <>
       <button

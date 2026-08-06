@@ -570,6 +570,21 @@ function DeleteConfirm({ product, onConfirm, onClose }: { product: Product; onCo
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+/**
+ * El flag se resuelve en un componente aparte del que tiene los hooks.
+ *
+ * Antes, el `if (!ECOMMERCE_ENABLED) return …` vivía DENTRO del componente y por
+ * encima de `useProducts()`, los `useState` y los `useCallback`: con el flag
+ * apagado esos 10 hooks no se llamaban, y con el flag prendido sí. Eso es una
+ * violación de las reglas de los hooks — hoy no truena sólo porque el valor del
+ * flag es constante durante toda la vida del bundle, así que el orden es
+ * consistente en cada render. En el momento en que el flag cambiara en caliente
+ * (o alguien lo volviera reactivo), React encontraría un orden de hooks distinto
+ * entre renders y reventaría con estado cruzado.
+ *
+ * Partiéndolo en dos, `ProductsPageContent` sólo se monta con ecommerce activo y
+ * llama TODOS sus hooks siempre, incondicionalmente.
+ */
 export default function ProductsPage() {
   if (!ECOMMERCE_ENABLED) {
     return (
@@ -583,6 +598,10 @@ export default function ProductsPage() {
     );
   }
 
+  return <ProductsPageContent />;
+}
+
+function ProductsPageContent() {
   const { data: products, loading, error, upsert, softDelete, refetch } = useProducts();
   const [formProduct, setFormProduct] = useState<Product | null | 'new'>('new' as unknown as null);
   const [showForm, setShowForm]       = useState(false);

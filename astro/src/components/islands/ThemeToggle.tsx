@@ -3,62 +3,70 @@
  * Persistencia: localStorage `pragmata_astro_theme` = light | dark
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { PublicIcon } from '../icons/PublicIcon';
 
-const STORAGE_KEY = 'pragmata_astro_theme';
+type Mode = 'light' | 'dark';
 
-function readStored(): 'light' | 'dark' | null {
+const STORAGE_KEY = 'pragmata_astro_theme';
+const THEME_EVENT = 'theme:changed';
+
+/**
+ * El tema es un store externo (localStorage + la preferencia del sistema), no
+ * estado de React. Antes se copiaba a estado con un `setMode(...)` en el efecto
+ * de montaje, más una bandera `ready` para no pintar el botón equivocado durante
+ * la hidratación. `useSyncExternalStore` cubre las dos cosas de fábrica: el
+ * `getServerSnapshot` da el valor que usa el HTML del servidor y el snapshot del
+ * cliente toma el mando al hidratar.
+ */
+function readMode(): Mode {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
     if (v === 'light' || v === 'dark') return v;
   } catch {
     /* ignore */
   }
-  return null;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function apply(mode: 'light' | 'dark') {
+/** En SSR no hay `localStorage` ni `matchMedia`: se asume claro, igual que antes. */
+function readServerMode(): Mode {
+  return 'light';
+}
+
+function subscribe(onStoreChange: () => void): () => void {
+  window.addEventListener(THEME_EVENT, onStoreChange);
+  window.addEventListener('storage', onStoreChange);
+  return () => {
+    window.removeEventListener(THEME_EVENT, onStoreChange);
+    window.removeEventListener('storage', onStoreChange);
+  };
+}
+
+function apply(mode: Mode) {
   const root = document.documentElement;
   if (mode === 'dark') root.classList.add('dark');
   else root.classList.remove('dark');
 }
 
 export default function ThemeToggle() {
-  const [mode, setMode] = useState<'light' | 'dark'>('light');
-  const [ready, setReady] = useState(false);
+  const mode = useSyncExternalStore(subscribe, readMode, readServerMode);
 
+  // Pintar la clase en <html> SÍ es un efecto de verdad: sincroniza el DOM de
+  // fuera de React con el modo vigente. No escribe estado.
   useEffect(() => {
-    const stored = readStored();
-    const initial =
-      stored ??
-      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    setMode(initial);
-    apply(initial);
-    setReady(true);
-  }, []);
+    apply(mode);
+  }, [mode]);
 
   const toggle = useCallback(() => {
-    setMode(prev => {
-      const next = prev === 'dark' ? 'light' : 'dark';
-      try {
-        localStorage.setItem(STORAGE_KEY, next);
-      } catch {
-        /* ignore */
-      }
-      apply(next);
-      return next;
-    });
+    const next: Mode = readMode() === 'dark' ? 'light' : 'dark';
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+    window.dispatchEvent(new Event(THEME_EVENT));
   }, []);
-
-  if (!ready) {
-    return (
-      <span
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-pragmata border border-transparent"
-        aria-hidden
-      />
-    );
-  }
 
   const isDark = mode === 'dark';
 

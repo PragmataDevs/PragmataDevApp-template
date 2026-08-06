@@ -1,4 +1,5 @@
 import type { AuditBase, UUID } from '@/types/core/base';
+import type { Json } from '@pragmata/core';
 
 /**
  * ResourceType: Clasificación del recurso para saber cómo manejarlo en la UI.
@@ -72,7 +73,7 @@ export interface RoleDefinition {
   
   // Condicionales Avanzados (Future-Proof, opcional)
   // Ej: { "max_amount": 10000, "region": "norte" }
-  conditions?: Record<string, any>;
+  conditions?: Record<string, Json>;
 }
 
 /**
@@ -106,7 +107,7 @@ export interface UserPermission {
   granted_actions: ResourceAction[]; // Checklist final
   
   // Si el permiso tiene condiciones específicas (mas allá de sí/no)
-  conditions?: Record<string, any>;
+  conditions?: Record<string, Json>;
 
   is_customized: boolean;
 }

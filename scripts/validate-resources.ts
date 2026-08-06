@@ -35,9 +35,9 @@ while ((m = codeRe.exec(resourcesSrc)) !== null) {
 const routeCodes: Map<string, string[]> = new Map(); // code → [route paths]
 const routeCodeRe = /resourceCode:\s*(['"])(?<code>[a-z_]+)\1/g;
 
-// Collect all routes that have resourceCode and their paths
-const routeBlockRe = /\{\s*\n(?:\s*\/\/[^\n]*\n)*(?:\s*\w+:[^\n]*\n)*/g;
-// Simpler approach: just extract the resourceCode values
+// Solo se extraen los valores de `resourceCode`; el intento de parsear el bloque
+// entero de cada ruta se descartó (el regex quedaba frágil ante cualquier cambio
+// de formato en routes.config.ts).
 let rm: RegExpExecArray | null;
 while ((rm = routeCodeRe.exec(routesSrc)) !== null) {
   const code = rm.groups!.code;

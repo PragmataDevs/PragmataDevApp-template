@@ -4,6 +4,7 @@
 
 export { optimizeFile, type OptimizeOptions } from './optimizeFile';
 export { resolveSignedUrl, resolveSignedUrls } from './resolveUrl';
+export { useSignedUrl } from './useSignedUrl';
 export {
   uploadFile,
   deleteFile,

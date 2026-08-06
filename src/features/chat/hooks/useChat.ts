@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
 import { uploadFile, resolveSignedUrl, CHAT_IMAGE_PRESET } from '@/lib/storage';
+import { errorMessage } from '@/lib/errors';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -133,9 +134,9 @@ export function useConversations() {
 
       if (ac.signal.aborted) return;
       setConversations(conversationsWithLastMessage);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (ac.signal.aborted) return;
-      console.error('Error fetching conversations:', err.message);
+      console.error('Error fetching conversations:', errorMessage(err, 'Error al cargar las conversaciones'));
     } finally {
       setLoading(false);
     }
@@ -248,14 +249,15 @@ export function useMessages(conversationId: string | null) {
         }, 'useMessages.fetchMessages');
 
         // Resolve storage paths to signed URLs
-        const resolved = await resolveFileUrls((data as unknown as ChatMessage[]) || []);
+        const rows = (data as unknown as ChatMessage[]) ?? [];
+        const resolved = await resolveFileUrls(rows);
         setMessages(resolved);
 
         // Mark messages as read
-        if (data && data.length > 0) {
-          const unreadIds = data
-            .filter((m: any) => m.sender_id !== profile.id)
-            .map((m: any) => m.id);
+        if (rows.length > 0) {
+          const unreadIds = rows
+            .filter((m) => m.sender_id !== profile.id)
+            .map((m) => m.id);
 
           if (unreadIds.length > 0) {
             // Get already-read message IDs
@@ -279,8 +281,8 @@ export function useMessages(conversationId: string | null) {
             }
           }
         }
-      } catch (err: any) {
-        console.error('Error fetching messages:', err.message);
+      } catch (err: unknown) {
+        console.error('Error fetching messages:', errorMessage(err, 'Error al cargar los mensajes'));
       } finally {
         setLoading(false);
       }

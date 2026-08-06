@@ -6,6 +6,7 @@ import { authRedirectUrl } from '@/lib/auth/authRedirect';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
 import type { Profile } from '@/features/users/types/profile';
 import type { GrantedPermissions } from '@/features/roles/components/PermissionsPanel';
+import { errorMessage } from '@/lib/errors';
 
 // ─── Feature flag ────────────────────────────────────────────
 const POWERSYNC_ENABLED = import.meta.env.VITE_ENABLE_POWERSYNC === 'true';
@@ -33,6 +34,15 @@ export type UserRow = Pick<
 export interface UserWithRole extends UserRow {
   role_name: string;
 }
+
+/**
+ * Fila cruda de `profiles` tal como la devuelve el select con embed
+ * (`'*, sys_roles!profiles_role_id_fkey(name)'`): el rol llega anidado, no
+ * aplanado. Se aplana a `role_name` al construir el `UserWithRole`.
+ */
+type ProfileRowWithRoleEmbed = UserRow & {
+  sys_roles: { name: string } | null;
+};
 
 /** Input para crear un nuevo usuario — campos del formulario derivados de Profile */
 export type UserCreateInput = Pick<Profile, 'full_name' | 'email' | 'role_id' | 'access_level' | 'is_role_synced'> &
@@ -142,15 +152,15 @@ export function useUsers() {
           if (rolesResponse.error) throw rolesResponse.error;
 
           return {
-            profilesData: profilesResponse.data ?? [],
-            rolesData: rolesResponse.data ?? [],
+            profilesData: (profilesResponse.data ?? []) as unknown as ProfileRowWithRoleEmbed[],
+            rolesData: (rolesResponse.data ?? []) as RoleOption[],
           };
         }, 'useUsers.fetchUsers');
 
         if (ac.signal.aborted) return;
 
         setUsers(
-          profilesData.map((p: any) => ({
+          profilesData.map((p) => ({
             id: p.id,
             email: p.email,
             full_name: p.full_name,
@@ -168,16 +178,16 @@ export function useUsers() {
           })),
         );
 
-        setRoles(rolesData.map((r: any) => ({
+        setRoles(rolesData.map((r) => ({
           id: r.id,
           name: r.name,
           can_be_customized: r.can_be_customized ?? false,
         })));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (ac.signal.aborted) return;
       console.error('[useUsers] Error fetching users:', err);
-      setError(err.message ?? 'Error al cargar usuarios');
+      setError(errorMessage(err, 'Error al cargar usuarios'));
     } finally {
       setLoading(false);
     }
@@ -379,8 +389,12 @@ export function useUsers() {
         // The real error body is in authError.context (a Response object).
         let detail = authData?.error || authError.message;
         try {
-          const response = (authError as any).context as Response | undefined;
-          if (response) {
+          // `FunctionsHttpError` guarda la Response cruda en `.context`, pero el
+          // tipo público de supabase-js no la declara. Se estrecha comprobando
+          // que sea una Response de verdad en vez de castear a ciegas.
+          const { context } = authError as { context?: unknown };
+          if (context instanceof Response) {
+            const response = context;
             const body = await response.json();
             detail = body?.error || body?.message || detail;
             console.error('[useUsers] Edge Function response body:', body);

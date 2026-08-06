@@ -2,17 +2,15 @@
  * CartButton — React island for the product detail page.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { PublicIcon } from '../icons/PublicIcon';
-
-export interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  slug: string;
-  image?: string;
-  quantity: number;
-}
+import {
+  getCartSnapshot,
+  getCartServerSnapshot,
+  subscribeToCart,
+  saveCart,
+  readCart,
+} from '../../lib/cart';
 
 export interface CartButtonProps {
   product: {
@@ -25,56 +23,39 @@ export interface CartButtonProps {
   disabled?: boolean;
 }
 
-const CART_KEY = 'pragmata_cart';
-
-function getCart(): CartItem[] {
-  try {
-    const raw = localStorage.getItem(CART_KEY);
-    return raw ? (JSON.parse(raw) as CartItem[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCart(cart: CartItem[]) {
-  localStorage.setItem(CART_KEY, JSON.stringify(cart));
-  window.dispatchEvent(new CustomEvent('cart:updated', { detail: cart }));
-}
-
 export default function CartButton({ product, disabled = false }: CartButtonProps) {
-  const [inCart, setInCart] = useState(false);
-  const [quantity, setQty] = useState(1);
-  const [added, setAdded] = useState(false);
+  // El carrito se LEE del store, no se copia a estado. Antes, `inCart` se
+  // sembraba con un efecto al montar y después sólo lo movían los clicks de este
+  // botón: si vaciabas el carrito desde el drawer, este botón se quedaba diciendo
+  // "Agregado" para siempre. Derivándolo, los dos islands van sincronizados.
+  const cart = useSyncExternalStore(subscribeToCart, getCartSnapshot, getCartServerSnapshot);
+  const existing = cart.find(i => i.id === product.id);
+  const inCart = Boolean(existing);
 
-  useEffect(() => {
-    const cart = getCart();
-    const existing = cart.find(i => i.id === product.id);
-    if (existing) {
-      setInCart(true);
-      setQty(existing.quantity);
-    }
-  }, [product.id]);
+  // Lo único que sí es estado propio: la cantidad que el usuario está eligiendo
+  // ANTES de agregar. Si el producto ya está en el carrito manda la del carrito.
+  const [pendingQty, setPendingQty] = useState(1);
+  const quantity = existing ? existing.quantity : pendingQty;
+
+  const [added, setAdded] = useState(false);
 
   const handleAddToCart = () => {
     if (disabled) return;
-    const cart = getCart();
-    const existing = cart.findIndex(i => i.id === product.id);
-    if (existing >= 0) {
-      cart[existing].quantity += quantity;
+    const next = readCart();
+    const index = next.findIndex(i => i.id === product.id);
+    if (index >= 0) {
+      next[index] = { ...next[index], quantity: next[index].quantity + quantity };
     } else {
-      cart.push({ ...product, quantity });
+      next.push({ ...product, quantity });
     }
-    saveCart(cart);
-    setInCart(true);
+    saveCart(next);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
 
   const handleRemoveFromCart = () => {
-    const cart = getCart().filter(i => i.id !== product.id);
-    saveCart(cart);
-    setInCart(false);
-    setQty(1);
+    saveCart(readCart().filter(i => i.id !== product.id));
+    setPendingQty(1);
   };
 
   const qtyBtn =
@@ -86,13 +67,13 @@ export default function CartButton({ product, disabled = false }: CartButtonProp
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-brand-steel">Cantidad</span>
           <div className="inline-flex items-stretch overflow-hidden rounded-pragmata border border-brand-border bg-white shadow-sm dark:border-slate-600 dark:bg-slate-900">
-            <button type="button" className={qtyBtn} onClick={() => setQty(q => Math.max(1, q - 1))}>
+            <button type="button" className={qtyBtn} onClick={() => setPendingQty(q => Math.max(1, q - 1))}>
               −
             </button>
             <span className="flex min-w-[2.25rem] items-center justify-center border-x border-brand-border px-2 text-sm font-semibold tabular-nums">
               {quantity}
             </span>
-            <button type="button" className={qtyBtn} onClick={() => setQty(q => q + 1)}>
+            <button type="button" className={qtyBtn} onClick={() => setPendingQty(q => q + 1)}>
               +
             </button>
           </div>

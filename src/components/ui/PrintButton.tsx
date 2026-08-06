@@ -13,7 +13,7 @@
  */
 
 import { Printer } from 'lucide-react';
-import { usePrint, buildPrintTable } from '@/lib/pdf/usePrint';
+import { usePrint } from '@/lib/pdf/usePrint';
 import type { PrintOptions } from '@/lib/pdf/usePrint';
 
 export interface PrintButtonProps {
@@ -87,5 +87,7 @@ export function PrintButton({
   );
 }
 
-// Re-export builder so consumers don't need a separate import
-export { buildPrintTable };
+// `buildPrintTable` NO se re-exporta desde aquí: vive en `@/lib/pdf/usePrint` y
+// ese es el import que deben usar los consumidores. El re-export ahorraba una
+// línea al llamador y a cambio rompía el fast-refresh de todo este archivo
+// (react-refresh exige que un módulo de componente exporte solo componentes).

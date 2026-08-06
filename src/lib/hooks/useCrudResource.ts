@@ -35,12 +35,19 @@ export interface AuditRecord {
   status?: string;
 }
 
-/** PostgREST chain types drift across package minors; keep filter ergonomic without pinning generics. */
-type FilterFn = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  query: any,
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) => any;
+/**
+ * La cadena de PostgREST que recibe un `filter`.
+ *
+ * Se **deriva del propio cliente** (`ReturnType<...>`) en vez de importar
+ * `PostgrestFilterBuilder`: esa clase lleva 7 parámetros genéricos que cambian
+ * entre minors de `@supabase/postgrest-js`, y fijarlos a mano es justo lo que
+ * obligaba al `any` que había aquí. Derivándolo, el tipo se reajusta solo al
+ * actualizar el paquete y el `.eq()/.in()/.gte()` del llamador sigue con
+ * autocompletado.
+ */
+type QueryChain = ReturnType<ReturnType<typeof supabase.from>['select']>;
+
+type FilterFn = (query: QueryChain) => QueryChain;
 
 export interface UseCrudResourceOptions {
   /** Supabase table name */
@@ -143,8 +150,7 @@ export function useCrudResource<T extends AuditRecord>({
 
     try {
       const result = await withSessionRetry(async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let query = supabase.from(table).select(select) as any;
+        let query: QueryChain = supabase.from(table).select(select);
 
         // Use refs so unstable inline functions don't re-trigger this effect.
         if (filterRef.current)  query = filterRef.current(query);
@@ -172,7 +178,7 @@ export function useCrudResource<T extends AuditRecord>({
       }
     }
   // filter and orderBy are intentionally excluded — they live in refs above.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // (Ya no lleva `eslint-disable`: la regla dejó de reclamarlos al leerse por ref.)
   }, [authLoading, isAuthenticated, enabled, table, select]);
 
   // Initial fetch + re-fetch on auth change / token refresh

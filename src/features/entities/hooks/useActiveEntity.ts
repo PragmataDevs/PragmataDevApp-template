@@ -25,18 +25,32 @@ export function useActiveEntity(): string | null {
     return urlEntityId ?? localStorage.getItem(STORAGE_KEY);
   });
 
-  useEffect(() => {
-    if (urlEntityId) {
-      localStorage.setItem(STORAGE_KEY, urlEntityId);
-      setResolvedId(urlEntityId);
-      return;
-    }
+  /**
+   * La URL es la fuente de verdad dentro del workspace, así que su id se adopta
+   * DURANTE el render (patrón de "ajustar estado cuando cambia un valor externo")
+   * en vez de con un `setResolvedId` dentro del efecto.
+   *
+   * La diferencia no es cosmética: con el efecto, el render inmediatamente
+   * posterior a navegar a `/workspace/:otroId/*` todavía devolvía el id ANTERIOR,
+   * y las pantallas que cuelgan de este hook (Sidebar, Tareas, Documentos,
+   * WorkspaceDashboard) alcanzaban a disparar una consulta contra la entity vieja
+   * antes de corregirse. Aquí React re-renderiza antes de pintar y ese frame
+   * intermedio deja de existir.
+   */
+  const [lastUrlId, setLastUrlId] = useState<string | null>(urlEntityId);
+  if (urlEntityId && urlEntityId !== lastUrlId) {
+    setLastUrlId(urlEntityId);
+    setResolvedId(urlEntityId);
+  }
 
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setResolvedId(stored);
-      return;
-    }
+  // Efecto de escritura pura: recordar la última entity visitada. No toca estado.
+  useEffect(() => {
+    if (urlEntityId) localStorage.setItem(STORAGE_KEY, urlEntityId);
+  }, [urlEntityId]);
+
+  useEffect(() => {
+    // Con id (de la URL o ya resuelto) no hay nada que ir a buscar.
+    if (urlEntityId || resolvedId) return;
 
     // Only fetch from DB once the user is authenticated
     if (!isAuthenticated) return;
@@ -67,7 +81,7 @@ export function useActiveEntity(): string | null {
 
     return () => { cancelled = true; };
   // sessionEpoch ensures we re-run after token refresh or sign-in
-  }, [urlEntityId, isAuthenticated, sessionEpoch]);
+  }, [urlEntityId, resolvedId, isAuthenticated, sessionEpoch]);
 
   return resolvedId;
 }

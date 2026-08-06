@@ -35,7 +35,9 @@ const LEGACY_EMOJI: Record<string, PublicIconKey> = {
 };
 
 /** Normaliza `icon` desde CMS (emoji, kebab-case o nombre Lucide). */
-export function resolvePublicIconKey(raw: string): PublicIconKey {
+// Sin `export`: sólo la consume `PublicIcon` en este mismo archivo, y exportarla
+// dejaba al módulo fuera del fast-refresh (mezcla componente + no-componente).
+function resolvePublicIconKey(raw: string): PublicIconKey {
   const t = raw.trim();
   if (!t) return 'circle';
   if (LEGACY_EMOJI[t]) return LEGACY_EMOJI[t];
