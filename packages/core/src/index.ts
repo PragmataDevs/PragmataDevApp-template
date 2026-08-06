@@ -4,6 +4,7 @@
  */
 
 export type { UUID, AuditStatus, AuditBase } from './audit.ts';
+export type { Json, JsonObject } from './json.ts';
 export type { DocumentStatus, DocumentW } from './document-work.ts';
 export type { Product, ProductInput } from './product.ts';
 export {
@@ -13,3 +14,22 @@ export {
   supabaseApiPort,
   resolveSupabaseUrlForBrowser,
 } from './supabase-url.ts';
+export type {
+  AgentActionKind,
+  AgentRiskLevel,
+  ParamsValidator,
+  AgentActionContext,
+  AgentActionDef,
+  AgentActionRow,
+  PermissionChecker,
+  AgentActionOutcome,
+  RunActionOptions,
+  RowConditionContext,
+} from './agent/index.ts';
+export {
+  defineAction,
+  buildManifest,
+  requiresConfirmation,
+  runAction,
+  evaluateRowConditions,
+} from './agent/index.ts';
