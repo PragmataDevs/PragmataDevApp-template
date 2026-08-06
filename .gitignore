@@ -20,3 +20,7 @@ dump*.sql
 *.sql.gz
 *-backup.sql
 *_backup.sql
+
+# Estado interno del CLI de Supabase (versión descargada, proyecto vinculado).
+# Cambia solo y no aporta nada al repo; llegó a estar trackeado por error.
+supabase/.temp/
