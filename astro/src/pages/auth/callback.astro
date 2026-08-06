@@ -11,13 +11,12 @@ const appUrl = import.meta.env.PUBLIC_APP_URL || 'http://localhost:7070';
   <meta charset="utf-8" />
   <meta name="robots" content="noindex" />
   <title>Redirigiendo… — {brand}</title>
-  <script>
+  <script define:vars={{ appUrl }}>
     (function() {
       var params = new URLSearchParams(location.hash.replace(/^#/, ''));
       var accessToken = params.get('access_token');
       var error = params.get('error');
       var redirectTo = new URLSearchParams(location.search).get('redirect_to') || '/';
-      var appUrl = {JSON.stringify(appUrl)};
 
       if (error) {
         location.href = appUrl + '/login?error=' + encodeURIComponent(error);
