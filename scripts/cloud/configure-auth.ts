@@ -50,6 +50,9 @@ export async function configureAuthUrls(input: ConfigureAuthInput): Promise<void
     headers: {
       Authorization: `Bearer ${input.accessToken}`,
       'Content-Type': 'application/json',
+      // Sin User-Agent de navegador, Cloudflare corta con 403 "error code: 1010".
+      'User-Agent':
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
     },
     body: JSON.stringify(body),
   });

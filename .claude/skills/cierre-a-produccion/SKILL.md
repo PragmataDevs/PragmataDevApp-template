@@ -37,6 +37,19 @@ allowed-tools: Read, Grep, Glob, Bash
 - [ ] `VITE_SUPABASE_URL`/`ANON_KEY` apuntan al proyecto **de prod**, no al local ni staging.
 - [ ] Feature flags correctos (`VITE_ENABLE_POWERSYNC`, `_ECOMMERCE`, `_AI`, `_MULTI_ENTITY`) según lo que el cliente realmente usa.
 - [ ] Variables `PUBLIC_*` del sitio Astro con el dominio real (OG tags, sitemap).
+- [ ] **Toda variable del `.env` local existe también en Vercel**, en el scope Production. Compará
+      las dos listas, no las asumas — el `.env` local es el que "funciona en mi máquina", Vercel es
+      el que ve el cliente. Falla **en silencio**: el build sale verde y la app carga, solo que con
+      los valores default. IndPack salió a producción sin sus `PUBLIC_BRAND_*` y el login le mostró
+      al cliente la marca de **PragmataDevs** (detectado 2026-08).
+      Verificalo: `vercel env ls production` contra `grep -oE '^[A-Z_]+' .env | sort`.
+- [ ] **SMTP propio configurado en el proyecto cloud** (Resend). El SMTP default de Supabase está
+      capado a **2 correos/hora** y cae en spam: invites y resets de password **no llegan**, y te
+      enterás cuando el cliente ya está adentro sin poder entrar. Le pasó a objetiva-ops (nadie
+      recibía el "establecer contraseña") y a IndPack (hubo que asignar passwords a mano).
+      Aplicalo con `tsx scripts/cloud/configure-smtp.ts --ref <ref> --sender "<Cliente>"`.
+      **Ojo:** un PATCH 200 no prueba que el correo llegue — verificá de verdad con
+      `--verify-email <addr>` y exigí `last_event: delivered`. Detalle en `/docs/auth-smtp-resend.md`.
 
 ## 5. Deploy 🚀 (dos proyectos Vercel desde un repo)
 - [ ] Proyecto **ERP** (root) → `app.<dominio>` · Proyecto **Web/Astro** (`astro/`) → `www.<dominio>`. Ver `vercel.json`.
