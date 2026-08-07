@@ -20,6 +20,7 @@ Sigue el orden de esta guía la primera vez; después solo activa lo que necesit
    - Matriz de dominios, variables y Vercel (ERP + público + Supabase local/nube): [**deployment-environments.md**](./deployment-environments.md)
 9. [RBAC — Sincronizar recursos](#9-rbac--sincronizar-recursos)
 10. [Checklist final](#10-checklist-final)
+11. [Testing](#11-testing)
 
 - **Lectura corta** después de clonar (orden de pasos + Vercel resumido): [**PARA-INICIAR.md**](./PARA-INICIAR.md)
 
@@ -681,6 +682,26 @@ Marca cada ítem antes de considerar el setup completo:
 ### RBAC
 - [ ] `SUPABASE_SERVICE_ROLE_KEY=xxx pnpm db:sync` ejecutado
 - [ ] `page_workspace_documents` aparece en `sys_resources` en Supabase
+
+---
+
+## 11. Testing
+
+`vitest` viene configurado con dos modos, según lo que pruebes:
+
+- **Lógica pura** (`*.test.ts`): funciones, hooks sin DOM, cálculos. Corre en entorno `node` (rápido).
+- **Componentes** (`*.test.tsx`): render real con jsdom + `@testing-library/react`. Requiere el
+  docblock `/** @vitest-environment jsdom */` al inicio del archivo — ver
+  `src/components/ui/Button.test.tsx` como ejemplo funcionando.
+
+```bash
+pnpm test          # corre todo una vez
+pnpm test:watch    # modo watch
+```
+
+**No es cobertura obligatoria.** El setup está disponible para cuando el riesgo lo justifique
+(formularios críticos, flujos de dinero, auth) — no hay que escribir tests de cada componente.
+Ver `vitest.config.ts` y `src/test/setup.ts` (ahí vive el cleanup automático entre tests).
 
 ---
 
