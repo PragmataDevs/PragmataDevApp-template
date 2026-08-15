@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
@@ -46,6 +46,9 @@ export interface ChatMessage {
 
 export function useConversations() {
   const { profile, loading: authLoading, isAuthenticated, sessionEpoch } = useAuth();
+  // Identidad estable y ÚNICA por instancia del hook — ver la suscripción de abajo.
+  const instanceId = useId();
+  const profileId = profile?.id ?? null;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
@@ -199,6 +202,46 @@ export function useConversations() {
     return () => { abortRef.current?.abort(); };
     // sessionEpoch in deps: re-run after TOKEN_REFRESHED / wake-from-idle.
   }, [authLoading, isAuthenticated, fetchConversations, sessionEpoch]);
+
+  // ── Suscripción GLOBAL a mensajes nuevos ───────────────────────────────────
+  // useMessages() ya escucha, pero filtrado a la conversación ABIERTA. Sin esto,
+  // si te escriben con el panel cerrado el badge no se prende hasta que recargues
+  // la página: el contador solo se recalcula en fetchConversations().
+  //
+  // Aquí se escucha `chat_messages` sin filtro de conversación. La RLS aplica
+  // también en Realtime, así que solo llegan eventos de mensajes que este usuario
+  // puede ver — no hace falta filtrar por "mis conversaciones" en el cliente.
+  //
+  // Se ignoran los mensajes propios: mandar algo no debe marcarte no-leídos.
+  //
+  // El nombre del canal lleva `instanceId` porque este hook se monta MÁS DE UNA
+  // VEZ a la vez: ChatIcon (el badge del header) y ChatPanel (el slide-over que
+  // ChatIcon abre) llaman los dos a useConversations(). Con un nombre fijo ambos
+  // se suscribían al mismo topic, y al CERRAR el panel su cleanup hacía
+  // removeChannel() sobre el topic compartido — dejando al badge, que sigue
+  // montado, creyendo que escucha pero ya sin suscripción. El badge se apagaba
+  // hasta recargar, justo lo que esta suscripción viene a evitar.
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || !profileId) return;
+
+    const channel = supabase
+      .channel(`chat:badge:${profileId}:${instanceId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        (payload) => {
+          const msg = payload.new as { sender_id?: string };
+          if (msg?.sender_id === profileId) return;
+          fetchConversations();
+        },
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
+    // profileId y no `profile`: el AuthProvider revalida en visibilitychange /
+    // reconnect y devuelve un objeto nuevo cada vez; con el objeto en deps el
+    // canal se tiraba y se recreaba en cada revalidación, sin que cambiara nada.
+  }, [authLoading, isAuthenticated, profileId, instanceId, fetchConversations]);
 
   return {
     conversations,

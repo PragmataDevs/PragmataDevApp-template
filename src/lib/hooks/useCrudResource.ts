@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { withSessionRetry } from '@/lib/auth/sessionRetry';
+import { toSupabaseError } from '@/lib/supabase/errors';
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -159,7 +160,7 @@ export function useCrudResource<T extends AuditRecord>({
         });
 
         const { data: rows, error: qErr } = await query;
-        if (qErr) throw qErr;
+        if (qErr) throw toSupabaseError(qErr);
         return rows as T[];
       }, `useCrudResource[${table}].fetch`);
 
@@ -228,7 +229,7 @@ export function useCrudResource<T extends AuditRecord>({
         .select(select)
         .single();
 
-      if (upsertErr) throw upsertErr;
+      if (upsertErr) throw toSupabaseError(upsertErr);
 
       const row = result as unknown as T;
 
