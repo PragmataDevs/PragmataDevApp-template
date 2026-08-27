@@ -438,7 +438,10 @@ export function useUsers() {
         access_level: payload.access_level,
         job_title: payload.job_title || null,
         phone: payload.phone || null,
-        is_role_synced: payload.is_role_synced,
+        // C4 (backport seguridad): permisos SOLO por rol. La caché
+        // sys_user_permissions ya no es escribible por el front — la sincroniza el
+        // trigger desde la definición del rol.
+        is_role_synced: true,
         profile_status: 'active',
       });
 
@@ -447,11 +450,6 @@ export function useUsers() {
         throw new Error(
           'Usuario creado en auth pero falló al crear el perfil: ' + profileError.message,
         );
-      }
-
-      // Step 4: If custom permissions (not synced), insert them manually
-      if (!payload.is_role_synced && payload.customPermissions) {
-        await upsertUserPermissions(newUserId, callerProfile.team_id, payload.customPermissions);
       }
 
       await syncUserEntityAssignments(newUserId, callerProfile.team_id, payload.entity_ids);
@@ -481,19 +479,12 @@ export function useUsers() {
           access_level: payload.access_level,
           job_title: payload.job_title || null,
           phone: payload.phone || null,
-          is_role_synced: payload.is_role_synced,
+          // C4 (backport seguridad): permisos solo por rol (ver createUser).
+          is_role_synced: true,
         })
         .eq('id', userId);
 
       if (updateError) throw updateError;
-
-      // If custom permissions, upsert them; if synced, the trigger handles it
-      if (!payload.is_role_synced && payload.customPermissions) {
-        const userProfile = users.find((u) => u.id === userId);
-        if (userProfile) {
-          await upsertUserPermissions(userId, userProfile.team_id, payload.customPermissions);
-        }
-      }
 
       const userProfile = users.find((u) => u.id === userId);
       if (userProfile) {
