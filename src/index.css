@@ -52,8 +52,9 @@
   --z-header: 60;
   --z-header-dropdown: 110;
   --z-overlay: 200;
-  --z-modal: 300;
-  --z-modal-elevated: 310;
+  /* modal > sheet: un modal siempre tapa paneles laterales y dropdowns */
+  --z-modal: 13000;
+  --z-modal-elevated: 13100;
   --z-floating: 11000;
   --z-sheet: 12000;
   --z-datatable: 10000;

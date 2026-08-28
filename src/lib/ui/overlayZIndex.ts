@@ -15,14 +15,16 @@ export const overlayZIndex = {
 } as const;
 
 /** Valores numéricos para `style.zIndex` (más fiable que solo clases Tailwind en portales). */
+// Jerarquía: datatable < floating < sheet < modal < modalElevated — un modal SIEMPRE tapa
+// dropdowns y paneles laterales (p. ej. un modal abierto desde el sheet del chat).
 export const overlayZIndexValue: Record<keyof typeof overlayZIndex, number> = {
   sidebarBackdrop: 40,
   sidebar: 50,
   header: 60,
   headerDropdown: 110,
   overlay: 200,
-  modal: 300,
-  modalElevated: 310,
+  modal: 13000,
+  modalElevated: 13100,
   floating: 11000,
   sheet: 12000,
   datatable: 10000,
