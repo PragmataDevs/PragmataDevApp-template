@@ -109,6 +109,12 @@ Deno.serve(async (req: Request) => {
 
   // ── Gemini ────────────────────────────────────────────────────────────────
   const teamId = await userTeamId(userClient, user.id);
+  // entity_id viene del body: solo se atribuye si pertenece al team del usuario (auditoría M2)
+  let entityId: string | null = null;
+  if (body.entity_id && /^[0-9a-f-]{36}$/i.test(body.entity_id)) {
+    const { data: mine } = await userClient.rpc('entity_in_my_team', { p_entity: body.entity_id });
+    if (mine === true) entityId = body.entity_id;
+  }
   const t0 = Date.now();
   const result = await geminiGenerate({
     apiKey,
@@ -125,11 +131,11 @@ Deno.serve(async (req: Request) => {
 
   if (!result.ok) {
     console.error('[ai-gateway] Gemini error:', result.status, result.body.slice(0, 500));
-    await aiLog(service, { teamId, entityId: body.entity_id ?? null, userId: user.id, feature, model, latencyMs, ok: false, error: `gemini_${result.status}` });
+    await aiLog(service, { teamId, entityId, userId: user.id, feature, model, latencyMs, ok: false, error: `gemini_${result.status}` });
     return errorResponse('Gemini request failed', 502);
   }
 
-  await aiLog(service, { teamId, entityId: body.entity_id ?? null, userId: user.id, feature, model, usage: result.usage, latencyMs, ok: true });
+  await aiLog(service, { teamId, entityId, userId: user.id, feature, model, usage: result.usage, latencyMs, ok: true });
 
   let parsed: unknown = undefined;
   if (def.response_schema) {

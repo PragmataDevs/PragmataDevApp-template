@@ -33,8 +33,10 @@ export function gateStatus(reason?: string): number {
       return 401;
     case 'plan_quota_exhausted':
     case 'team_cannot_write':
+    case 'feature_not_in_plan':
       return 402;
     case 'global_budget_exhausted':
+    case 'team_budget_exhausted':
       return 429;
     case 'ai_disabled':
       return 503;

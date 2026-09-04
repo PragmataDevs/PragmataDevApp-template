@@ -47,6 +47,10 @@ Deno.serve(async (req: Request) => {
   if (!body.entity_id) return errorResponse('entity_id required');
 
   const supabase = createSupabaseClient(req);
+  // La entity debe ser del team del usuario (auditoría C1/M2): sin esto, un entity_id ajeno
+  // convertía este endpoint en exfiltración vía Gemini aunque RLS ya la acote.
+  const { data: mine } = await supabase.rpc('entity_in_my_team', { p_entity: body.entity_id });
+  if (mine !== true) return errorResponse('entity_not_in_team', 403);
 
   const gate = await aiGate(supabase, FEATURE);
   if (!gate.allowed) return errorResponse(`ai_not_allowed:${gate.reason ?? 'unknown'}`, gateStatus(gate.reason));
