@@ -1,7 +1,7 @@
 # IA — Guía de Setup e Integración
 
 El Pilar Intelligence de Pragmata usa **Supabase Edge Functions** (Deno) como capa intermedia
-entre el cliente React y los LLMs (OpenAI, Anthropic). Nunca se llama directamente a la API desde el browser.
+entre el cliente React y los LLMs (Gemini, Anthropic). Nunca se llama directamente a la API desde el browser.
 
 ---
 
@@ -72,14 +72,13 @@ Guía orientada a producto y límites: **`ai/README.md`**.
 
 ## Setup Inicial
 
-### 1. Obtener API Key de OpenAI
+### 1. Obtener API Key de Gemini
 
-- [platform.openai.com](https://platform.openai.com) → API Keys → Create new secret key
+- [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → Create API key (cuenta `@pragmatadevs.com`)
 - Guardar como secret de Supabase (nunca en `.env` del repo):
 
 ```bash
-supabase secrets set OPENAI_API_KEY=sk-proj-xxx
-supabase secrets set OPENAI_MODEL=gpt-4o-mini   # opcional, default es gpt-4o-mini
+supabase secrets set GEMINI_API_KEY=sk-proj-xxx
 ```
 
 ### 2. Desplegar la función
@@ -178,7 +177,7 @@ CREATE TABLE embeddings (
   source_type TEXT,          -- 'task', 'document', 'comment'
   source_id   UUID,
   content     TEXT,
-  embedding   vector(1536),  -- OpenAI text-embedding-3-small
+  embedding   vector(1536),  -- Gemini text-embedding-3-small
   created_at  TIMESTAMPTZ DEFAULT now()
 );
 
@@ -188,12 +187,12 @@ CREATE INDEX ON embeddings USING ivfflat (embedding vector_cosine_ops)
 
 ---
 
-## Costos estimados (OpenAI)
+## Costos estimados (Gemini)
 
 | Modelo | Costo aprox. | Usar para |
 |--------|-------------|-----------|
-| `gpt-4o-mini` | ~$0.0001/resumen | Resúmenes, clasificación |
+| `gemini-2.5-flash-lite` | ~$0.0001/resumen | Resúmenes, clasificación |
 | `gpt-4o` | ~$0.005/resumen | Análisis complejo, extracción |
 | `text-embedding-3-small` | ~$0.00002/doc | Embeddings para búsqueda |
 
-**Recomendación:** `gpt-4o-mini` para el 95% de los casos. Solo escalar a `gpt-4o` cuando sea necesario.
+**Recomendación:** `gemini-2.5-flash-lite` para el 95% de los casos. Solo escalar a `gpt-4o` cuando sea necesario.

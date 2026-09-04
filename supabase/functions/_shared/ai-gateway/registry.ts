@@ -22,5 +22,6 @@ export function listPromptCatalog(): AiPromptCatalogEntry[] {
     label: p.label,
     description: p.description,
     variables: p.variables,
+    accepts_image: p.accepts_image,
   }));
 }

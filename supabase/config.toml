@@ -46,16 +46,16 @@ port = 54329
 file_size_limit = "50MiB"
 
 [auth]
-site_url = "http://localhost:7070"
-# Lista de URLs permitidas para redireccionamiento (ERP :7070, Astro :4321 en dev)
+site_url = "http://localhost:7020"
+# Lista de URLs permitidas para redireccionamiento. Los puertos los manda el registro
+# central (~/PragmataDevs/ports.json); se reapuntan con: node scripts/ports-sync-auth.mjs
 additional_redirect_urls = [
-  "http://localhost:7070/**",
-  "http://127.0.0.1:7070/**",
-  "http://localhost:7070/auth/callback",
-  "http://127.0.0.1:7070/auth/callback",
-  "http://localhost:7070/auth/reset-password",
-  "http://127.0.0.1:7070/auth/reset-password",
-  "http://localhost:5173/auth/callback",
+  "http://localhost:7020/**",
+  "http://127.0.0.1:7020/**",
+  "http://localhost:7020/auth/callback",
+  "http://127.0.0.1:7020/auth/callback",
+  "http://localhost:7020/auth/reset-password",
+  "http://127.0.0.1:7020/auth/reset-password",
   "https://app.tucliente.com/auth/callback",
   "https://app.tucliente.com/auth/reset-password"
 ]
@@ -90,7 +90,11 @@ verify_jwt = false
 [functions.stripe-webhook]
 verify_jwt = false
 
-# Secrets en nube: supabase secrets set OPENAI_API_KEY=sk-...
+# Stripe BILLING (mensualidad por tenant, capa plataforma) — hermano de stripe-webhook (orders)
+[functions.stripe-billing-webhook]
+verify_jwt = false
+
+# Secrets en nube: supabase secrets set GEMINI_API_KEY=... (única IA de la casa; ver ~/CLAUDE.md)
 # Local: opcional en supabase/.env.local o --env-file al hacer functions serve
 #   OPENAI_API_KEY            → ai-task-summary, ai-gateway
 #   STRIPE_SECRET_KEY         → stripe-checkout, stripe-webhook

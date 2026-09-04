@@ -8,7 +8,7 @@ Capa única entre tu app (React, Astro, móvil) y el proveedor LLM. **La API key
 
 | Problema | Cómo lo resuelve el gateway |
 |----------|-----------------------------|
-| Exponer `sk-...` en el cliente | Imposible: solo Deno en Edge tiene `OPENAI_API_KEY`. |
+| Exponer la key de Gemini en el cliente | Imposible: solo Deno en Edge tiene `GEMINI_API_KEY`. |
 | Repetir CORS/auth en cada feature | Un solo endpoint + `requireAuth` compartido. |
 | Prompts dispersos en código | Catálogo versionado en `ai/prompts/*.json` + sync a `_shared`. |
 | Cliente pide “meter IA” | Activas secret, despliegas función, llamas con `prompt_id` + variables. |
@@ -16,7 +16,7 @@ Capa única entre tu app (React, Astro, móvil) y el proveedor LLM. **La API key
 ## Arquitectura
 
 ```text
-Browser / App  →  POST /functions/v1/ai-gateway  →  OpenAI
+Browser / App  →  POST /functions/v1/ai-gateway  →  Gemini
                       ↑ JWT (usuario logueado)
                       ↑ prompt_id + variables
 ```
@@ -32,9 +32,8 @@ Browser / App  →  POST /functions/v1/ai-gateway  →  OpenAI
 ### 1. Secret en Supabase
 
 ```bash
-supabase secrets set OPENAI_API_KEY=sk-proj-...
+supabase secrets set GEMINI_API_KEY=...
 # opcional:
-supabase secrets set OPENAI_MODEL=gpt-4o-mini
 ```
 
 ### 2. Sincronizar prompts y desplegar
