@@ -1,0 +1,10 @@
+BEGIN;
+DROP POLICY IF EXISTS "Platform Owner View Teams" ON public.teams;
+DROP POLICY IF EXISTS "Platform Owner View Profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Platform Owner View Subscriptions" ON public.team_subscriptions;
+DROP POLICY IF EXISTS "Platform Owner View AI Usage" ON public.ai_usage;
+DROP POLICY IF EXISTS "Platform Owner View Signup Log" ON public.tenant_signup_log;
+DROP POLICY IF EXISTS "Platform Owner View Billing Events" ON public.billing_events;
+DROP POLICY IF EXISTS "Platform Owner View God Access Log" ON public.god_access_log;
+DROP FUNCTION IF EXISTS public.is_platform_owner_admin();
+COMMIT;
