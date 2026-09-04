@@ -45,6 +45,9 @@ const TasksPage                 = lazy(() => import('@/features/tasks/pages/Task
 const WorkspaceDashboardPage    = lazy(() => import('@/features/workspace/pages/WorkspaceDashboardPage'));
 const DocumentsPage             = lazy(() => import('@/features/documents/pages/DocumentsPage'));
 
+/** Backport: módulos de demo del template, apagables sin tocar código. Default true. */
+const TASKS_ENABLED = import.meta.env.VITE_ENABLE_TASKS !== 'false';
+const DOCUMENTS_ENABLED = import.meta.env.VITE_ENABLE_DOCUMENTS !== 'false';
 const ECOMMERCE_ENABLED = import.meta.env.VITE_ENABLE_ECOMMERCE === 'true';
 /** CMS sitio público: activo por defecto; desactivar con `VITE_ENABLE_SITE_CMS=false`. */
 const SITE_CMS_ENABLED = import.meta.env.VITE_ENABLE_SITE_CMS !== 'false';
@@ -229,24 +232,32 @@ export const WORKSPACE_ROUTES: AppRoute[] = [
     resourceCode: 'page_workspace_dashboard',
     hideInMenu: false,
   },
-  {
-    path: 'tasks',
-    name: 'Tareas',
-    icon: CheckSquare,
-    element: TasksPage,
-    layout: 'workspace',
-    resourceCode: 'page_workspace_tasks',
-    hideInMenu: false,
-  },
-  {
-    path: 'documents',
-    name: 'Documentos',
-    icon: FileText,
-    element: DocumentsPage,
-    layout: 'workspace',
-    resourceCode: 'page_workspace_documents',
-    hideInMenu: false,
-  },
+  ...(TASKS_ENABLED
+    ? ([
+        {
+          path: 'tasks',
+          name: 'Tareas',
+          icon: CheckSquare,
+          element: TasksPage,
+          layout: 'workspace',
+          resourceCode: 'page_workspace_tasks',
+          hideInMenu: false,
+        },
+      ] as AppRoute[])
+    : []),
+  ...(DOCUMENTS_ENABLED
+    ? ([
+        {
+          path: 'documents',
+          name: 'Documentos',
+          icon: FileText,
+          element: DocumentsPage,
+          layout: 'workspace',
+          resourceCode: 'page_workspace_documents',
+          hideInMenu: false,
+        },
+      ] as AppRoute[])
+    : []),
 
   {
     path: 'config',

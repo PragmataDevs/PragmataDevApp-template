@@ -17,10 +17,16 @@ export function usePermission() {
    */
   const hasPermission = useCallback((resourceCode?: string, action?: string): boolean => {
     if (loading) return false;
-    if (!profile) return false;
 
-    // Si la ruta no requiere recurso explícito, basta con estar autenticado.
+    // Si la ruta no requiere recurso explícito, basta con estar autenticado —
+    // ANTES del check de `profile`: un usuario recién confirmado (signup
+    // self-serve) llega aquí con sesión pero sin fila en `profiles` todavía
+    // (la crea `create_tenant()` en el wizard `/bienvenida`, que no lleva
+    // `resourceCode` a propósito). Si este check fuera después de `!profile`,
+    // `RouteGuard` lo rebotaría a `/dashboard` antes de poder completar el alta.
     if (!resourceCode) return true;
+
+    if (!profile) return false;
 
     // 1. GOD MODE — alineado con public.is_god() (god + platform owner)
     if (isGod) return true;

@@ -198,8 +198,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN') {
         const currentPath = window.location.pathname;
         if (PUBLIC_PATHS.includes(currentPath) && !NO_REDIRECT_PATHS.includes(currentPath)) {
-          console.log('[AuthProvider] OAuth sign-in detected on public path, redirecting to /dashboard');
-          queueMicrotask(() => window.location.replace('/dashboard'));
+          // `next` viene de /auth/callback?next=/bienvenida (signup self-serve,
+          // confirmación de correo). Solo se acepta un path relativo propio
+          // (nunca protocol-relative `//host` ni una URL absoluta) para no abrir
+          // un open-redirect. Sin `next` válido, cae al default de siempre.
+          const params = new URLSearchParams(window.location.search);
+          const next = params.get('next');
+          const target = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+          console.log('[AuthProvider] OAuth sign-in detected on public path, redirecting to', target);
+          queueMicrotask(() => window.location.replace(target));
         }
       }
     });

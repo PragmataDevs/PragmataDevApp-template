@@ -7,8 +7,15 @@ import { resolveSiteOrigin } from '../lib/site-origin';
 
 export const prerender = false;
 
-export const GET: APIRoute = ({ site }) => {
-  const origin = resolveSiteOrigin(site, Astro.url);
+export const GET: APIRoute = ({ site, request }) => {
+  // `Astro` no existe dentro de un endpoint: la URL viene de `request` (ver sitemap.xml.ts).
+  let pageUrl: URL | undefined;
+  try {
+    pageUrl = new URL(request.url);
+  } catch {
+    pageUrl = undefined;
+  }
+  const origin = resolveSiteOrigin(site, pageUrl);
   const ecommerceOn = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 
   const lines = [

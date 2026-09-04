@@ -38,8 +38,17 @@ function urlEntry(loc: string, opts?: { lastmod?: string | null; priority?: stri
   return `<url><loc>${xmlEscape(loc)}</loc>${mod}<changefreq>weekly</changefreq><priority>${priority}</priority></url>`;
 }
 
-export const GET: APIRoute = async ({ site }) => {
-  const origin = resolveSiteOrigin(site, Astro.url);
+export const GET: APIRoute = async ({ site, request }) => {
+  // `Astro` no existe dentro de un endpoint (solo en componentes .astro): la URL de la
+  // petición se toma de `request`. Antes esto lanzaba ReferenceError y el sitemap
+  // respondía 500.
+  let pageUrl: URL | undefined;
+  try {
+    pageUrl = new URL(request.url);
+  } catch {
+    pageUrl = undefined;
+  }
+  const origin = resolveSiteOrigin(site, pageUrl);
   const ecommerceOn = import.meta.env.PUBLIC_ENABLE_ECOMMERCE === 'true';
 
   const locs: { path: string; lastmod?: string | null; priority?: string }[] = [

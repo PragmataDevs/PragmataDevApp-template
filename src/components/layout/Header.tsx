@@ -18,6 +18,8 @@ interface HeaderProps {
 }
 
 const PUBLIC_SITE_URL = getConfiguredPublicSiteUrl();
+/** Backport: `ChatIcon` se renderizaba incondicionalmente (bug del template). Default true. */
+const CHAT_ENABLED = import.meta.env.VITE_ENABLE_CHAT !== 'false';
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { user, profile } = useAuth();
@@ -128,7 +130,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="flex items-center gap-2 md:gap-4">
         
         {/* Chat */}
-        <ChatIcon />
+        {CHAT_ENABLED && <ChatIcon />}
 
         {/* Notifications */}
         <NotificationBell />

@@ -231,8 +231,10 @@ export async function verifyDelivery(opts: {
       headers: { Authorization: `Bearer ${opts.resendApiKey}` },
     });
     if (!listRes.ok) continue;
-    const payload = (await listRes.json()) as { data?: Array<Record<string, any>> };
-    const match = payload.data?.find((e) => (e.to ?? []).includes?.(opts.email));
+    const payload = (await listRes.json()) as {
+      data?: Array<{ to?: string[]; last_event?: string; status?: string }>;
+    };
+    const match = payload.data?.find((e) => (e.to ?? []).includes(opts.email));
     if (match) {
       const status = match.last_event ?? match.status ?? 'desconocido';
       return {
