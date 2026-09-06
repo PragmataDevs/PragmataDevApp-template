@@ -13,6 +13,7 @@
  *
  * Uso (secretos por variables de entorno o ops/secrets/env, nunca por argumento):
  *   STRIPE_SECRET_KEY=sk_test_... pnpm exec tsx scripts/cloud/stripe-billing-setup.ts --producto cuentaaparte
+ *   ... --descriptor "CUENTA APARTE"   # texto del extracto bancario del producto (máx 22)
  *   ... --dry-run          # solo muestra qué haría
  *   ... --env .env.cloud   # de dónde leer SUPABASE_URL / SERVICE_ROLE (default .env.cloud)
  *
@@ -51,6 +52,8 @@ const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 if (!STRIPE_KEY.startsWith('sk_')) { console.error('Falta STRIPE_SECRET_KEY (env o ops/secrets/env). No se imprime nada más.'); process.exit(1); }
 if (!SUPABASE_URL || !SERVICE_ROLE) { console.error(`Faltan VITE_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY en ${ENV_FILE}`); process.exit(1); }
 const MODE = STRIPE_KEY.startsWith('sk_live') ? 'LIVE' : 'test';
+/** Descripción del extracto por producto (--descriptor "CUENTA APARTE"); default: el slug en mayúsculas. */
+const DESCRIPTOR = (arg('--descriptor') || PRODUCTO.toUpperCase()).replace(/[<>\\'"*]/g, '').slice(0, 22);
 
 async function stripe<T>(method: 'GET' | 'POST', path: string, form?: Record<string, string>): Promise<T> {
   const res = await fetch(`https://api.stripe.com/v1${path}`, {
@@ -82,6 +85,9 @@ async function main() {
         const prod = await stripe<{ id: string }>('POST', '/products', {
           name: `${plan.nombre} — ${PRODUCTO}`,
           description: plan.descripcion ?? '',
+          // Lo que el cliente ve en su extracto: la MARCA del producto, no PragmataDevs
+          // (evita contracargos por "cargo desconocido"). Máx 22 chars, sin < > \ ' " *.
+          statement_descriptor: DESCRIPTOR,
           'metadata[plan_code]': plan.code,
           'metadata[producto]': PRODUCTO,
         });
