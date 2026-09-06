@@ -8,6 +8,8 @@
     "dev": "vite",
     "dev:astro": "pnpm --dir astro dev",
     "dev:all": "bash scripts/dev-all.sh",
+    "db:up": "bash scripts/dev-all.sh --db-up",
+    "db:down": "bash scripts/dev-all.sh --db-down",
     "dev:cloud": "bash scripts/dev-all.sh --cloud",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -26,7 +28,8 @@
     "brand:sync": "cp public/pragmatadevs-icon.svg astro/public/pragmatadevs-icon.svg && cp public/pragmatadevs-icon.svg src/assets/brand-icon.svg && cp public/pragmatadevs-icon.svg public/favicon.svg && cp public/pragmatadevs-icon.svg astro/public/favicon.svg",
     "vercel:prod": "vercel deploy --prod -y",
     "vercel:prod:astro": "bash scripts/vercel-prod-astro.sh",
-    "vercel:prod:all": "bash scripts/vercel-prod-all.sh"
+    "vercel:prod:all": "bash scripts/vercel-prod-all.sh",
+    "cloud:stripe-setup": "tsx scripts/cloud/stripe-billing-setup.ts"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
