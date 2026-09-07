@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { isGodUser } from '@/lib/auth/isGodUser';
 import { errorMessage } from '@/lib/errors';
+import { needsMfaChallenge, resolveSafeNext } from '@/lib/auth/mfa';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/features/users/types/profile';
 
@@ -32,6 +33,14 @@ interface AuthContextType {
   sessionEpoch: number;
   /** Re-fetch the profile from the database (e.g. after avatar update) */
   refreshProfile: () => Promise<void>;
+  /**
+   * `true` cuando la sesión es `aal1` y el usuario tiene un TOTP verificado
+   * (`nextLevel === 'aal2'`): todavía no presentó el código. `RouteGuard` lo
+   * manda a `/mfa` hasta que lo haga. Ver `docs/auth-mfa.md`.
+   */
+  mfaRequired: boolean;
+  /** Recalcula `mfaRequired` desde el JWT actual (tras `mfa.verify`). */
+  refreshAal: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // but profile=null causes hasPermission to return false for every resource.
   const [loading, setLoading] = useState(true);
   const [sessionEpoch, setSessionEpoch] = useState(0);
+  const [mfaRequired, setMfaRequired] = useState(false);
   const fetchingProfileRef = useRef(false);
   const lastProfileUserIdRef = useRef<string | null>(null);
 
@@ -126,6 +136,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * ¿Falta el segundo paso? `getAuthenticatorAssuranceLevel()` sin jwt decodifica
+   * el JWT de la sesión local (claim `aal`) y mira `session.user.factors`
+   * verificados: no hace red (auth-js 2.94.1, GoTrueClient.js l. 2553-2574).
+   * Firma: `getAuthenticatorAssuranceLevel(jwt?: string)` → `{ data: {
+   * currentLevel, nextLevel, currentAuthenticationMethods }, error }`
+   * (types.d.ts l. 955-975, 1044).
+   *
+   * Si falla, no se bloquea al usuario (fail-open con warn): la barrera real es
+   * `public.session_mfa_ok()` en la base; esto es la UX que lo lleva a `/mfa`.
+   * Se llama FUERA del callback de `onAuthStateChange` (usa `getSession`).
+   */
+  const checkAal = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (error) {
+        console.warn('[AuthProvider] getAuthenticatorAssuranceLevel error:', error);
+        setMfaRequired(false);
+        return;
+      }
+      setMfaRequired(needsMfaChallenge(data));
+    } catch (err) {
+      console.warn('[AuthProvider] getAuthenticatorAssuranceLevel threw:', err);
+      setMfaRequired(false);
+    }
+  }, []);
+
   // ── Bootstrap + auth subscription ──
   // IMPORTANT: `onAuthStateChange` callback MUST stay synchronous. Awaiting
   // any `supabase.from(...)` query or `supabase.auth.refreshSession()` inside
@@ -171,7 +208,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(currentUser);
 
       // TOKEN_REFRESHED: do NOT re-fetch profile, just signal data hooks.
-      if (event === 'TOKEN_REFRESHED' && currentUser) {
+      // MFA_CHALLENGE_VERIFIED: `mfa.verify` guardó una sesión nueva con `aal2`
+      // (GoTrueClient.js l. 2419-2420); mismo trato — los hooks de datos deben
+      // refetchear porque las policies con `session_mfa_ok()` ahora sí pasan.
+      // `mfaRequired` lo recalcula quien llamó a `verify` vía `refreshAal()`
+      // (aquí no se puede: `getSession` dentro del callback deadlockea).
+      if ((event === 'TOKEN_REFRESHED' || event === 'MFA_CHALLENGE_VERIFIED') && currentUser) {
         bumpSessionEpoch();
         return;
       }
@@ -180,6 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setTeamIsPlatformOwner(null);
         setPermissions({});
+        setMfaRequired(false);
         lastProfileUserIdRef.current = null;
         return;
       }
@@ -203,8 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // (nunca protocol-relative `//host` ni una URL absoluta) para no abrir
           // un open-redirect. Sin `next` válido, cae al default de siempre.
           const params = new URLSearchParams(window.location.search);
-          const next = params.get('next');
-          const target = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+          const target = resolveSafeNext(params.get('next'));
           console.log('[AuthProvider] OAuth sign-in detected on public path, redirecting to', target);
           queueMicrotask(() => window.location.replace(target));
         }
@@ -234,6 +276,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void (async () => {
       await fetchProfile(userId);
+      // Antes de soltar `loading`: si falta el código TOTP, RouteGuard debe
+      // saberlo en el primer render y no dejar pasar ni un frame a la app.
+      await checkAal();
       bumpSessionEpoch();
       // Only after profile + permissions are fully loaded do we unlock.
       // This is the single authoritative place for authenticated users.
@@ -292,7 +337,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user,
     sessionEpoch,
     refreshProfile,
-  }), [user, profile, teamIsPlatformOwner, isGod, permissions, loading, sessionEpoch, refreshProfile]);
+    mfaRequired,
+    refreshAal: checkAal,
+  }), [user, profile, teamIsPlatformOwner, isGod, permissions, loading, sessionEpoch, refreshProfile, mfaRequired, checkAal]);
 
   return (
     <AuthContext.Provider value={value}>

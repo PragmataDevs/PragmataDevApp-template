@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { usePermission } from '../hooks/usePermission';
 import { useAuth } from '../hooks/useAuth';
+import { mfaChallengeUrl } from '@/lib/auth/mfa';
 import type { AdminLevelType } from '@/app/navigation';
 
 interface RouteGuardProps {
@@ -12,7 +13,8 @@ interface RouteGuardProps {
 
 export function RouteGuard({ resourceCode, adminLevel, children }: RouteGuardProps) {
   const { hasPermission, isAdmin, loading } = usePermission();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, mfaRequired } = useAuth();
+  const location = useLocation();
 
   if (loading) {
      return <div className="flex h-screen w-full items-center justify-center bg-slate-50">
@@ -23,6 +25,13 @@ export function RouteGuard({ resourceCode, adminLevel, children }: RouteGuardPro
     if (!isAuthenticated) {
      return <Navigate to="/login" replace />;
     }
+
+  // 0. Segundo paso pendiente: tiene TOTP verificado y la sesión sigue en aal1.
+  //    Nada de la app se renderiza hasta que pase por /mfa; se conserva a dónde
+  //    iba en `?next=` (saneado). Ver docs/auth-mfa.md.
+  if (mfaRequired) {
+    return <Navigate to={mfaChallengeUrl(location.pathname + location.search)} replace />;
+  }
 
   // 1. Verificar Nivel de Admin (si aplica)
   if (adminLevel === 'Admin' && !isAdmin()) {

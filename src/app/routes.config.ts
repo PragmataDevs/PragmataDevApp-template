@@ -22,6 +22,7 @@ const LoginPage             = lazy(() => import('@/features/auth/pages/LoginPage
 const CallbackPage          = lazy(() => import('@/features/auth/pages/CallbackPage'));
 const ResetPasswordPage     = lazy(() => import('@/features/auth/pages/ResetPasswordPage'));
 const ForgotPasswordPage    = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'));
+const MfaChallengePage      = lazy(() => import('@/features/auth/pages/MfaChallengePage'));
 
 const DashboardPage         = lazy(() => import('@/features/dashboard/pages/DashboardPage'));
 const ProfilePage           = lazy(() => import('@/features/profile/pages/ProfilePage'));
@@ -90,6 +91,15 @@ export const APP_ROUTES: AppRoute[] = [
     path: '/auth/reset-password',
     name: 'Establecer Contraseña',
     element: ResetPasswordPage,
+    layout: 'public',
+    hideInMenu: true,
+  },
+  {
+    // Segundo paso (TOTP) al iniciar sesión. Pública a propósito: el usuario ya
+    // tiene sesión (aal1) pero RouteGuard no lo deja entrar a la app hasta aal2.
+    path: '/mfa',
+    name: 'Verificación en dos pasos',
+    element: MfaChallengePage,
     layout: 'public',
     hideInMenu: true,
   },

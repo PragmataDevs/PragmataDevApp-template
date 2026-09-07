@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { uploadFile, deleteFile, resolveSignedUrl, AVATAR_PRESET } from '@/lib/storage';
 import { errorMessage } from '@/lib/errors';
 import { Button } from '@/components/ui/Button';
+import { MfaSection } from '../components/MfaSection';
 import { Sun, Moon, Monitor, CheckCircle2, Camera, Loader2, Trash2 } from 'lucide-react';
 
 const THEME_OPTIONS: { value: ThemeOption; label: string; icon: typeof Sun }[] = [
@@ -307,10 +308,12 @@ export default function ProfilePage() {
               <div className="p-6 border-b border-[color:var(--pragmata-border)]">
                 <h2 className="text-lg font-semibold">Seguridad</h2>
                 <p className="text-xs text-[color:var(--pragmata-muted)] mt-1">
-                  Cambia tu contraseña cuando lo necesites.
+                  Verificación en dos pasos y contraseña.
                 </p>
               </div>
-              <div className="p-6">
+              <div className="p-6 space-y-4">
+                <MfaSection />
+
                 <div className="rounded-lg bg-[color:var(--pragmata-surface-2)] border border-[color:var(--pragmata-border)] p-4">
                   <p className="text-sm font-medium">Restablecer contraseña</p>
                   <p className="text-xs text-[color:var(--pragmata-muted)] mt-1">
