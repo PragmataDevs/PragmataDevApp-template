@@ -137,6 +137,8 @@ Deno.serve(async (req: Request) => {
           current_period_end: periodEnd(st),
           trial_end: st.trial_end ? new Date(st.trial_end * 1000).toISOString() : null,
           cancel_at_period_end: Boolean(st.cancel_at_period_end),
+          // M1: sucursales pagadas = quantity del item; plan_within_limit lo usa como tope (plan_limits.seat_based)
+          quantity: Math.max(1, st.items?.data?.[0]?.quantity ?? 1),
           grace_until: status === 'periodo_gracia' ? new Date(Date.now() + GRACE_DAYS * 86400000).toISOString() : null,
         };
         if (st.metadata?.plan_code) patch.plan_code = st.metadata.plan_code;

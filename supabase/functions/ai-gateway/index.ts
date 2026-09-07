@@ -131,11 +131,11 @@ Deno.serve(async (req: Request) => {
 
   if (!result.ok) {
     console.error('[ai-gateway] Gemini error:', result.status, result.body.slice(0, 500));
-    await aiLog(service, { teamId, entityId, userId: user.id, feature, model, latencyMs, ok: false, error: `gemini_${result.status}` });
+    await aiLog(service, { teamId, entityId, userId: user.id, feature, model, latencyMs, ok: false, error: `gemini_${result.status}`, reservationId: gate.reservation_id });
     return errorResponse('Gemini request failed', 502);
   }
 
-  await aiLog(service, { teamId, entityId, userId: user.id, feature, model, usage: result.usage, latencyMs, ok: true });
+  await aiLog(service, { teamId, entityId, userId: user.id, feature, model, usage: result.usage, latencyMs, ok: true, reservationId: gate.reservation_id });
 
   let parsed: unknown = undefined;
   if (def.response_schema) {

@@ -1,7 +1,11 @@
 /**
  * Medición y control de costo de IA (docs/estrategia-costos-ia.md).
- *   aiGate()  → consulta ai_can_run(feature) CON el JWT del usuario, ANTES de llamar a Gemini.
- *   aiLog()   → registra la llamada en ai_usage con service_role, DESPUÉS.
+ *   aiGate()  → ai_reserve(feature) CON el JWT del usuario, ANTES de llamar a Gemini.
+ *               Deja una fila `state='reserved'` en ai_usage que ya cuenta para la
+ *               cuota (cierra la carrera M3 de la auditoría: N requests concurrentes
+ *               ya no pasan todas el gate).
+ *   aiLog()   → cierra esa reserva con el costo real (state='done') usando service_role,
+ *               DESPUÉS. Si no hubo reserva (gate legado), inserta.
  * La edge function nunca confía en el body para modelo ni feature libre.
  */
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -14,12 +18,14 @@ export interface AiGateResult {
   used?: number;
   limit?: number;
   remaining?: number;
+  /** id de la fila reservada en ai_usage; aiLog la cierra. */
+  reservation_id?: string;
 }
 
 export async function aiGate(userClient: SupabaseClient, feature: string): Promise<AiGateResult> {
-  const { data, error } = await userClient.rpc('ai_can_run', { p_feature: feature });
+  const { data, error } = await userClient.rpc('ai_reserve', { p_feature: feature });
   if (error) {
-    console.error('[ai] ai_can_run error', error);
+    console.error('[ai] ai_reserve error', error);
     return { allowed: false, reason: 'gate_error' };
   }
   return (data ?? { allowed: false, reason: 'gate_empty' }) as AiGateResult;
@@ -55,6 +61,7 @@ export async function aiLog(service: SupabaseClient, entry: {
   latencyMs: number;
   ok: boolean;
   error?: string;
+  reservationId?: string | null;
 }): Promise<void> {
   if (!entry.teamId) return; // sin team no hay a quién cargarle el costo; el gate ya lo habría negado
   const tokensIn = entry.usage?.promptTokens ?? 0;
@@ -64,7 +71,7 @@ export async function aiLog(service: SupabaseClient, entry: {
   if (typeof data === 'number') cost = data;
   else if (typeof data === 'string') cost = Number(data) || 0;
 
-  const { error } = await service.from('ai_usage').insert({
+  const row = {
     team_id: entry.teamId,
     entity_id: entry.entityId ?? null,
     user_id: entry.userId,
@@ -76,7 +83,22 @@ export async function aiLog(service: SupabaseClient, entry: {
     latency_ms: entry.latencyMs,
     ok: entry.ok,
     error_detail: entry.error ?? null,
-  });
+    state: 'done',
+  };
+
+  if (entry.reservationId) {
+    const { data: updated, error } = await service
+      .from('ai_usage')
+      .update(row)
+      .eq('id', entry.reservationId)
+      .eq('state', 'reserved')
+      .select('id');
+    if (error) console.error('[ai] no se pudo cerrar la reserva', error);
+    if (!error && updated && updated.length > 0) return;
+    // La reserva ya caducó (llamada > 10 min): se registra igual, como fila nueva.
+  }
+
+  const { error } = await service.from('ai_usage').insert(row);
   if (error) console.error('[ai] no se pudo registrar ai_usage', error);
 }
 

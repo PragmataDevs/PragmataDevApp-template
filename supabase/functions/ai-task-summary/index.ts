@@ -99,10 +99,10 @@ ${taskList}`;
 
   if (!result.ok) {
     console.error('[ai-task-summary] Gemini error:', result.status, result.body.slice(0, 300));
-    await aiLog(service, { teamId, entityId: body.entity_id, userId: user.id, feature: FEATURE, model, latencyMs, ok: false, error: `gemini_${result.status}` });
+    await aiLog(service, { teamId, entityId: body.entity_id, userId: user.id, feature: FEATURE, model, latencyMs, ok: false, error: `gemini_${result.status}`, reservationId: gate.reservation_id });
     return errorResponse('Gemini request failed', 502);
   }
-  await aiLog(service, { teamId, entityId: body.entity_id, userId: user.id, feature: FEATURE, model, usage: result.usage, latencyMs, ok: true });
+  await aiLog(service, { teamId, entityId: body.entity_id, userId: user.id, feature: FEATURE, model, usage: result.usage, latencyMs, ok: true, reservationId: gate.reservation_id });
 
   return jsonResponse({ summary: result.text });
 });

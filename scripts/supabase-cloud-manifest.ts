@@ -22,6 +22,8 @@ export const EDGE_FUNCTIONS_OPTIONAL = {
   ai: ['ai-gateway', 'ai-task-summary'] as const,
   /** VITE_ENABLE_ECOMMERCE */
   ecommerce: ['stripe-checkout', 'stripe-webhook'] as const,
+  /** platform_settings.platform_mode = true (self-serve): mensualidad por tenant con Stripe Billing */
+  billing: ['stripe-billing-checkout', 'stripe-billing-portal', 'stripe-billing-seats', 'stripe-billing-webhook'] as const,
 } as const;
 
 /**
@@ -33,10 +35,11 @@ export const EDGE_FUNCTIONS_OPTIONAL = {
  * (ej. API keys de terceros que consuman tus Edge Functions).
  */
 export const EDGE_SECRETS_INTEGRATIONS = [
-  'OPENAI_API_KEY',
-  'OPENAI_MODEL',
+  'GEMINI_API_KEY',                 // única IA de la casa (~/CLAUDE.md §IA dentro de las apps)
   'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_WEBHOOK_SECRET',          // orders (ecommerce)
+  'STRIPE_BILLING_WEBHOOK_SECRET',  // Stripe Billing (modo plataforma)
+  'APP_URL',                        // origen permitido en CORS y retornos de Stripe Billing
   'PUBLIC_SITE_URL',
 ] as const;
 

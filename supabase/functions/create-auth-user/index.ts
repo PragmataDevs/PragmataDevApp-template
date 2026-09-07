@@ -27,11 +27,8 @@
 // ============================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 /** Genera una contraseña interna aleatoria (el usuario nunca la verá) */
 function generateInternalPassword(length = 32): string {
@@ -95,14 +92,21 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── 2. Validar payload ──
-    const { email, full_name, redirectTo } = await req.json();
+    const { email: rawEmail, full_name, redirectTo } = await req.json();
 
-    if (!email) {
+    if (!rawEmail) {
       return new Response(
         JSON.stringify({ error: 'Se requiere email.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+
+    // Se normaliza UNA vez y solo se usa esta versión de aquí en adelante.
+    // GoTrue baja el correo a minúsculas por su cuenta; el insert en profiles
+    // que hace el frontend no. Usar el valor crudo en los dos lados dejaba el
+    // email del profile distinto al de auth.users
+    // (ver migración 20260818190000_profiles_email_normalize_unique.sql).
+    const email = String(rawEmail).trim().toLowerCase();
 
     // ── 3. Crear usuario con Service Role (admin) ──
     const supabaseAdmin = createClient(
