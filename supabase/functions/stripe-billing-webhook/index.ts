@@ -28,6 +28,13 @@ const HANDLED = new Set([
   'invoice.payment_failed',
 ]);
 
+/** Fin del periodo: en la suscripción (API < 2025) o en su primer item (API 2025+). */
+function periodEnd(st: Stripe.Subscription): string | null {
+  const s = st as unknown as { current_period_end?: number; items?: { data?: Array<{ current_period_end?: number }> } };
+  const ts = s.current_period_end ?? s.items?.data?.[0]?.current_period_end;
+  return ts ? new Date(ts * 1000).toISOString() : null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return errorResponse('Method not allowed', 405);
 
@@ -41,7 +48,10 @@ Deno.serve(async (req: Request) => {
   const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' });
   let event: Stripe.Event;
   try {
-    event = await stripe.webhooks.constructEventAsync(await req.arrayBuffer(), signature, secret);
+    // El body va como TEXTO crudo: la build de stripe@14 para Deno rechaza ArrayBuffer
+    // ("payload must be provided as a string or a Buffer") y la firma nunca verifica.
+    const rawBody = await req.text();
+    event = await stripe.webhooks.constructEventAsync(rawBody, signature, secret);
   } catch (err) {
     console.error('[stripe-billing-webhook] firma inválida', err);
     return errorResponse('Invalid signature', 400);
@@ -123,7 +133,8 @@ Deno.serve(async (req: Request) => {
         const patch: Record<string, unknown> = {
           stripe_subscription_id: st.id,
           sub_status: status,
-          current_period_end: st.current_period_end ? new Date(st.current_period_end * 1000).toISOString() : null,
+          // API 2025+: current_period_end vive en cada item; versiones viejas lo traen en la suscripción.
+          current_period_end: periodEnd(st),
           trial_end: st.trial_end ? new Date(st.trial_end * 1000).toISOString() : null,
           cancel_at_period_end: Boolean(st.cancel_at_period_end),
           grace_until: status === 'periodo_gracia' ? new Date(Date.now() + GRACE_DAYS * 86400000).toISOString() : null,

@@ -44,7 +44,9 @@ Deno.serve(async (req: Request) => {
 
   let event: Stripe.Event;
   try {
-    const body = await req.arrayBuffer();
+    // Texto crudo, no ArrayBuffer: con ArrayBuffer stripe@14/deno lanza
+    // "payload must be provided as a string or a Buffer" y todo webhook falla la firma.
+    const body = await req.text();
     event = await stripe.webhooks.constructEventAsync(
       body,
       signature,
