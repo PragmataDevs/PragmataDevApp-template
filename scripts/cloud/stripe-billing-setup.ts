@@ -14,6 +14,7 @@
  * Uso (secretos por variables de entorno o ops/secrets/env, nunca por argumento):
  *   STRIPE_SECRET_KEY=sk_test_... pnpm exec tsx scripts/cloud/stripe-billing-setup.ts --producto cuentaaparte
  *   ... --descriptor "CUENTA APARTE"   # texto del extracto bancario del producto (máx 22)
+ *   ... --marca "Cuenta Aparte"        # nombre de marca que ve el cliente en Checkout
  *   ... --dry-run          # solo muestra qué haría
  *   ... --env .env.cloud   # de dónde leer SUPABASE_URL / SERVICE_ROLE (default .env.cloud)
  *
@@ -54,6 +55,8 @@ if (!SUPABASE_URL || !SERVICE_ROLE) { console.error(`Faltan VITE_SUPABASE_URL / 
 const MODE = STRIPE_KEY.startsWith('sk_live') ? 'LIVE' : 'test';
 /** Descripción del extracto por producto (--descriptor "CUENTA APARTE"); default: el slug en mayúsculas. */
 const DESCRIPTOR = (arg('--descriptor') || PRODUCTO.toUpperCase()).replace(/[<>\\'"*]/g, '').slice(0, 22);
+/** Nombre de marca que ve el cliente en Checkout (--marca "Cuenta Aparte"); default: el descriptor en Title Case. */
+const MARCA = arg('--marca') || DESCRIPTOR.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 async function stripe<T>(method: 'GET' | 'POST', path: string, form?: Record<string, string>): Promise<T> {
   const res = await fetch(`https://api.stripe.com/v1${path}`, {
@@ -83,7 +86,7 @@ async function main() {
       console.log(`  + producto Stripe para plan ${plan.code} (${plan.nombre})`);
       if (!DRY) {
         const prod = await stripe<{ id: string }>('POST', '/products', {
-          name: `${plan.nombre} — ${PRODUCTO}`,
+          name: `${MARCA} — Plan ${plan.nombre}`,
           description: plan.descripcion ?? '',
           // Lo que el cliente ve en su extracto: la MARCA del producto, no PragmataDevs
           // (evita contracargos por "cargo desconocido"). Máx 22 chars, sin < > \ ' " *.
