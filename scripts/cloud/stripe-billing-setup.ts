@@ -131,9 +131,13 @@ async function main() {
       const form: Record<string, string> = { url, description: `${PRODUCTO} billing (Supabase edge fn)` };
       events.forEach((e, i) => { form[`enabled_events[${i}]`] = e; });
       const created = await stripe<{ id: string; secret: string }>('POST', '/webhook_endpoints', form);
-      console.log(`  ✓ webhook ${created.id}. Guarda su secret en la nube (no se vuelve a mostrar):`);
-      console.log(`\n    supabase secrets set --project-ref <REF> "STRIPE_BILLING_WEBHOOK_SECRET=${created.secret.slice(0, 8)}…"  ← usa el valor completo que imprime Stripe en el Dashboard o ejecuta este script con --show-secret\n`);
-      if (process.argv.includes('--show-secret')) console.log(`    STRIPE_BILLING_WEBHOOK_SECRET=${created.secret}\n`);
+      console.log(`  ✓ webhook ${created.id}. Su signing secret NO se vuelve a mostrar.`);
+      if (process.argv.includes('--show-secret')) {
+        // Línea única y completa, pensada para capturarse con grep (no se trunca).
+        console.log(`  STRIPE_BILLING_WEBHOOK_SECRET_FULL=${created.secret}`);
+      } else {
+        console.log('    Vuelve a correr con --show-secret para imprimirlo una vez y guardarlo con `supabase secrets set`.');
+      }
     }
   }
   console.log(`\nSiguiente: supabase secrets set --project-ref <REF> "STRIPE_SECRET_KEY=…" y probar con "stripe trigger checkout.session.completed".`);
