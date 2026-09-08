@@ -139,7 +139,11 @@ Deno.serve(async (req: Request) => {
 
   let parsed: unknown = undefined;
   if (def.response_schema) {
-    try { parsed = JSON.parse(result.text); } catch { parsed = undefined; }
+    // Con responseSchema el modelo devuelve JSON pelón, pero algunos modelos lo
+    // envuelven en ```json … ```; sin quitar las marcas, `json` volvía undefined
+    // en silencio y el front se quedaba sin datos (visto el 7-sep-2026).
+    const limpio = result.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    try { parsed = JSON.parse(limpio); } catch { parsed = undefined; }
   }
 
   console.info(`[ai-gateway] prompt=${promptId} feature=${feature} user=${user.id} model=${model} tokens=${result.usage.totalTokens} ms=${latencyMs}`);

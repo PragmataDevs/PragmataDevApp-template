@@ -14,7 +14,10 @@ export interface GeminiImage {
 
 export interface GeminiUsage {
   promptTokens: number;
+  /** Salida FACTURABLE: candidatesTokenCount + thoughtsTokenCount. */
   candidatesTokens: number;
+  /** Tokens de razonamiento. Google los cobra como salida (ai.google.dev/gemini-api/docs/pricing). */
+  thoughtsTokens: number;
   totalTokens: number;
 }
 
@@ -62,17 +65,24 @@ export async function geminiGenerate(params: {
 
   const json = await res.json() as {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
-    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number; totalTokenCount?: number };
   };
   const text = (json.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('').trim();
   return {
     ok: true,
     text,
     finishReason: json.candidates?.[0]?.finishReason ?? null,
-    usage: {
-      promptTokens: json.usageMetadata?.promptTokenCount ?? 0,
-      candidatesTokens: json.usageMetadata?.candidatesTokenCount ?? 0,
-      totalTokens: json.usageMetadata?.totalTokenCount ?? 0,
-    },
+    usage: (() => {
+      // Los modelos Flash 3.x sin "lite" razonan por default y esos tokens se
+      // COBRAN como salida; ignorarlos subestimaba el costo ~7× (medido en Gastón,
+      // 7-sep-2026). Se suman a la salida facturable y se conservan aparte.
+      const thoughts = json.usageMetadata?.thoughtsTokenCount ?? 0;
+      return {
+        promptTokens: json.usageMetadata?.promptTokenCount ?? 0,
+        candidatesTokens: (json.usageMetadata?.candidatesTokenCount ?? 0) + thoughts,
+        thoughtsTokens: thoughts,
+        totalTokens: json.usageMetadata?.totalTokenCount ?? 0,
+      };
+    })(),
   };
 }
