@@ -3,15 +3,20 @@ import { Loader2 } from 'lucide-react';
 
 /* ─── Variants ─────────────────────────────────────────────── */
 
+// `text-white` sobre el acento era ilegible: el cian de marca con blanco encima
+// da 2.33:1 en oscuro y 2.77:1 en claro (mínimo AA para texto: 4.5:1). Con el
+// texto oscuro del token, los mismos cianes dan 8.13:1 y 6.85:1.
+// El color lo decide ahora el tema, no el componente — así un cliente que
+// instancie el template con un acento oscuro solo redefine el token.
 const variantStyles = {
   primary: [
-    'bg-[color:var(--pragmata-accent)] text-white',
+    'bg-[color:var(--pragmata-accent)] text-[color:var(--pragmata-on-accent)]',
     'hover:bg-[color:var(--pragmata-accent-dark)]',
     'shadow-sm',
   ].join(' '),
 
   accent: [
-    'bg-[color:var(--pragmata-accent)] text-white',
+    'bg-[color:var(--pragmata-accent)] text-[color:var(--pragmata-on-accent)]',
     'hover:bg-[color:var(--pragmata-accent-dark)]',
     'shadow-sm',
   ].join(' '),

@@ -15,6 +15,8 @@
 @tailwind utilities;
 
 :root {
+  /* Texto sobre el relleno de acción (Button primary/accent). */
+  --pragmata-on-accent:  #04121a; /* 8.13:1 sobre el cian */
   /* ── Tipografía (Pragmata canónica) ──────────────────────────────────── */
   --font-pragmata:      'Syne', 'Inter', system-ui, sans-serif;
   --font-pragmata-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
@@ -66,6 +68,8 @@
  * El default es dark — Pragmata es dark-first.
  */
 .light {
+  /* Texto sobre el relleno de acción (Button primary/accent). */
+  --pragmata-on-accent:  #04121a; /* 6.85:1 sobre el cian claro */
   --pragmata-bg:         #F7F8FB;
   --pragmata-fg:         #0B1220;
   --pragmata-muted:      #5A6B85;
@@ -90,6 +94,8 @@
  * Si algún consumidor hacía toggle .dark, sigue funcionando.
  */
 .dark {
+  /* Texto sobre el relleno de acción (Button primary/accent). */
+  --pragmata-on-accent:  #04121a; /* 8.13:1 sobre el cian */
   --pragmata-bg:         #05080f;
   --pragmata-fg:         #ddeaf8;
   --pragmata-muted:      #8badc8;
