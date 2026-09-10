@@ -120,7 +120,7 @@ export default function EntitySelector() {
       {/* Trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 py-1.5 px-3 rounded-lg border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface-2)] hover:bg-[color:var(--pragmata-surface)] hover:border-[color:var(--pragmata-border-strong)] transition-all text-sm font-medium text-[color:var(--pragmata-fg)] min-w-[200px] justify-between group"
+        className="flex items-center gap-2 py-1.5 px-3 rounded-lg border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface-2)] hover:bg-[color:var(--pragmata-surface)] hover:border-[color:var(--pragmata-border-strong)] transition-all text-sm font-medium text-[color:var(--pragmata-fg)] max-w-[46vw] sm:max-w-none sm:min-w-[200px] justify-between group"
       >
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-5 h-5 rounded-md bg-[color:var(--pragmata-accent)] flex items-center justify-center text-[10px] text-white font-bold flex-shrink-0">
@@ -135,7 +135,7 @@ export default function EntitySelector() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-72 bg-[color:var(--pragmata-surface)] rounded-xl shadow-xl border border-[color:var(--pragmata-border)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute top-full left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-[color:var(--pragmata-surface)] rounded-xl shadow-xl border border-[color:var(--pragmata-border)] z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           <div className="p-2 border-b border-[color:var(--pragmata-border)]">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[color:var(--pragmata-muted)]" />

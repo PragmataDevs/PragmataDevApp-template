@@ -108,7 +108,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     <header className="h-16 bg-[color:var(--pragmata-surface)] border-b border-[color:var(--pragmata-border)] flex items-center justify-between px-4 md:px-6 z-header sticky top-0">
       
       {/* Left: Mobile Menu + EntitySelector */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         <button
           type="button"
           data-mobile-menu-trigger
@@ -118,9 +118,12 @@ export function Header({ onMenuClick }: HeaderProps) {
           <Menu className="w-6 h-6" />
         </button>
 
-        {/* EntitySelector — only on workspace routes + multi-entity enabled */}
+        {/* EntitySelector — only on workspace routes + multi-entity enabled.
+            Mobile first: antes iba `hidden sm:flex` y en celular NO existía forma de
+            cambiar de entidad (visto en cuentaaparte desde el iPhone, 9-sep-2026). El
+            selector ya se compacta solo bajo `sm`, así que se muestra siempre. */}
         {MULTI_ENTITY_ENABLED && isInWorkspace && (
-          <div className="hidden sm:flex items-center">
+          <div className="flex items-center min-w-0">
             <EntitySelector />
           </div>
         )}
