@@ -231,6 +231,16 @@ export const Sidebar = forwardRef<HTMLElement, SidebarProps>(function Sidebar(
           <div>
             <button
               onClick={() => {
+                // Con el sidebar colapsado, la lista de rutas del workspace no
+                // se renderiza (está bajo `{!isCollapsed && ...}`), así que
+                // alternar `workspaceExpanded` no producía NADA visible: el
+                // ícono se podía picar y no pasaba nada. Igual que los demás
+                // grupos, lo primero es abrir el sidebar.
+                if (isCollapsed) {
+                  onToggleCollapse();
+                  setWorkspaceExpanded(true);
+                  return;
+                }
                 if (!isInWorkspace && activeEntityId) {
                   navigate(`/workspace/${activeEntityId}/dashboard`);
                   setWorkspaceExpanded(true);

@@ -4,6 +4,23 @@
 #   pnpm dev:all            → LOCAL  (Supabase local + app → local). Default.
 #   pnpm dev:all --cloud    → NUBE   (app → Supabase en la nube; NO levanta local).
 #     alias del flag de nube: --nube | --remote
+#   pnpm db:up              → SOLO la base: levanta Supabase y NO lo ata a este proceso.
+#   pnpm db:down            → apaga Supabase de este proyecto.
+#
+# ── Por qué existen db:up / db:down ───────────────────────────────────────────
+# `dev:all` ata el stack a la vida del proceso: al salir, lo apaga. Eso es correcto
+# para desarrollar, pero no sirve para abrir la base un rato desde la terminal, hacer
+# SQL, o para una sesión headless (Telegram) que no deja un proceso vivo.
+#
+# `db:up` levanta el stack y escribe un lock MANUAL (sin PID). Eso lo declara
+# intencional: el watchdog no lo mata ni lo reporta como zombie, y un `dev:all`
+# posterior lo reusa y lo deja vivo al salir (regla «el que lo prende, lo apaga»).
+# `db:down` es la contraparte explícita, y se niega a apagar un stack que un
+# `dev:all` vivo esté usando.
+#
+# Van como banderas de ESTE script a propósito, no en un archivo aparte: toda la
+# maquinaria (project_id, .env.local, lock, Studio) ya vive acá, y un segundo script
+# vendorizado en 9 copias sería otra cosa que se desincroniza.
 #
 # En LOCAL apaga Supabase automáticamente al salir (Ctrl+C, cerrar terminal o VS Code):
 #   - Salida limpia (SIGINT/SIGTERM/SIGHUP): el `trap` corre `supabase stop`.
@@ -20,13 +37,22 @@ cd "$PROJECT_ROOT"
 
 # ── Parse de la bandera ───────────────────────────────────────────────────────
 TARGET="local"
+# MODE: app (default, levanta la app) | db-up (solo la base) | db-down (apagarla)
+MODE="app"
 for arg in "$@"; do
   case "$arg" in
-    --cloud|--nube|--remote) TARGET="cloud" ;;
-    --local)                 TARGET="local" ;;
-    *) echo "⚠️  dev-all: flag desconocida '$arg' (usa --cloud o --local)" >&2 ;;
+    --cloud|--nube|--remote)   TARGET="cloud" ;;
+    --local)                   TARGET="local" ;;
+    --db-up|--db-only|--solo-db) MODE="db-up" ;;
+    --db-down|--db-stop)       MODE="db-down" ;;
+    *) echo "⚠️  dev-all: flag desconocida '$arg' (usa --cloud, --local, --db-up o --db-down)" >&2 ;;
   esac
 done
+
+if [ "$MODE" != "app" ] && [ "$TARGET" = "cloud" ]; then
+  echo "❌ dev-all: --db-up/--db-down son de Supabase LOCAL; no tienen sentido con --cloud." >&2
+  exit 1
+fi
 
 if [ ! -f supabase/config.toml ]; then
   echo "❌ dev-all: no encuentro supabase/config.toml en $PROJECT_ROOT" >&2
@@ -92,6 +118,52 @@ mkdir -p "$LOCK_DIR"
 FUNCTIONS_LOG="$LOCK_DIR/${PROJECT_ID}-functions.log"
 FUNCTIONS_PID=""
 
+# ══ MODO db-down ══════════════════════════════════════════════════════════════
+# Apaga el stack de este proyecto. Se niega si un `dev:all` VIVO lo está usando:
+# tumbarle la base a un dev en marcha es justo el bug que el fix del trap arregló.
+if [ "$MODE" = "db-down" ]; then
+  if ! docker ps --filter "name=^supabase_db_${PROJECT_ID}$" --format '{{.Names}}' 2>/dev/null | grep -q .; then
+    echo "ℹ️  db:down: Supabase de '$PROJECT_ID' ya estaba abajo."
+    rm -f "$LOCK_FILE"
+    exit 0
+  fi
+
+  if [ -f "$LOCK_FILE" ]; then
+    LOCK_OWNER="$(cut -d'|' -f1 < "$LOCK_FILE" 2>/dev/null || true)"
+    if [ "$LOCK_OWNER" != "manual" ] && [ -n "$LOCK_OWNER" ] && kill -0 "$LOCK_OWNER" 2>/dev/null; then
+      echo "❌ db:down: NO lo apago — un 'pnpm dev:all' vivo (pid $LOCK_OWNER) está usando este stack." >&2
+      echo "   Cierra ese dev primero (él lo apaga solo al salir)." >&2
+      exit 1
+    fi
+  fi
+
+  echo "🛑 db:down: apagando Supabase local ($PROJECT_ID)…"
+  # Sin `--no-backup` a propósito: los volúmenes —y con ellos los datos— se conservan.
+  supabase stop --project-id "$PROJECT_ID" >/dev/null 2>&1 || supabase stop >/dev/null 2>&1 || true
+  rm -f "$LOCK_FILE"
+  echo "✓ db:down: '$PROJECT_ID' abajo. Los datos siguen en su volumen de Docker."
+  exit 0
+fi
+
+# ── ¿De quién es el stack? ────────────────────────────────────────────────────
+# REGLA: el que lo prende, lo apaga.
+#
+# Si el stack de este proyecto YA estaba corriendo al arrancar —lo levantó
+# `supabase start` a mano, otra terminal, o una sesión headless— este script no
+# es su dueño: al salir lo deja vivo.
+#
+# Sin esto el trap corría `supabase stop` incondicionalmente, así que cualquier
+# Ctrl+C (o cerrar VS Code) tumbaba un stack que otro estaba usando. En IndPack,
+# servido 24/7 por tailnet, cada salida le tiraba la base al cliente (5-ago-2026).
+#
+# Se consulta Docker y no `supabase status` porque es instantáneo y no depende
+# de que el CLI resuelva el proyecto. El ancla `^…$` evita el falso positivo de
+# un project_id que sea prefijo de otro.
+SUPABASE_WAS_RUNNING=0
+if docker ps --filter "name=^supabase_db_${PROJECT_ID}$" --format '{{.Names}}' 2>/dev/null | grep -q .; then
+  SUPABASE_WAS_RUNNING=1
+fi
+
 cleanup() {
   trap - EXIT INT TERM HUP
   # Los mensajes van a stderr (>&2), NO a stdout. El motivo es un bug real que
@@ -108,13 +180,102 @@ cleanup() {
   # terminal y jamás contamina un archivo.
   echo "" >&2
   [ -n "$FUNCTIONS_PID" ] && kill "$FUNCTIONS_PID" >/dev/null 2>&1 || true
-  echo "🛑 dev-all: cerrando — apagando Supabase local ($PROJECT_ID)…" >&2
-  supabase stop --project-id "$PROJECT_ID" >/dev/null 2>&1 || supabase stop >/dev/null 2>&1 || true
-  rm -f "$LOCK_FILE"
+  if [ "${SUPABASE_WAS_RUNNING:-0}" = "1" ]; then
+    echo "🫸 dev-all: cerrando — Supabase ($PROJECT_ID) ya estaba arriba antes; lo dejo corriendo." >&2
+    # El lock tampoco es nuestro: borrarlo dejaría al stack vivo pero sin dueño
+    # declarado, y el watchdog empezaría a reportarlo como «arriba sin lock» cada
+    # 2 minutos (o, si era un lock `manual` de `pnpm db:up`, se perdería la marca
+    # de que está abierto a propósito). La regla «el que lo prende, lo apaga»
+    # aplica igual al lockfile.
+  else
+    echo "🛑 dev-all: cerrando — apagando Supabase local ($PROJECT_ID)…" >&2
+    # Sin `--no-backup` a propósito: los volúmenes —y con ellos los datos— se conservan.
+    supabase stop --project-id "$PROJECT_ID" >/dev/null 2>&1 || supabase stop >/dev/null 2>&1 || true
+    rm -f "$LOCK_FILE"
+  fi
 }
-trap cleanup EXIT INT TERM HUP
+# En db-up NO se instala el trap: el punto de `db:up` es justamente que el stack
+# sobreviva a la salida de este proceso. Apagarlo es explícito, con `pnpm db:down`.
+if [ "$MODE" != "db-up" ]; then
+  trap cleanup EXIT INT TERM HUP
+fi
 
-echo "🚀 dev-all: levantando Supabase LOCAL ($PROJECT_ID)…"
+# ── Guarda: la versión de Postgres del volumen manda ──────────────────────────
+#
+# `supabase link` escribe en `supabase/.temp/postgres-version` la versión de
+# Postgres del proyecto REMOTO, y ese archivo **le gana al `major_version` del
+# config.toml**. Si el volumen local se creó con una mayor más vieja, el CLI
+# intenta levantar la imagen nueva sobre datos viejos y Postgres se niega:
+#
+#   FATAL: database files are incompatible with server
+#   DETAIL: The data directory was initialized by PostgreSQL version 15,
+#           which is not compatible with this version 17.6.
+#
+# El stack no levanta y `dev:all` aborta entero. El síntoma no menciona el link
+# por ningún lado, así que se diagnostica como problema de puertos o de Docker
+# (mordió a IndPack el 9-sep-2026: el link era del 6-ago y estuvo un mes latente
+# porque nadie levantó ese stack).
+#
+# Acá se alinea `.temp/postgres-version` a la mayor que el volumen REALMENTE
+# tiene. Se elige el volumen y no la nube a propósito: bajar la imagen preserva
+# los datos, subirla los deja inaccesibles. La migración a la mayor nueva es una
+# decisión aparte (dump + restore), y se avisa en voz alta para que no se olvide.
+alinear_version_pg() {
+  local vol="supabase_db_${PROJECT_ID}"
+  # Sin volumen no hay nada que preservar: el CLI lo inicializa con la mayor que quiera.
+  docker volume inspect "$vol" >/dev/null 2>&1 || return 0
+
+  local vol_major
+  vol_major="$(docker run --rm -v "${vol}":/v:ro alpine cat /v/PG_VERSION 2>/dev/null | tr -dc '0-9')"
+  # Si no se pudo leer (sin imagen alpine, sin permisos), no se estorba el arranque.
+  [ -z "$vol_major" ] && return 0
+
+  local temp_file="supabase/.temp/postgres-version"
+  local cfg_major pedido pedido_major
+  cfg_major="$(awk '/^\[db\]/{f=1;next} /^\[/{f=0} f&&/^[[:space:]]*major_version/{gsub(/[^0-9]/,"");print;exit}' supabase/config.toml 2>/dev/null || true)"
+  pedido=""
+  [ -f "$temp_file" ] && pedido="$(tr -d '[:space:]' < "$temp_file" 2>/dev/null || true)"
+  # Lo que de verdad se va a levantar: el .temp del link si existe, si no el config.
+  pedido_major="${pedido%%.*}"
+  [ -z "$pedido_major" ] && pedido_major="$cfg_major"
+
+  # El config.toml no manda, pero si miente conviene saberlo: el día que se borre
+  # el .temp, es él quien decide.
+  if [ -n "$cfg_major" ] && [ "$cfg_major" != "$vol_major" ]; then
+    echo "⚠️  dev-all: config.toml dice major_version = $cfg_major y el volumen es PG $vol_major." >&2
+  fi
+
+  [ -z "$pedido_major" ] && return 0
+  [ "$pedido_major" = "$vol_major" ] && return 0
+
+  # Se necesita un tag concreto de esa mayor. Se busca entre las imágenes ya
+  # descargadas: pedir una que no está obligaría a un pull a ciegas.
+  local tag
+  tag="$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null \
+        | grep -E "supabase/postgres:${vol_major}\." | sed 's/.*://' | sort -V | tail -1)"
+  if [ -z "$tag" ]; then
+    echo "❌ dev-all: el volumen '$vol' es PG $vol_major pero se iba a levantar PG $pedido_major," >&2
+    echo "   y no hay imagen supabase/postgres:${vol_major}.* descargada para alinearlo." >&2
+    echo "   Tus datos siguen intactos en el volumen, pero el stack no va a subir." >&2
+    echo "   Cura: docker pull public.ecr.aws/supabase/postgres:${vol_major}.x  y reintenta." >&2
+    return 0
+  fi
+
+  mkdir -p "$(dirname "$temp_file")"
+  [ -f "$temp_file" ] && [ ! -f "${temp_file}.bak-link" ] && cp "$temp_file" "${temp_file}.bak-link"
+  printf '%s' "$tag" > "$temp_file"
+  echo "⚠️  dev-all: el volumen de '$PROJECT_ID' es PG $vol_major y el link pedía PG $pedido_major." >&2
+  echo "   Alineado a $tag para no dejar tus datos inaccesibles." >&2
+  echo "   >> MIGRACIÓN PENDIENTE a PG $pedido_major (dump con $vol_major → restore en $pedido_major)." >&2
+}
+
+if [ "$SUPABASE_WAS_RUNNING" = "1" ]; then
+  echo "ℹ️  dev-all: Supabase de '$PROJECT_ID' YA estaba arriba — lo reuso y lo dejo vivo al salir."
+else
+  # Sólo cuando hay que levantarlo: si ya está arriba, el volumen ya montó bien.
+  alinear_version_pg
+  echo "🚀 dev-all: levantando Supabase LOCAL ($PROJECT_ID)…"
+fi
 supabase start
 
 # ── Edge Functions ────────────────────────────────────────────────────────────
@@ -122,7 +283,11 @@ supabase start
 # Sin esto, todo /functions/v1/* responde 503 desde Kong — y es un 503 mudo, no
 # avisa que falta el runtime (así estuvo 12 días sin que nadie lo notara, 3-ago-2026).
 # Las secrets (API keys del asistente) viven en supabase/functions/.env, fuera de git.
-if compgen -G "supabase/functions/*/index.ts" >/dev/null 2>&1; then
+if [ "$MODE" = "db-up" ] && compgen -G "supabase/functions/*/index.ts" >/dev/null 2>&1; then
+  # `functions serve` necesita un proceso vivo que lo aloje, y db:up termina.
+  echo "ℹ️  db:up: NO se sirven las Edge Functions (necesitan un proceso vivo)."
+  echo "   /functions/v1/* va a responder 503 hasta que corras 'pnpm dev:all'."
+elif compgen -G "supabase/functions/*/index.ts" >/dev/null 2>&1; then
   ENV_FLAG=()
   if [ -f supabase/functions/.env ]; then
     ENV_FLAG=(--env-file supabase/functions/.env)
@@ -136,7 +301,24 @@ if compgen -G "supabase/functions/*/index.ts" >/dev/null 2>&1; then
 fi
 
 # Heartbeat para el watchdog: PID de este script + ruta del proyecto.
-echo "$$|$PROJECT_ROOT" > "$LOCK_FILE"
+#
+# Solo se escribe si el stack es NUESTRO. El watchdog apaga los stacks cuyo lock
+# apunta a un PID muerto; dejar lock sobre un stack ajeno haría que un crash de
+# este script le tumbe el Supabase a quien sí lo estaba usando. Su política ya
+# cubre el resto del caso: un stack sin lock lo da por levantado a mano y no lo toca.
+#
+# En `db:up` el dueño no es un proceso (este script termina), así que el lock se
+# escribe con el marcador `manual` en lugar de un PID. El watchdog lo lee y lo
+# respeta: no es un zombie, es un stack abierto a propósito. Sin el marcador
+# tendría que elegir entre matarlo (si pusiéramos un PID muerto) o quejarse cada
+# 2 minutos de que está «arriba sin lock».
+if [ "$MODE" = "db-up" ]; then
+  if [ "$SUPABASE_WAS_RUNNING" = "0" ] || [ ! -f "$LOCK_FILE" ]; then
+    echo "manual|$PROJECT_ROOT" > "$LOCK_FILE"
+  fi
+elif [ "$SUPABASE_WAS_RUNNING" = "0" ]; then
+  echo "$$|$PROJECT_ROOT" > "$LOCK_FILE"
+fi
 
 # Regenera .env.local con las credenciales locales reales (puertos/keys del CLI),
 # preservando cualquier feature-flag propio del proyecto que ya viviera en .env.local.
@@ -210,6 +392,17 @@ if [ -n "$TS_IP" ] && grep -q "'/supabase'" vite.config.ts 2>/dev/null; then
     sed -i -E "s|^VITE_SUPABASE_URL=.*|VITE_SUPABASE_URL=\"http://${TS_IP}:${APP_PORT}/supabase\"|" .env.local
     echo "🔗 dev-all: accesible desde otra máquina → http://${TS_IP}:${APP_PORT}"
   fi
+fi
+
+if [ "$MODE" = "db-up" ]; then
+  echo ""
+  echo "  ╔════════════════════════════════════════════════════════════╗"
+  echo "  ║  🗄️   SOLO BASE — Supabase local arriba, sin app             ║"
+  echo "  ║  Studio: http://127.0.0.1:${STUDIO_PORT}"
+  echo "  ║  Queda vivo al salir. Para apagarlo: pnpm db:down           ║"
+  echo "  ╚════════════════════════════════════════════════════════════╝"
+  echo ""
+  exit 0
 fi
 
 echo ""
