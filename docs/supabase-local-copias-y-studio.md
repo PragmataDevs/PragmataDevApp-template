@@ -101,14 +101,19 @@ port = 54334
 `.env` de esa copia:
 
 ```env
+# Ejemplo con el bloque de objetiva-ops (n=3): app 7030 · astro 7031 · SB api 54331
 VITE_SUPABASE_URL=http://127.0.0.1:54331
 VITE_SUPABASE_ANON_KEY=<Publishable de `supabase status` en esta carpeta>
-PUBLIC_APP_URL=http://localhost:7071
-PUBLIC_SITE_URL=http://localhost:4322
-VITE_PUBLIC_SITE_URL=http://localhost:4322
+PUBLIC_APP_URL=http://localhost:7030
+PUBLIC_SITE_URL=http://localhost:7031
+VITE_PUBLIC_SITE_URL=http://localhost:7031
 ```
 
-**Auth local:** en `config.toml`, `site_url` y `additional_redirect_urls` deben usar el puerto ERP de **esa** copia (p. ej. `http://localhost:7071`).
+> Los puertos NO se eligen a mano: los manda el registro central `~/PragmataDevs/ports.json`
+> (índice `n` → app `70n0`, astro `70n1`, supabase api `543n1`). Verificá con
+> `pnpm ports:check` desde `~/PragmataDevs`.
+
+**Auth local:** en `config.toml`, `site_url` y `additional_redirect_urls` deben usar el puerto ERP de **esa** copia. No lo edites a mano: `node scripts/ports-sync-auth.mjs --write` lo reapunta desde el registro. Si quedan desalineados, un magic link aterriza en el dev server de OTRO proyecto — pasó de verdad.
 
 Tras cambiar puertos: `supabase stop` → `supabase start` en **esa** carpeta.
 

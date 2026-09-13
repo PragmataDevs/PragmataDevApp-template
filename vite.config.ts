@@ -1,6 +1,24 @@
 import path from "path"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, loadEnv } from "vite"
+
+/**
+ * PUERTO DE DESARROLLO — lo manda el registro central: ~/PragmataDevs/ports.json
+ *
+ * Cada proyecto tiene un índice `n` y de ahí se derivan TODOS sus puertos
+ * (app = 7000+n*10). Al instanciar un cliente, la factory reserva su `n` y escribe
+ * VITE_PORT en su .env. Para ver el mapa: `pnpm ports:check --table`.
+ *
+ * El fallback de abajo es el puerto del PROPIO template (n=2), no un default
+ * compartido. Esto es a propósito: antes decía 7070 y, como instanciar un cliente
+ * copia este archivo tal cual, tres proyectos acabaron peleándose el 7070. Con el
+ * puerto del template como fallback + strictPort, un cliente al que no se le escribió
+ * su VITE_PORT truena de inmediato en vez de robarle el puerto a otro en silencio.
+ *
+ * `process.env` NO trae el .env al evaluar este config: hay que cargarlo con loadEnv.
+ */
+const env = loadEnv("development", process.cwd(), ["VITE_", "PUBLIC_"])
+const port = Number(process.env.VITE_PORT || env.VITE_PORT) || 7020
 
 export default defineConfig({
   envPrefix: ["VITE_", "PUBLIC_"],
@@ -69,7 +87,8 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: Number(process.env.VITE_PORT) || 7070,
+    port,
+    strictPort: true,
     /**
      * Puente a Supabase local por el MISMO puerto del dev server.
      *
