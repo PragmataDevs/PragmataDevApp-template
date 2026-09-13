@@ -60,7 +60,7 @@ export default function ProfilePage() {
     setUploadingAvatar(true);
 
     try {
-      const path = `avatars/${profile.id}.webp`;
+      const path = `${profile.team_id}/avatars/${profile.id}.webp`;
       const { storagePath, signedUrl } = await uploadFile(
         'attachments',
         path,

@@ -6,8 +6,6 @@ export type {
   UUID,
   AuditStatus,
   AuditBase,
-  DocumentStatus,
-  DocumentW,
 } from '@pragmata/core';
 
 import type { ComponentType, LazyExoticComponent } from 'react';

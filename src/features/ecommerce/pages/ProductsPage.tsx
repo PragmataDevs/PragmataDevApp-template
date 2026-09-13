@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/lib/supabase';
+import { useAuth }  from '@/features/auth/hooks/useAuth';
 
 import { DataTable, type ColumnDef, type CsvImportMode } from '@/components/ui/DataTable';
 import { useProducts }  from '@/features/products/hooks/useProducts';
@@ -70,9 +71,10 @@ const productSchema = z
 
 const IMAGE_BUCKET = 'product-images';
 
-async function uploadProductImage(file: File): Promise<string> {
+async function uploadProductImage(file: File, teamId: string): Promise<string> {
   const ext  = file.name.split('.').pop() ?? 'jpg';
-  const path = `${crypto.randomUUID()}.${ext}`;
+  // El path SIEMPRE empieza con el team_id: así lo exigen las policies de storage.
+  const path = `${teamId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage
     .from(IMAGE_BUCKET)
     .upload(path, file, { upsert: false, contentType: file.type });
@@ -267,6 +269,7 @@ interface ProductFormModalProps {
 }
 
 function ProductFormModal({ product, onSave, onClose, saving }: ProductFormModalProps) {
+  const { profile } = useAuth();
   const isEditing = !!product;
 
   // Image upload state
@@ -324,7 +327,8 @@ function ProductFormModal({ product, onSave, onClose, saving }: ProductFormModal
     if (imageFile) {
       setUploadingImage(true);
       try {
-        image_url = await uploadProductImage(imageFile);
+        if (!profile) throw new Error('No hay sesión para subir la imagen');
+        image_url = await uploadProductImage(imageFile, profile.team_id);
       } catch (err) {
         console.error(err);
         setUploadingImage(false);

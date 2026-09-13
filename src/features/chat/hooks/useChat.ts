@@ -367,7 +367,7 @@ export function useMessages(conversationId: string | null) {
     async (file: File) => {
       if (!conversationId || !profile) throw new Error('Missing context');
 
-      const path = `chat/${conversationId}/${Date.now()}_${file.name}`;
+      const path = `${profile.team_id}/chat/${conversationId}/${Date.now()}_${file.name}`;
       const msgType = file.type.startsWith('image/') ? 'image' : 'file';
 
       // Upload with optimization (images get resized/WebP, files pass through)

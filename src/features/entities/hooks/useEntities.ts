@@ -189,6 +189,8 @@ export function useEntities() {
 
   const uploadEntityImages = useCallback(async (entityId: string, files: File[]): Promise<EntityImageAsset[]> => {
     if (!files.length) return [];
+    // Mandamiento 4.3: sin sesión no hay team_id para el path → grita, no adivina.
+    if (!profile) throw new Error('No hay sesión para subir imágenes');
 
     const uploads = files.map(async (file, index) => {
       const ext = file.name.split('.').pop()?.toLowerCase() || 'bin';
@@ -199,7 +201,7 @@ export function useEntities() {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 
-      const storagePath = `entities/${entityId}/${Date.now()}-${index}-${safeBase || 'image'}.${ext}`;
+      const storagePath = `${profile.team_id}/entities/${entityId}/${Date.now()}-${index}-${safeBase || 'image'}.${ext}`;
 
       const result = await uploadFile('attachments', storagePath, file, {
         optimize: CHAT_IMAGE_PRESET,
@@ -215,7 +217,7 @@ export function useEntities() {
     });
 
     return Promise.all(uploads);
-  }, []);
+  }, [profile]);
 
   const createEntity = useCallback(
     async (data: EntityInput) => {

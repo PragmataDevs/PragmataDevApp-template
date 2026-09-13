@@ -1,4 +1,3 @@
-export type { DocumentStatus, DocumentW } from '@/types/core/base';
 import type { AuditBase } from '@/types/core/base';
 
 // ─── Document entity (maps to public.documents table) ────────────────────────

@@ -5,7 +5,6 @@
 
 export type { UUID, AuditStatus, AuditBase } from './audit.ts';
 export type { Json, JsonObject } from './json.ts';
-export type { DocumentStatus, DocumentW } from './document-work.ts';
 export type { Product, ProductInput } from './product.ts';
 export {
   isLoopbackHostname,
