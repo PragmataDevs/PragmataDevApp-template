@@ -203,7 +203,10 @@ export default function UserForm({
     } else {
       const createPayload: UserCreateInput = {
         full_name: fullName,
-        email,
+        // El correo se guarda siempre en minúsculas (la edge function y el
+        // trigger de profiles lo garantizan). Normalizarlo aquí también hace
+        // que lo que el admin ve tras guardar sea lo que quedó guardado.
+        email: email.trim().toLowerCase(),
         role_id: roleId,
         access_level: accessLevel,
         job_title: jobTitle || undefined,
