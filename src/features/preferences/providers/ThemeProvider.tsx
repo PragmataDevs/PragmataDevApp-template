@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { applyThemeClass } from '@/features/preferences/lib/applyThemeClass';
 
 export type ThemeOption = 'light' | 'dark' | 'system';
 
@@ -18,16 +19,6 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 function getSystemTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light';
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-/** Apply or remove `.dark` class on <html> */
-function applyThemeClass(resolved: 'light' | 'dark') {
-  const root = document.documentElement;
-  if (resolved === 'dark') {
-    root.classList.add('dark');
-  } else {
-    root.classList.remove('dark');
-  }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
