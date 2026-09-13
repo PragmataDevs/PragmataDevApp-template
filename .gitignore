@@ -24,3 +24,12 @@ dump*.sql
 # Estado interno del CLI de Supabase (versión descargada, proyecto vinculado).
 # Cambia solo y no aporta nada al repo; llegó a estar trackeado por error.
 supabase/.temp/
+
+# Cache generado de Astro (astro sync / dev) — se regenera solo
+astro/.astro/
+
+# Salidas de tooling
+coverage/
+*.tsbuildinfo
+*.log
+.eslintcache
