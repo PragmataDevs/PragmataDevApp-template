@@ -39,6 +39,8 @@ cd "$PROJECT_ROOT"
 TARGET="local"
 # MODE: app (default, levanta la app) | db-up (solo la base) | db-down (apagarla)
 MODE="app"
+# Registro de puertos (16-sep-2026): la nube manda; si este repo se desfasó, se avisa y se sigue.
+[ -x "$HOME/praxia/organon/ports.sh" ] && bash "$HOME/praxia/organon/ports.sh" check --path "$PWD" 2>/dev/null | grep -E '^(✖|ports:)' || true
 for arg in "$@"; do
   case "$arg" in
     --cloud|--nube|--remote)   TARGET="cloud" ;;
@@ -88,6 +90,20 @@ if [ "$TARGET" = "cloud" ]; then
     exit 1
   fi
   CLOUD_URL="$(grep -E '^VITE_SUPABASE_URL=' .env.cloud | head -1 | cut -d= -f2- | tr -d '"')"
+  # ── Guarda (16-sep-2026): --cloud es PRODUCCIÓN con datos reales. Sin PRAXIA_CLOUD_OK=1 hay que
+  # escribir el project_id del stack para confirmar; sin terminal (Praxia, timers) se niega. Antes
+  # bastaba la bandera y un dedo de más apuntaba la app a la nube sin aviso.
+  _PID="$(grep -E '^[[:space:]]*project_id[[:space:]]*=' supabase/config.toml 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)"
+  if [ "${PRAXIA_CLOUD_OK:-}" != "1" ]; then
+    if [ -t 0 ]; then
+      printf '  ⚠️  Vas a apuntar la app a PRODUCCIÓN (%s).\n  Escribe el project_id "%s" para confirmar: ' "$CLOUD_URL" "$_PID"
+      read -r _ok
+      [ -n "$_PID" ] && [ "$_ok" = "$_PID" ] || { echo "❌ dev-all --cloud: cancelado (no coincide)." >&2; exit 1; }
+    else
+      echo "❌ dev-all --cloud: sin terminal y sin PRAXIA_CLOUD_OK=1 no se apunta a producción." >&2
+      exit 1
+    fi
+  fi
   echo ""
   echo "  ╔════════════════════════════════════════════════════════════╗"
   echo "  ║  ☁️   MODO NUBE — la app apunta a Supabase EN LA NUBE        ║"
