@@ -96,9 +96,10 @@ if [ "$TARGET" = "cloud" ]; then
   _PID="$(grep -E '^[[:space:]]*project_id[[:space:]]*=' supabase/config.toml 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || true)"
   if [ "${PRAXIA_CLOUD_OK:-}" != "1" ]; then
     if [ -t 0 ]; then
-      printf '  ⚠️  Vas a apuntar la app a PRODUCCIÓN (%s).\n  Escribe el project_id "%s" para confirmar: ' "$CLOUD_URL" "$_PID"
+      # Se pide una palabra fija, no el project_id: nadie se sabe "pragmata-x-a85bee3f" de memoria (Wicho, 17-sep-2026).
+      printf '  ⚠️  Vas a apuntar la app %s a PRODUCCIÓN: %s\n  Escribe  produccion  para confirmar: ' "${_PID:-$(basename "$PWD")}" "$CLOUD_URL"
       read -r _ok
-      [ -n "$_PID" ] && [ "$_ok" = "$_PID" ] || { echo "❌ dev-all --cloud: cancelado (no coincide)." >&2; exit 1; }
+      [ "$_ok" = "produccion" ] || { echo "❌ dev-all --cloud: cancelado (no escribiste produccion)." >&2; exit 1; }
     else
       echo "❌ dev-all --cloud: sin terminal y sin PRAXIA_CLOUD_OK=1 no se apunta a producción." >&2
       exit 1
