@@ -91,6 +91,8 @@ export interface DataTableProps<T extends object> {
   onExport?: (filtered: T[]) => void;
   /** CSV export/import options. Export dialog is always available when field keys resolve to a non-empty list. */
   csv?: DataTableCsvConfig;
+  /** Orden inicial de la tabla (el usuario puede cambiarlo desde el menú de columna). */
+  initialSort?: { key: string; dir: 'asc' | 'desc' };
   emptyMessage?: string;
   emptyDescription?: string;
   className?: string;
@@ -100,7 +102,9 @@ export interface DataTableProps<T extends object> {
 
 const ACTIONS_WIDTH = 64;   // px — matches w-16
 const DEFAULT_WIDTH = 160;  // px — fallback when column.width is undefined
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+// -1 = "Todas": sin paginar (pedido de Wicho 2026-07-29 — programas de obra
+// de cientos de filas se revisan completos, con scroll).
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, -1];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -147,6 +151,7 @@ export function DataTable<T extends object>({
   actions,
   onExport,
   csv,
+  initialSort,
   emptyMessage = 'Sin resultados',
   emptyDescription = 'No se encontraron registros con los filtros actuales.',
   className = '',
@@ -165,9 +170,19 @@ export function DataTable<T extends object>({
     return columns.filter(c => !c.omitFromCsv).map(c => c.key);
   }, [csv?.fields, columns]);
 
+  /** Header label por key para mostrar nombres humanos en el diálogo de export. */
+  const csvFieldLabels = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of columns) map.set(c.key, c.header);
+    return map;
+  }, [columns]);
+
+  /** Columnas elegidas en el diálogo de export (se resiembra al abrirlo). */
+  const [exportKeys, setExportKeys] = useState<string[]>([]);
+
   const exportBasename = csv?.filename ?? 'export';
 
-  const [sortConfig, setSortConfig] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(initialSort ?? null);
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [globalSearch, setGlobalSearch] = useState('');
   const [hiddenCols, setHiddenCols] = useState<string[]>([]);
@@ -256,8 +271,11 @@ export function DataTable<T extends object>({
     return result;
   }, [data, visibleColumns, globalSearch, columnFilters, columnValueFilters, sortConfig]);
 
-  const totalPages = Math.max(1, Math.ceil(processedData.length / pageSize));
-  const paginatedData = processedData.slice(page * pageSize, (page + 1) * pageSize);
+  // Con pageSize = -1 ("Todas") el tamaño efectivo es el total de filas,
+  // así totalPages queda en 1 y paginatedData no recorta nada.
+  const sizeEfectivo = pageSize === -1 ? Math.max(1, processedData.length) : pageSize;
+  const totalPages = Math.max(1, Math.ceil(processedData.length / sizeEfectivo));
+  const paginatedData = processedData.slice(page * sizeEfectivo, (page + 1) * sizeEfectivo);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSort = useCallback((key: string, dir: 'asc' | 'desc') => {
@@ -278,34 +296,46 @@ export function DataTable<T extends object>({
     setHiddenCols([]);
   }, []);
 
-  const downloadCsvExport = useCallback((rows: T[]) => {
-    if (csvFieldKeys.length === 0) return;
+  const downloadCsvExport = useCallback((rows: T[], keys: string[]) => {
+    if (keys.length === 0) return;
     if (onExport) {
       onExport(rows as T[]);
       return;
     }
-    const recs = rowsToCsvRecords(rows, csvFieldKeys);
-    const body = recordsToCsvString(csvFieldKeys, recs);
+    const recs = rowsToCsvRecords(rows, keys);
+    const body = recordsToCsvString(keys, recs);
     downloadCsvUtf8(exportBasename, body);
-  }, [onExport, csvFieldKeys, exportBasename]);
+  }, [onExport, exportBasename]);
 
   const openExportDialog = useCallback(() => {
     setCsvMessage(null);
+    // Con onExport el consumidor manda: no hay diálogo ni selección de columnas.
     if (onExport) {
-      downloadCsvExport(processedData);
+      downloadCsvExport(processedData, csvFieldKeys);
       return;
     }
+    setExportKeys(csvFieldKeys);
     setExportDialogOpen(true);
-  }, [onExport, downloadCsvExport, processedData]);
+  }, [onExport, downloadCsvExport, processedData, csvFieldKeys]);
+
+  const toggleExportKey = useCallback((key: string) => {
+    setExportKeys(prev =>
+      prev.includes(key)
+        ? prev.filter(k => k !== key)
+        // conserva el orden canónico de csvFieldKeys, no el orden de clic
+        : csvFieldKeys.filter(k => prev.includes(k) || k === key),
+    );
+  }, [csvFieldKeys]);
 
   const runExportChoice = useCallback((kind: 'current' | 'template') => {
+    if (exportKeys.length === 0) return;
     setExportDialogOpen(false);
-    if (kind === 'current') downloadCsvExport(processedData);
+    if (kind === 'current') downloadCsvExport(processedData, exportKeys);
     else {
-      const body = recordsToCsvString(csvFieldKeys, []);
+      const body = recordsToCsvString(exportKeys, []);
       downloadCsvUtf8(`${exportBasename}_plantilla`, body);
     }
-  }, [downloadCsvExport, processedData, csvFieldKeys, exportBasename]);
+  }, [downloadCsvExport, processedData, exportKeys, exportBasename]);
 
   const onCsvFileSelected = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -495,6 +525,7 @@ export function DataTable<T extends object>({
           {globalSearch && (
             <button
               onClick={() => setGlobalSearch('')}
+              aria-label="Limpiar búsqueda"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--pragmata-muted)] hover:text-[color:var(--pragmata-danger)]"
             >
               <X className="w-4 h-4" />
@@ -563,6 +594,56 @@ export function DataTable<T extends object>({
       {csvMessage && (
         <div className="rounded-pragmata border border-[color:var(--pragmata-border)] bg-[color:var(--pragmata-surface-2)] px-4 py-3 text-sm text-[color:var(--pragmata-fg)] whitespace-pre-wrap">
           {csvMessage}
+        </div>
+      )}
+
+      {/* ── Filtros activos como chips — que se VEA qué se está viendo
+          (Wicho 2026-07-30: "si estoy viendo una especialidad en particular,
+          necesito verlo más claro"). Cada chip se quita individual; el
+          "limpiar todo" es el botón Limpiar de la barra de herramientas. ──── */}
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-1.5 -mt-1">
+          <span className="text-[11px] font-medium text-[color:var(--pragmata-muted)]">Viendo:</span>
+          {globalSearch.trim() && (
+            <button
+              onClick={() => setGlobalSearch('')}
+              aria-label={`Quitar la búsqueda ${globalSearch.trim()}`}
+              title="Quitar la búsqueda"
+              className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[color:var(--pragmata-accent)]/10 text-[color:var(--pragmata-accent)] hover:bg-[color:var(--pragmata-accent)]/20 transition-colors"
+            >
+              busca “{globalSearch.trim()}” <X className="w-3 h-3" />
+            </button>
+          )}
+          {Object.entries(columnFilters).filter(([, v]) => v.trim()).map(([key, v]) => {
+            const label = columns.find(c => c.key === key)?.header ?? key;
+            return (
+              <button
+                key={`cf-${key}`}
+                onClick={() => setColumnFilters(prev => { const next = { ...prev }; delete next[key]; return next; })}
+                aria-label={`Quitar el filtro de ${label.toLowerCase()}`}
+                title="Quitar este filtro"
+                className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[color:var(--pragmata-accent)]/10 text-[color:var(--pragmata-accent)] hover:bg-[color:var(--pragmata-accent)]/20 transition-colors"
+              >
+                {label}: {v.trim()} <X className="w-3 h-3" />
+              </button>
+            );
+          })}
+          {Object.entries(columnValueFilters).filter(([, vals]) => vals.length > 0).map(([key, vals]) => {
+            const label = columns.find(c => c.key === key)?.header ?? key;
+            // Más de 2 valores se resumen ("A, B +3") para no romper la fila.
+            const resumen = vals.length <= 2 ? vals.join(', ') : `${vals.slice(0, 2).join(', ')} +${vals.length - 2}`;
+            return (
+              <button
+                key={`vf-${key}`}
+                onClick={() => setColumnValueFilters(prev => { const next = { ...prev }; delete next[key]; return next; })}
+                aria-label={`Quitar el filtro de ${label.toLowerCase()}`}
+                title="Quitar este filtro"
+                className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[color:var(--pragmata-accent)]/10 text-[color:var(--pragmata-accent)] hover:bg-[color:var(--pragmata-accent)]/20 transition-colors"
+              >
+                {label}: {resumen} <X className="w-3 h-3" />
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -718,7 +799,7 @@ export function DataTable<T extends object>({
         <div className="flex items-center gap-3">
           <span>
             {processedData.length === 0 ? '0 registros' : (
-              `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, processedData.length)} de ${processedData.length}`
+              `${page * sizeEfectivo + 1}–${Math.min((page + 1) * sizeEfectivo, processedData.length)} de ${processedData.length}`
             )}
           </span>
           <div className="flex items-center gap-1.5">
@@ -728,7 +809,7 @@ export function DataTable<T extends object>({
               onChange={e => { setPageSize(Number(e.target.value)); setPage(0); }}
               className="text-xs border border-[color:var(--pragmata-border)] rounded bg-[color:var(--pragmata-surface)] text-[color:var(--pragmata-fg)] px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-[color:var(--pragmata-accent)]"
             >
-              {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+              {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n === -1 ? 'Todas' : n}</option>)}
             </select>
           </div>
         </div>
@@ -777,28 +858,74 @@ export function DataTable<T extends object>({
           aria-modal="true"
           aria-labelledby="dt-export-csv-title"
         >
-          <div className="bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-pragmata shadow-xl max-w-md w-full p-6 flex flex-col gap-4">
+          <div className="bg-[color:var(--pragmata-surface)] border border-[color:var(--pragmata-border)] rounded-pragmata shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 flex flex-col gap-4">
             <h3 id="dt-export-csv-title" className="text-base font-semibold text-[color:var(--pragmata-fg)]">
               Exportar CSV
             </h3>
             <p className="text-sm text-[color:var(--pragmata-muted)] leading-relaxed">
-              Los encabezados del archivo coinciden con los nombres de campo en base de datos (por ejemplo{' '}
+              Elige las columnas a incluir. Los encabezados del archivo usan los nombres de campo en base de datos (por ejemplo{' '}
               <code className="text-xs bg-[color:var(--pragmata-surface-2)] px-1 rounded">name</code>,{' '}
-              <code className="text-xs bg-[color:var(--pragmata-surface-2)] px-1 rounded">slug</code>
-              ). Elige qué descargar.
+              <code className="text-xs bg-[color:var(--pragmata-surface-2)] px-1 rounded">slug</code>).
             </p>
+
+            {/* Selector de columnas */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs text-[color:var(--pragmata-muted)]">
+                <span>{exportKeys.length} de {csvFieldKeys.length} columnas</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setExportKeys(csvFieldKeys)}
+                    className="text-[color:var(--pragmata-accent)] hover:underline"
+                  >
+                    Todas
+                  </button>
+                  <span className="text-[color:var(--pragmata-border)]">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setExportKeys([])}
+                    className="text-[color:var(--pragmata-accent)] hover:underline"
+                  >
+                    Ninguna
+                  </button>
+                </div>
+              </div>
+              <div className="max-h-56 overflow-y-auto rounded-pragmata border border-[color:var(--pragmata-border)] divide-y divide-[color:var(--pragmata-border)]">
+                {csvFieldKeys.map(key => (
+                  <label
+                    key={key}
+                    className="flex items-center gap-2.5 px-3 py-2 text-sm text-[color:var(--pragmata-fg)] cursor-pointer hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={exportKeys.includes(key)}
+                      onChange={() => toggleExportKey(key)}
+                      className="accent-[color:var(--pragmata-accent)] flex-shrink-0"
+                    />
+                    <span className="truncate">{csvFieldLabels.get(key) ?? key}</span>
+                    {/* La key cruda ayuda a casar el CSV con la base al reimportar */}
+                    {csvFieldLabels.has(key) && (
+                      <code className="ml-auto text-[10px] text-[color:var(--pragmata-muted-2)] truncate max-w-[40%]">{key}</code>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="flex flex-col gap-2">
               <button
                 type="button"
                 onClick={() => runExportChoice('current')}
-                className="w-full text-left px-4 py-3 rounded-pragmata border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
+                disabled={exportKeys.length === 0}
+                className="w-full text-left px-4 py-3 rounded-pragmata border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Datos actuales (respeta filtros y orden de la tabla)
               </button>
               <button
                 type="button"
                 onClick={() => runExportChoice('template')}
-                className="w-full text-left px-4 py-3 rounded-pragmata border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors"
+                disabled={exportKeys.length === 0}
+                className="w-full text-left px-4 py-3 rounded-pragmata border border-[color:var(--pragmata-border)] text-sm font-medium text-[color:var(--pragmata-fg)] hover:bg-[color:var(--pragmata-surface-2)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Plantilla vacía (solo encabezados)
               </button>
